@@ -1,0 +1,1 @@
+ALTER TABLE public.songs ADD COLUMN IF NOT EXISTS grammar_notes jsonb NOT NULL DEFAULT '[]'::jsonb;

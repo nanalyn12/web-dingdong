@@ -1,0 +1,1 @@
+ALTER TABLE public.dramas ADD COLUMN IF NOT EXISTS has_captions boolean NOT NULL DEFAULT false;

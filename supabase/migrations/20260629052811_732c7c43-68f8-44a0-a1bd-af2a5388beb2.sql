@@ -1,0 +1,1 @@
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS weeks integer NOT NULL DEFAULT 1 CHECK (weeks BETWEEN 1 AND 15);

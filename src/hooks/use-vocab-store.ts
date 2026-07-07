@@ -1,0 +1,148 @@
+import { useEffect, useState, useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  loadGuestVocab,
+  removeGuestVocab,
+  updateGuestVocabTags,
+  gradeGuestVocab,
+  listGuestVocabTags,
+  type VocabItem,
+} from "@/lib/vocab";
+import {
+  deleteVocabulary,
+  gradeVocabulary,
+  listVocabTags,
+  listVocabulary,
+  updateVocabularyTags,
+} from "@/lib/vocab.functions";
+import type { SrsGrade } from "@/lib/vocab-srs";
+
+export function useAuthedFlag() {
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancel = false;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!cancel) setAuthed(!!data.user);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
+      if (e === "SIGNED_IN" || e === "SIGNED_OUT") {
+        supabase.auth.getUser().then(({ data }) => setAuthed(!!data.user));
+      }
+    });
+    return () => {
+      cancel = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+  return authed;
+}
+
+export function useVocabStore() {
+  const authed = useAuthedFlag();
+  const qc = useQueryClient();
+  const [guestItems, setGuestItems] = useState<VocabItem[]>([]);
+  const [guestReady, setGuestReady] = useState(false);
+  const [guestTags, setGuestTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (authed === false) {
+      setGuestItems(loadGuestVocab());
+      setGuestTags(listGuestVocabTags());
+      setGuestReady(true);
+    }
+  }, [authed]);
+
+  const authedQuery = useQuery({
+    queryKey: ["vocabulary"],
+    queryFn: () => listVocabulary(),
+    enabled: authed === true,
+  });
+  const authedTags = useQuery({
+    queryKey: ["vocabulary-tags"],
+    queryFn: () => listVocabTags(),
+    enabled: authed === true,
+  });
+
+  const del = useMutation({
+    mutationFn: (zh: string) => deleteVocabulary({ data: { zh } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vocabulary"] });
+      qc.invalidateQueries({ queryKey: ["vocabulary-tags"] });
+    },
+  });
+  const grade = useMutation({
+    mutationFn: ({ id, grade: g }: { id: string; grade: SrsGrade }) =>
+      gradeVocabulary({ data: { id, grade: g } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vocabulary"] }),
+  });
+  const setTags = useMutation({
+    mutationFn: ({ id, tags }: { id: string; tags: string[] }) =>
+      updateVocabularyTags({ data: { id, tags } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vocabulary"] });
+      qc.invalidateQueries({ queryKey: ["vocabulary-tags"] });
+    },
+  });
+
+  const loading =
+    authed === null || (authed === true ? authedQuery.isLoading : !guestReady);
+  const items: VocabItem[] =
+    authed === true ? (authedQuery.data ?? []) : guestItems;
+  const tags: string[] =
+    authed === true ? (authedTags.data ?? []) : guestTags;
+
+  const deleteByZh = useCallback(
+    (zh: string) => {
+      if (authed) {
+        del.mutate(zh);
+      } else {
+        setGuestItems(removeGuestVocab(zh));
+        setGuestTags(listGuestVocabTags());
+      }
+    },
+    [authed, del],
+  );
+
+  const gradeById = useCallback(
+    async (id: string, g: SrsGrade) => {
+      if (authed) {
+        await grade.mutateAsync({ id, grade: g });
+      } else {
+        setGuestItems(gradeGuestVocab(id, g));
+      }
+    },
+    [authed, grade],
+  );
+
+  const setTagsById = useCallback(
+    async (id: string, next: string[]) => {
+      if (authed) {
+        await setTags.mutateAsync({ id, tags: next });
+      } else {
+        setGuestItems(updateGuestVocabTags(id, next));
+        setGuestTags(listGuestVocabTags());
+      }
+    },
+    [authed, setTags],
+  );
+
+
+  return {
+    authed,
+    loading,
+    items,
+    tags,
+    deleteByZh,
+    gradeById,
+    setTagsById,
+    refresh: () => {
+      if (authed) {
+        qc.invalidateQueries({ queryKey: ["vocabulary"] });
+      } else {
+        setGuestItems(loadGuestVocab());
+        setGuestTags(listGuestVocabTags());
+      }
+    },
+  };
+}
