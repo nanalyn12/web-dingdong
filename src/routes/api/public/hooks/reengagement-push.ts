@@ -4,8 +4,9 @@ export const Route = createFileRoute("/api/public/hooks/reengagement-push")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Shared-secret auth for the external cron caller.
         const apiKey = request.headers.get("apikey") ?? "";
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
+        const expected = process.env.CRON_HOOK_SECRET ?? "";
         if (!apiKey || !expected || apiKey !== expected) {
           return new Response("Unauthorized", { status: 401 });
         }
@@ -16,29 +17,39 @@ export const Route = createFileRoute("/api/public/hooks/reengagement-push")({
         const { default: webpush } = await import("web-push");
         webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { db, tables } = await import("@/db");
+        const { eq, inArray, isNull, lt, or } = await import("drizzle-orm");
 
         // Inactive > 3 days
         const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-        const { data: profiles, error: pErr } = await supabaseAdmin
-          .from("profiles")
-          .select("id, last_active_at")
-          .or(`last_active_at.is.null,last_active_at.lt.${cutoff}`);
-        if (pErr) {
-          return Response.json({ ok: false, error: pErr.message }, { status: 500 });
-        }
-        if (!profiles?.length) return Response.json({ ok: true, sent: 0 });
+        const profiles = await db
+          .select({
+            id: tables.profiles.id,
+            last_active_at: tables.profiles.last_active_at,
+          })
+          .from(tables.profiles)
+          .where(
+            or(
+              isNull(tables.profiles.last_active_at),
+              lt(tables.profiles.last_active_at, cutoff),
+            ),
+          );
+        if (!profiles.length) return Response.json({ ok: true, sent: 0 });
 
         const userIds = profiles.map((p) => p.id);
-        const { data: subs, error: sErr } = await supabaseAdmin
-          .from("push_subscriptions")
-          .select("id, user_id, endpoint, p256dh, auth, last_pushed_at")
-          .in("user_id", userIds);
-        if (sErr) {
-          return Response.json({ ok: false, error: sErr.message }, { status: 500 });
-        }
+        const subs = await db
+          .select({
+            id: tables.push_subscriptions.id,
+            user_id: tables.push_subscriptions.user_id,
+            endpoint: tables.push_subscriptions.endpoint,
+            p256dh: tables.push_subscriptions.p256dh,
+            auth: tables.push_subscriptions.auth,
+            last_pushed_at: tables.push_subscriptions.last_pushed_at,
+          })
+          .from(tables.push_subscriptions)
+          .where(inArray(tables.push_subscriptions.user_id, userIds));
 
         let sent = 0;
         let skipped = 0;
@@ -50,7 +61,7 @@ export const Route = createFileRoute("/api/public/hooks/reengagement-push")({
           url: "/",
         });
 
-        for (const s of subs ?? []) {
+        for (const s of subs) {
           if (s.last_pushed_at && s.last_pushed_at > oneDayAgo) {
             skipped++;
             continue;
@@ -63,16 +74,18 @@ export const Route = createFileRoute("/api/public/hooks/reengagement-push")({
               },
               payload,
             );
-            await supabaseAdmin
-              .from("push_subscriptions")
-              .update({ last_pushed_at: new Date().toISOString() })
-              .eq("id", s.id);
+            await db
+              .update(tables.push_subscriptions)
+              .set({ last_pushed_at: new Date().toISOString() })
+              .where(eq(tables.push_subscriptions.id, s.id));
             sent++;
           } catch (err: unknown) {
             failed++;
             const code = (err as { statusCode?: number })?.statusCode;
             if (code === 404 || code === 410) {
-              await supabaseAdmin.from("push_subscriptions").delete().eq("id", s.id);
+              await db
+                .delete(tables.push_subscriptions)
+                .where(eq(tables.push_subscriptions.id, s.id));
             }
           }
         }

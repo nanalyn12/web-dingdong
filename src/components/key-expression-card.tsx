@@ -3,14 +3,14 @@ import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { BookmarkPlus, BookmarkCheck, Mic, Volume2, Check, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { authClient } from "@/lib/auth-client";
 import {
   addGuestVocab,
   guessEmoji,
   loadGuestVocab,
   scorePronunciation,
 } from "@/lib/vocab";
-import { saveVocabulary } from "@/lib/vocab.functions";
+import { hasVocabZh, saveVocabulary } from "@/lib/vocab.functions";
 import { VocabPracticeDialog } from "@/components/vocab-practice-dialog";
 
 type KeyExpression = {
@@ -73,6 +73,7 @@ export function KeyExpressionCard({
 }) {
   const emoji = k.emoji || guessEmoji(k.zh, k.ko);
   const callSave = useServerFn(saveVocabulary);
+  const callHasVocab = useServerFn(hasVocabZh);
 
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [saved, setSaved] = useState(false);
@@ -81,18 +82,19 @@ export function KeyExpressionCard({
   useEffect(() => {
     let alive = true;
     (async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await authClient.getSession();
       if (!alive) return;
-      setAuthed(!!data.user);
-      if (!data.user) {
+      const user = data?.user ?? null;
+      setAuthed(!!user);
+      if (!user) {
         setSaved(loadGuestVocab().some((v) => v.zh === k.zh));
       } else {
-        const { data: rows } = await supabase
-          .from("vocabulary")
-          .select("id")
-          .eq("zh", k.zh)
-          .limit(1);
-        if (alive) setSaved((rows ?? []).length > 0);
+        try {
+          const res = await callHasVocab({ data: { zh: k.zh } });
+          if (alive) setSaved(!!res?.saved);
+        } catch {
+          // non-fatal — leave as unsaved
+        }
       }
     })();
     return () => {

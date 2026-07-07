@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth-middleware";
+import { assertEditor, getRole } from "@/lib/courses.functions";
 
 export type DramaScene = {
   index: number;
@@ -44,21 +46,14 @@ export type DramaRow = {
   created_at: string;
 };
 
-const COLS =
-  "id, title, title_zh, description, level, youtube_url, youtube_video_id, thumbnail_url, duration_seconds, genre, scenes, has_captions, created_by, created_at";
-
-
 export const listDramas = createServerFn({ method: "GET" }).handler(
   async (): Promise<DramaRow[]> => {
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data, error } = await supabaseAdmin
-      .from("dramas")
-      .select(COLS)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as unknown as DramaRow[];
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select()
+      .from(tables.dramas)
+      .orderBy(desc(tables.dramas.created_at));
+    return rows as unknown as DramaRow[];
   },
 );
 
@@ -67,54 +62,39 @@ export const getDrama = createServerFn({ method: "GET" })
     z.object({ id: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data }): Promise<DramaRow> => {
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: row, error } = await supabaseAdmin
-      .from("dramas")
-      .select(COLS)
-      .eq("id", data.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!row) throw new Error("드라마를 찾을 수 없습니다.");
-    return row as unknown as DramaRow;
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select()
+      .from(tables.dramas)
+      .where(eq(tables.dramas.id, data.id))
+      .limit(1);
+    if (!rows[0]) throw new Error("드라마를 찾을 수 없습니다.");
+    return rows[0] as unknown as DramaRow;
   });
 
 export const deleteDrama = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ id: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: prof } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const isAdmin = prof?.role === "admin";
-    const { data: row, error: gErr } = await supabaseAdmin
-      .from("dramas")
-      .select("created_by")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (gErr) throw new Error(gErr.message);
-    if (!row) throw new Error("드라마를 찾을 수 없습니다.");
-    if (!isAdmin && row.created_by !== context.userId) {
+    const { db, tables } = await import("@/db");
+    const isAdmin = (await getRole(context.userId)) === "admin";
+    const rows = await db
+      .select({ created_by: tables.dramas.created_by })
+      .from(tables.dramas)
+      .where(eq(tables.dramas.id, data.id))
+      .limit(1);
+    if (!rows[0]) throw new Error("드라마를 찾을 수 없습니다.");
+    if (!isAdmin && rows[0].created_by !== context.userId) {
       throw new Error("본인이 만든 드라마만 삭제할 수 있어요.");
     }
-    const { error } = await supabaseAdmin
-      .from("dramas")
-      .delete()
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    await db.delete(tables.dramas).where(eq(tables.dramas.id, data.id));
     return { ok: true as const };
   });
 
 export const updateDramaLineTime = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z
       .object({
@@ -126,39 +106,26 @@ export const updateDramaLineTime = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: prof } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const isEditor = prof?.role === "admin" || prof?.role === "teacher";
-    if (!isEditor) throw new Error("교수자만 편집할 수 있어요.");
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
 
-    const { data: row, error: gErr } = await supabaseAdmin
-      .from("dramas")
-      .select("scenes")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (gErr) throw new Error(gErr.message);
-    if (!row) throw new Error("드라마를 찾을 수 없습니다.");
+    const rows = await db
+      .select({ scenes: tables.dramas.scenes })
+      .from(tables.dramas)
+      .where(eq(tables.dramas.id, data.id))
+      .limit(1);
+    if (!rows[0]) throw new Error("드라마를 찾을 수 없습니다.");
 
-    const scenes = (row.scenes as unknown as DramaScene[]) ?? [];
+    const scenes = (rows[0].scenes as unknown as DramaScene[]) ?? [];
     const scene = scenes[data.sceneIndex];
     if (!scene) throw new Error("장면을 찾을 수 없어요.");
     const line = scene.key_lines?.[data.lineIndex];
     if (!line) throw new Error("대사를 찾을 수 없어요.");
     line.time_seconds = data.timeSeconds;
 
-    const { error } = await supabaseAdmin
-      .from("dramas")
-      .update({
-        scenes: scenes as unknown as import("@/integrations/supabase/types").Json,
-      })
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    await db
+      .update(tables.dramas)
+      .set({ scenes: scenes as unknown as import("@/db/schema").Json })
+      .where(eq(tables.dramas.id, data.id));
     return { ok: true as const };
   });
-

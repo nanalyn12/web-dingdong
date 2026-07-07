@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth-middleware";
 import { assertEditor } from "@/lib/courses.functions";
 
 const LevelEnum = z.enum(["beginner", "intermediate", "advanced"]);
@@ -231,7 +231,7 @@ export async function generateSceneData(args: {
 }
 
 export const generateDrama = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
@@ -245,10 +245,10 @@ export const generateDrama = createServerFn({ method: "POST" })
     const finalTitle =
       (data.title?.trim() || parsed.title || oembed.title || "드라마 학습").slice(0, 80);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin
-      .from("dramas")
-      .insert({
+    const { db, tables } = await import("@/db");
+    const [row] = await db
+      .insert(tables.dramas)
+      .values({
         title: finalTitle,
         title_zh: parsed.title_zh ?? null,
         description: parsed.description ?? null,
@@ -259,13 +259,11 @@ export const generateDrama = createServerFn({ method: "POST" })
           oembed.thumbnail_url ?? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
         duration_seconds: parsed.duration_seconds ?? null,
         genre: data.genre || null,
-        scenes: parsed.scenes as unknown as import("@/integrations/supabase/types").Json,
+        scenes: parsed.scenes as unknown as import("@/db/schema").Json,
         has_captions: hasCaptions,
         created_by: context.userId,
       })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { dramaId: row.id as string };
+      .returning({ id: tables.dramas.id });
+    return { dramaId: row.id };
   });
 

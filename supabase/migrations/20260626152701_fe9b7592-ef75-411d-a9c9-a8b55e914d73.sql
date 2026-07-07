@@ -1,2 +1,0 @@
-GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticator, authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.is_editor(uuid) TO authenticator, authenticated, anon, service_role;

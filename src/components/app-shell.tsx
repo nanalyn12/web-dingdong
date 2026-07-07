@@ -4,8 +4,7 @@ import { HelpCircle, LogIn, LogOut, Search, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppSidebar } from "./app-sidebar";
-import { useMyProfile, useSession } from "@/lib/auth-client";
-import { supabase } from "@/integrations/supabase/client";
+import { authClient, useMyProfile, useSession } from "@/lib/auth-client";
 import {
   Popover,
   PopoverContent,
@@ -26,7 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   async function logout() {
-    await supabase.auth.signOut();
+    await authClient.signOut();
     toast.success("로그아웃 했어요.");
     navigate({ to: "/" });
   }

@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+import { requireAuth } from "@/lib/auth-middleware";
 
 export const getVapidPublicKey = createServerFn({ method: "GET" }).handler(async () => {
   return { publicKey: process.env.VAPID_PUBLIC_KEY ?? "" };
@@ -14,46 +16,51 @@ const SubInput = z.object({
 });
 
 export const saveSubscription = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((d: unknown) => SubInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { error } = await supabase
-      .from("push_subscriptions")
-      .upsert(
-        {
-          user_id: userId,
-          endpoint: data.endpoint,
-          p256dh: data.p256dh,
-          auth: data.auth,
-          user_agent: data.user_agent ?? null,
-        },
-        { onConflict: "endpoint" },
-      );
-    if (error) throw new Error(error.message);
+    const { db, tables } = await import("@/db");
+    const values = {
+      user_id: context.userId,
+      endpoint: data.endpoint,
+      p256dh: data.p256dh,
+      auth: data.auth,
+      user_agent: data.user_agent ?? null,
+    };
+    await db
+      .insert(tables.push_subscriptions)
+      .values(values)
+      .onConflictDoUpdate({
+        target: tables.push_subscriptions.endpoint,
+        set: values,
+      });
     return { ok: true };
   });
 
 export const deleteSubscription = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((d: unknown) => z.object({ endpoint: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("push_subscriptions")
-      .delete()
-      .eq("endpoint", data.endpoint);
-    if (error) throw new Error(error.message);
+    const { db, tables } = await import("@/db");
+    await db
+      .delete(tables.push_subscriptions)
+      .where(
+        and(
+          eq(tables.push_subscriptions.endpoint, data.endpoint),
+          eq(tables.push_subscriptions.user_id, context.userId),
+        ),
+      );
     return { ok: true };
   });
 
 export const mySubscriptionStatus = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("push_subscriptions")
-      .select("endpoint")
-      .eq("user_id", context.userId)
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({ endpoint: tables.push_subscriptions.endpoint })
+      .from(tables.push_subscriptions)
+      .where(eq(tables.push_subscriptions.user_id, context.userId))
       .limit(1);
-    if (error) throw new Error(error.message);
-    return { hasSubscription: (data?.length ?? 0) > 0 };
+    return { hasSubscription: rows.length > 0 };
   });

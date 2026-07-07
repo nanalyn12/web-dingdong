@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { getMyProfile, saveOnboarding } from "@/lib/profile.functions";
 import { requestTeacher } from "@/lib/admin.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_app/onboarding")({
   head: () => ({ meta: [{ title: "프로필 설정 — DingDong" }] }),
@@ -76,8 +76,8 @@ function OnboardingPage() {
 
   useEffect(() => {
     // If not signed in, kick to auth.
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) navigate({ to: "/auth", search: { redirect: "/onboarding" } });
+    authClient.getSession().then(({ data }) => {
+      if (!data?.user) navigate({ to: "/auth", search: { redirect: "/onboarding" } });
     });
   }, [navigate]);
 
@@ -110,8 +110,8 @@ function OnboardingPage() {
   const [myEmail, setMyEmail] = useState<string>("");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setMyEmail(data.user?.email ?? "");
+    authClient.getSession().then(({ data }) => {
+      setMyEmail(data?.user?.email ?? "");
     });
   }, []);
 

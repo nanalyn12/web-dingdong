@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/auth-client";
 import {
   loadGuestVocab,
   removeGuestVocab,
@@ -19,23 +19,8 @@ import {
 import type { SrsGrade } from "@/lib/vocab-srs";
 
 export function useAuthedFlag() {
-  const [authed, setAuthed] = useState<boolean | null>(null);
-  useEffect(() => {
-    let cancel = false;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!cancel) setAuthed(!!data.user);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
-      if (e === "SIGNED_IN" || e === "SIGNED_OUT") {
-        supabase.auth.getUser().then(({ data }) => setAuthed(!!data.user));
-      }
-    });
-    return () => {
-      cancel = true;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-  return authed;
+  const { session, loading } = useSession();
+  return loading ? null : !!session;
 }
 
 export function useVocabStore() {

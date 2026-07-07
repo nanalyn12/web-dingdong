@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { z } from "zod";
 
-import type { Json } from "@/integrations/supabase/types";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/db/schema";
+import { requireAuth } from "@/lib/auth-middleware";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 import { assertEditor } from "./courses.functions";
 
@@ -159,27 +159,28 @@ ${titleBlock}
 
 // ---------- Server Function ----------
 export const generateLesson = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
+    const { db, tables } = await import("@/db");
+    const { asc, eq } = await import("drizzle-orm");
 
     // Fetch existing lesson titles in order for context + next order_index.
-    const { data: existing, error: existingErr } = await supabaseAdmin
-      .from("lessons")
-      .select("title, order_index")
-      .eq("course_id", data.courseId)
-      .order("order_index", { ascending: true });
-    if (existingErr) throw new Error(existingErr.message);
-    const existingTitles = (existing ?? []).map((r) => r.title);
+    const existing = await db
+      .select({
+        title: tables.lessons.title,
+        order_index: tables.lessons.order_index,
+      })
+      .from(tables.lessons)
+      .where(eq(tables.lessons.course_id, data.courseId))
+      .orderBy(asc(tables.lessons.order_index));
+    const existingTitles = existing.map((r) => r.title);
     const nextOrder =
-      ((existing ?? []).reduce((m, r) => Math.max(m, r.order_index), 0)) + 1;
+      existing.reduce((m, r) => Math.max(m, r.order_index), 0) + 1;
 
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
@@ -225,9 +226,9 @@ export const generateLesson = createServerFn({ method: "POST" })
         80,
       );
 
-    const { data: inserted, error: insErr } = await supabaseAdmin
-      .from("lessons")
-      .insert({
+    const [inserted] = await db
+      .insert(tables.lessons)
+      .values({
         course_id: data.courseId,
         created_by: context.userId,
         order_index: nextOrder,
@@ -248,10 +249,8 @@ export const generateLesson = createServerFn({ method: "POST" })
         vocab_comparison: toJson(parsed.vocab_comparison),
         cultural_snippet: toJson(parsed.cultural_snippet),
       })
-      .select("id")
-      .single();
-    if (insErr) throw new Error(insErr.message);
+      .returning({ id: tables.lessons.id });
 
-    return { lessonId: inserted.id as string };
+    return { lessonId: inserted.id };
   });
 

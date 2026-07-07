@@ -1,11 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Json } from "@/integrations/supabase/types";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/db/schema";
+import { requireAuth } from "@/lib/auth-middleware";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
-import { assertEditor } from "./courses.functions";
+import { assertEditor, getRole } from "./courses.functions";
 
 const GenerateInput = z.object({
   courseId: z.string().uuid().optional().nullable(),
@@ -114,32 +115,32 @@ function buildPrompt(args: {
 }
 
 export const generateCurriculum = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { db, tables } = await import("@/db");
 
     let courseName: string | null = null;
     let lessonName: string | null = null;
     if (data.courseId) {
-      const { data: c } = await supabaseAdmin
-        .from("courses")
-        .select("title")
-        .eq("id", data.courseId)
-        .maybeSingle();
-      courseName = c?.title ?? null;
+      const c = await db
+        .select({ title: tables.courses.title })
+        .from(tables.courses)
+        .where(eq(tables.courses.id, data.courseId))
+        .limit(1);
+      courseName = c[0]?.title ?? null;
     }
     if (data.lessonId) {
-      const { data: l } = await supabaseAdmin
-        .from("lessons")
-        .select("title")
-        .eq("id", data.lessonId)
-        .maybeSingle();
-      lessonName = l?.title ?? null;
+      const l = await db
+        .select({ title: tables.lessons.title })
+        .from(tables.lessons)
+        .where(eq(tables.lessons.id, data.lessonId))
+        .limit(1);
+      lessonName = l[0]?.title ?? null;
     }
 
     const gateway = createLovableAiGatewayProvider(apiKey);
@@ -180,9 +181,9 @@ export const generateCurriculum = createServerFn({ method: "POST" })
     const finalTitle =
       (parsed.title || `${data.studentGrade} · ${data.durationMinutes}분 수업`).slice(0, 100);
 
-    const { data: inserted, error: insErr } = await supabaseAdmin
-      .from("curriculum_plans")
-      .insert({
+    const [inserted] = await db
+      .insert(tables.curriculum_plans)
+      .values({
         created_by: context.userId,
         course_id: data.courseId ?? null,
         lesson_id: data.lessonId ?? null,
@@ -200,10 +201,8 @@ export const generateCurriculum = createServerFn({ method: "POST" })
         assessment: toJson(parsed.assessment),
         handout_markdown: parsed.handout_markdown,
       })
-      .select("id")
-      .single();
-    if (insErr) throw new Error(insErr.message);
-    return { id: inserted.id as string };
+      .returning({ id: tables.curriculum_plans.id });
+    return { id: inserted.id };
   });
 
 export type CurriculumRow = {
@@ -228,77 +227,67 @@ export type CurriculumRow = {
 };
 
 export const listMyCurriculums = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }) => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: prof } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const isAdmin = prof?.role === "admin";
-    const q = supabaseAdmin
-      .from("curriculum_plans")
-      .select("id, title, student_grade, duration_minutes, created_at")
-      .order("created_at", { ascending: false });
-    const { data, error } = isAdmin ? await q : await q.eq("created_by", context.userId);
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    const { db, tables } = await import("@/db");
+    const isAdmin = (await getRole(context.userId)) === "admin";
+    const cols = {
+      id: tables.curriculum_plans.id,
+      title: tables.curriculum_plans.title,
+      student_grade: tables.curriculum_plans.student_grade,
+      duration_minutes: tables.curriculum_plans.duration_minutes,
+      created_at: tables.curriculum_plans.created_at,
+    };
+    const base = db.select(cols).from(tables.curriculum_plans);
+    const rows = isAdmin
+      ? await base.orderBy(desc(tables.curriculum_plans.created_at))
+      : await base
+          .where(eq(tables.curriculum_plans.created_by, context.userId))
+          .orderBy(desc(tables.curriculum_plans.created_at));
+    return rows;
   });
 
 const IdInput = z.object({ id: z.string().uuid() });
 
 export const getCurriculum = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((i: unknown) => IdInput.parse(i))
   .handler(async ({ data, context }): Promise<CurriculumRow> => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin
-      .from("curriculum_plans")
-      .select("*")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select()
+      .from(tables.curriculum_plans)
+      .where(eq(tables.curriculum_plans.id, data.id))
+      .limit(1);
+    const row = rows[0];
     if (!row) throw new Error("커리큘럼을 찾을 수 없습니다.");
-    const { data: prof } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const isAdmin = prof?.role === "admin";
+    const isAdmin = (await getRole(context.userId)) === "admin";
     if (!isAdmin && row.created_by !== context.userId) {
       throw new Error("접근 권한이 없습니다.");
     }
-    return row as CurriculumRow;
+    return row as unknown as CurriculumRow;
   });
 
 export const deleteCurriculum = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((i: unknown) => IdInput.parse(i))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: prof } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const isAdmin = prof?.role === "admin";
-    const { data: row } = await supabaseAdmin
-      .from("curriculum_plans")
-      .select("created_by")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (!row) throw new Error("커리큘럼을 찾을 수 없습니다.");
-    if (!isAdmin && row.created_by !== context.userId) {
+    const { db, tables } = await import("@/db");
+    const isAdmin = (await getRole(context.userId)) === "admin";
+    const rows = await db
+      .select({ created_by: tables.curriculum_plans.created_by })
+      .from(tables.curriculum_plans)
+      .where(eq(tables.curriculum_plans.id, data.id))
+      .limit(1);
+    if (!rows[0]) throw new Error("커리큘럼을 찾을 수 없습니다.");
+    if (!isAdmin && rows[0].created_by !== context.userId) {
       throw new Error("본인이 만든 커리큘럼만 삭제할 수 있어요.");
     }
-    const { error } = await supabaseAdmin
-      .from("curriculum_plans")
-      .delete()
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    await db
+      .delete(tables.curriculum_plans)
+      .where(eq(tables.curriculum_plans.id, data.id));
     return { ok: true as const };
   });

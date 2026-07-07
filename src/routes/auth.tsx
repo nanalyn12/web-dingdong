@@ -5,7 +5,7 @@ import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { supabase } from "@/integrations/supabase/client";
+import { authClient } from "@/lib/auth-client";
 import { ensureProfile } from "@/lib/profile.functions";
 
 const searchSchema = z.object({
@@ -54,28 +54,25 @@ function AuthPage() {
     }
     setLoading(true);
     try {
-      const email = usernameToEmail(username);
+      const uname = username.trim().toLowerCase();
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const { error } = await authClient.signIn.username({
+          username: uname,
+          password,
+        });
+        if (error) throw new Error(error.message || "로그인 실패");
         toast.success("환영합니다!");
         await afterSignedIn();
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
+        const { error } = await authClient.signUp.email({
+          name: uname,
+          username: uname,
+          email: usernameToEmail(uname),
           password,
-          options: { emailRedirectTo: window.location.origin },
         });
-        if (error) throw error;
-        if (data.session) {
-          toast.success("가입 완료!");
-          await afterSignedIn();
-        } else {
-          // auto-confirm is on; sign in immediately
-          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-          if (signInErr) throw signInErr;
-          await afterSignedIn();
-        }
+        if (error) throw new Error(error.message || "회원가입 실패");
+        toast.success("가입 완료!");
+        await afterSignedIn();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "오류가 발생했어요.");
@@ -87,17 +84,15 @@ function AuthPage() {
   async function onGoogle() {
     setGoogleLoading(true);
     try {
-      // Requires the Google provider to be enabled in the Supabase dashboard
-      // (Authentication → Providers → Google).
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Requires GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET on the server.
+      const { error } = await authClient.signIn.social({
         provider: "google",
-        options: { redirectTo: window.location.origin },
+        callbackURL: search.redirect ?? "/",
       });
       if (error) {
         toast.error(error.message || "Google 로그인 실패");
-        return;
       }
-      // signInWithOAuth redirects the browser; nothing further to do here.
+      // On success the browser redirects to Google; nothing further here.
     } finally {
       setGoogleLoading(false);
     }
@@ -155,7 +150,7 @@ function AuthPage() {
           <input
             type="password"
             required
-            minLength={6}
+            minLength={8}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

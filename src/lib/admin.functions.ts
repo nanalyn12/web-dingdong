@@ -1,17 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth-middleware";
 
 async function assertAdmin(userId: string) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data || data.role !== "admin") {
+  const { db, tables } = await import("@/db");
+  const rows = await db
+    .select({ role: tables.profiles.role })
+    .from(tables.profiles)
+    .where(eq(tables.profiles.id, userId))
+    .limit(1);
+  if (rows[0]?.role !== "admin") {
     throw new Error("관리자만 접근할 수 있어요.");
   }
 }
@@ -34,16 +34,19 @@ const TeacherApplyInput = z.object({
 
 /** Student requests teacher role with contact info + application note. */
 export const requestTeacher = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => TeacherApplyInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: prof, error: e1 } = await supabaseAdmin
-      .from("profiles")
-      .select("role, teacher_status")
-      .eq("id", context.userId)
-      .maybeSingle();
-    if (e1) throw new Error(e1.message);
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({
+        role: tables.profiles.role,
+        teacher_status: tables.profiles.teacher_status,
+      })
+      .from(tables.profiles)
+      .where(eq(tables.profiles.id, context.userId))
+      .limit(1);
+    const prof = rows[0];
     if (!prof) throw new Error("프로필이 없습니다.");
     if (prof.role === "teacher" || prof.role === "admin") {
       return { ok: true, already: true };
@@ -51,9 +54,9 @@ export const requestTeacher = createServerFn({ method: "POST" })
     if (prof.teacher_status === "pending") {
       return { ok: true, already: true };
     }
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
+    await db
+      .update(tables.profiles)
+      .set({
         real_name: data.realName,
         phone: data.phone,
         job: data.job,
@@ -61,8 +64,7 @@ export const requestTeacher = createServerFn({ method: "POST" })
         teacher_status: "pending",
         teacher_applied_at: new Date().toISOString(),
       })
-      .eq("id", context.userId);
-    if (error) throw new Error(error.message);
+      .where(eq(tables.profiles.id, context.userId));
     return { ok: true };
   });
 
@@ -81,56 +83,49 @@ export type PendingTeacher = {
 };
 
 export const listPendingTeachers = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<PendingTeacher[]> => {
     await assertAdmin(context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
-      .from("profiles")
-      .select(
-        "id, nickname, real_name, job, learning_goal, phone, teacher_application_note, teacher_applied_at, created_at",
-      )
-      .eq("teacher_status", "pending")
-      .order("teacher_applied_at", { ascending: true, nullsFirst: false });
-    if (error) throw new Error(error.message);
-    const rows = data ?? [];
-    // Enrich with auth email/phone
-    const enriched = await Promise.all(
-      rows.map(async (r) => {
-        let email: string | null = null;
-        let auth_phone: string | null = null;
-        try {
-          const { data: u } = await supabaseAdmin.auth.admin.getUserById(r.id);
-          email = u?.user?.email ?? null;
-          auth_phone = u?.user?.phone ?? null;
-        } catch {
-          // ignore
-        }
-        return { ...r, email, auth_phone } as PendingTeacher;
-      }),
-    );
-    return enriched;
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({
+        id: tables.profiles.id,
+        nickname: tables.profiles.nickname,
+        real_name: tables.profiles.real_name,
+        job: tables.profiles.job,
+        learning_goal: tables.profiles.learning_goal,
+        phone: tables.profiles.phone,
+        teacher_application_note: tables.profiles.teacher_application_note,
+        teacher_applied_at: tables.profiles.teacher_applied_at,
+        created_at: tables.profiles.created_at,
+        email: tables.user.email,
+      })
+      .from(tables.profiles)
+      .leftJoin(tables.user, eq(tables.user.id, tables.profiles.id))
+      .where(eq(tables.profiles.teacher_status, "pending"))
+      .orderBy(asc(tables.profiles.teacher_applied_at));
+    return rows.map((r) => ({ ...r, auth_phone: null }));
   });
 
 const DecisionInput = z.object({
-  userId: z.string().uuid(),
+  // better-auth user ids are opaque strings, not UUIDs
+  userId: z.string().min(1),
   decision: z.enum(["approve", "reject"]),
 });
 
 export const decideTeacher = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => DecisionInput.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { db, tables } = await import("@/db");
     const patch =
       data.decision === "approve"
         ? { role: "teacher" as const, teacher_status: "approved" as const }
         : { teacher_status: "rejected" as const };
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update(patch)
-      .eq("id", data.userId);
-    if (error) throw new Error(error.message);
+    await db
+      .update(tables.profiles)
+      .set(patch)
+      .where(eq(tables.profiles.id, data.userId));
     return { ok: true };
   });

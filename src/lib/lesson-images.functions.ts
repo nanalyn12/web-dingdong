@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth-middleware";
 import { assertEditor } from "./courses.functions";
 
 const InputSchema = z.object({
@@ -51,28 +51,29 @@ async function generateImageBase64(prompt: string, apiKey: string): Promise<stri
   throw new Error(`이미지 응답 형식을 인식할 수 없습니다: ${JSON.stringify(payload).slice(0, 300)}`);
 }
 
-
 export const generateLessonComicImages = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY 미설정");
 
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
+    const { db, tables } = await import("@/db");
+    const { eq } = await import("drizzle-orm");
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    const { dirname, join } = await import("node:path");
+    const { getMediaDir } = await import("@/lib/suno.server");
 
-    const { data: row, error } = await supabaseAdmin
-      .from("lessons")
-      .select("id, comic_panels")
-      .eq("id", data.lessonId)
-      .single();
-    if (error) throw new Error(error.message);
+    const rows = await db
+      .select({ id: tables.lessons.id, comic_panels: tables.lessons.comic_panels })
+      .from(tables.lessons)
+      .where(eq(tables.lessons.id, data.lessonId))
+      .limit(1);
+    if (!rows[0]) throw new Error("세부 강의를 찾을 수 없습니다.");
 
-    const panels = Array.isArray(row.comic_panels)
-      ? (row.comic_panels as Array<Record<string, unknown>>)
+    const panels = Array.isArray(rows[0].comic_panels)
+      ? (rows[0].comic_panels as Array<Record<string, unknown>>)
       : [];
     if (!panels.length) throw new Error("comic_panels가 비어 있습니다.");
 
@@ -88,30 +89,20 @@ export const generateLessonComicImages = createServerFn({ method: "POST" })
         (typeof p.narration === "string" && p.narration) ||
         "cute friendly scene of two characters chatting";
       const b64 = await generateImageBase64(prompt, apiKey);
-      const bin = atob(b64);
-      const bytes = new Uint8Array(bin.length);
-      for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+      const bytes = Buffer.from(b64, "base64");
 
-      const path = `${data.lessonId}/panel-${i}-${Date.now()}.png`;
-      const { error: upErr } = await supabaseAdmin.storage
-        .from("lesson-images")
-        .upload(path, bytes, { contentType: "image/png", upsert: true });
-      if (upErr) throw new Error(`업로드 실패: ${upErr.message}`);
+      const relPath = `lesson-images/${data.lessonId}/panel-${i}-${Date.now()}.png`;
+      const fullPath = join(getMediaDir(), relPath);
+      await mkdir(dirname(fullPath), { recursive: true });
+      await writeFile(fullPath, bytes);
 
-      const { data: signed, error: signErr } = await supabaseAdmin.storage
-        .from("lesson-images")
-        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (signErr || !signed?.signedUrl) {
-        throw new Error(`Signed URL 실패: ${signErr?.message ?? "unknown"}`);
-      }
-      updated.push({ ...p, image_url: signed.signedUrl });
+      updated.push({ ...p, image_url: `/media/${relPath}` });
     }
 
-    const { error: updErr } = await supabaseAdmin
-      .from("lessons")
-      .update({ comic_panels: updated as unknown as never })
-      .eq("id", data.lessonId);
-    if (updErr) throw new Error(updErr.message);
+    await db
+      .update(tables.lessons)
+      .set({ comic_panels: updated as unknown as import("@/db/schema").Json })
+      .where(eq(tables.lessons.id, data.lessonId));
 
     return { ok: true as const, count: updated.length };
   });

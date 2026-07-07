@@ -1,4 +1,4 @@
-// Suno API client + Supabase Storage helpers. SERVER-ONLY (.server.ts).
+// Suno API client + media storage helpers. SERVER-ONLY (.server.ts).
 // Docs: https://docs.sunoapi.org/suno-api/
 //   POST /api/v1/generate              → create music generation task
 //   GET  /api/v1/generate/record-info  → poll music generation task
@@ -188,32 +188,30 @@ export async function sunoGetMp4(taskId: string): Promise<SunoMp4Record> {
 }
 
 // ─── Storage helpers ────────────────────────────────────────────────────────
-// Suno-hosted files expire in ~15 days. Copy them to the `songs` bucket so
-// learners always have access. Bucket is private — we mint long-lived signed
-// URLs (10 years) and store them in the row.
+// Suno-hosted files expire in ~15 days. Copy them onto the app's persistent
+// disk (a Railway volume mounted at MEDIA_DIR) and serve them through the
+// /media/* route. The stored URL is site-relative so it works on any domain.
 
-const TEN_YEARS_SECONDS = 60 * 60 * 24 * 365 * 10;
+export function getMediaDir(): string {
+  return process.env.MEDIA_DIR || "./data/media";
+}
 
 export async function downloadAndStore(
   sourceUrl: string,
   destPath: string,
-  contentType: string,
+  _contentType: string,
 ): Promise<{ path: string; url: string }> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { mkdir, writeFile } = await import("node:fs/promises");
+  const { dirname, join, normalize } = await import("node:path");
+
   const res = await fetch(sourceUrl);
   if (!res.ok) throw new Error(`다운로드 실패 (${res.status}): ${sourceUrl}`);
   const buf = new Uint8Array(await res.arrayBuffer());
 
-  const { error: upErr } = await supabaseAdmin.storage
-    .from("songs")
-    .upload(destPath, buf, { contentType, upsert: true });
-  if (upErr) throw new Error(`Storage 업로드 실패: ${upErr.message}`);
+  const safePath = normalize(destPath).replace(/^([./\\])+/, "");
+  const fullPath = join(getMediaDir(), safePath);
+  await mkdir(dirname(fullPath), { recursive: true });
+  await writeFile(fullPath, buf);
 
-  const { data, error: signErr } = await supabaseAdmin.storage
-    .from("songs")
-    .createSignedUrl(destPath, TEN_YEARS_SECONDS);
-  if (signErr || !data?.signedUrl) {
-    throw new Error(`Signed URL 생성 실패: ${signErr?.message ?? "unknown"}`);
-  }
-  return { path: destPath, url: data.signedUrl };
+  return { path: safePath, url: `/media/${safePath.replace(/\\/g, "/")}` };
 }

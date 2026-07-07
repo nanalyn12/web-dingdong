@@ -1,10 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { assertEditor } from "@/lib/courses.functions";
+import type { Json } from "@/db/schema";
 
 const LevelEnum = z.enum(["beginner", "intermediate", "advanced"]);
 
@@ -67,20 +69,38 @@ export type SongRow = {
   created_at: string;
 };
 
-const SONG_COLUMNS =
-  "id, title, title_zh, level, cover_url, media_url, video_url, lyrics, vocab, grammar_notes, status, style, topic, suno_audio_task_id, suno_audio_id, suno_mp4_task_id, source, external_url, youtube_id, artist, pinyin, translation, created_at";
+async function fetchSong(songId: string): Promise<SongRow> {
+  const { db, tables } = await import("@/db");
+  const rows = await db
+    .select()
+    .from(tables.songs)
+    .where(eq(tables.songs.id, songId))
+    .limit(1);
+  if (!rows[0]) throw new Error("노래를 찾을 수 없습니다.");
+  return rows[0] as unknown as SongRow;
+}
+
+async function updateSong(
+  songId: string,
+  patch: Record<string, unknown>,
+): Promise<SongRow> {
+  const { db, tables } = await import("@/db");
+  const [row] = await db
+    .update(tables.songs)
+    .set(patch)
+    .where(eq(tables.songs.id, songId))
+    .returning();
+  return row as unknown as SongRow;
+}
 
 export const listSongs = createServerFn({ method: "GET" }).handler(
   async (): Promise<SongRow[]> => {
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data, error } = await supabaseAdmin
-      .from("songs")
-      .select(SONG_COLUMNS)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as SongRow[];
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select()
+      .from(tables.songs)
+      .orderBy(desc(tables.songs.created_at));
+    return rows as unknown as SongRow[];
   },
 );
 
@@ -88,44 +108,28 @@ export const getSong = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({ id: z.string().uuid() }).parse(input),
   )
-  .handler(async ({ data }): Promise<SongRow> => {
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: row, error } = await supabaseAdmin
-      .from("songs")
-      .select(SONG_COLUMNS)
-      .eq("id", data.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!row) throw new Error("노래를 찾을 수 없습니다.");
-    return row as SongRow;
-  });
+  .handler(async ({ data }): Promise<SongRow> => fetchSong(data.id));
 
 export const createSong = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => CreateSongInput.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: row, error } = await supabaseAdmin
-      .from("songs")
-      .insert({
+    const { db, tables } = await import("@/db");
+    const [row] = await db
+      .insert(tables.songs)
+      .values({
         title: data.title,
         title_zh: data.title_zh || null,
         level: data.level,
         cover_url: data.cover_url || null,
         media_url: data.media_url,
-        lyrics: data.lyrics,
+        lyrics: data.lyrics as unknown as Json,
         status: "ready",
         created_by: context.userId,
       })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { songId: row.id as string };
+      .returning({ id: tables.songs.id });
+    return { songId: row.id };
   });
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -148,14 +152,12 @@ const GenerateWithSunoInput = z.object({
 });
 
 export const generateSongWithSuno = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => GenerateWithSunoInput.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const { sunoCreateMusic } = await import("@/lib/suno.server");
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
+    const { db, tables } = await import("@/db");
 
     let taskId: string;
     try {
@@ -194,48 +196,40 @@ export const generateSongWithSuno = createServerFn({ method: "POST" })
       }
     }
 
-    const { data: row, error } = await supabaseAdmin
-      .from("songs")
-      .insert({
-        title: data.title,
-        title_zh: data.title_zh || null,
-        level: data.level,
-        style: data.style,
-        topic: data.topic || null,
-        lyrics: finalLyrics,
-        status: "generating_audio",
-        suno_audio_task_id: taskId,
-        created_by: context.userId,
-      })
-      .select("id")
-      .single();
-    if (error) return { error: error.message, retryable: false } as const;
-    return { songId: row.id as string, taskId } as const;
-
+    try {
+      const [row] = await db
+        .insert(tables.songs)
+        .values({
+          title: data.title,
+          title_zh: data.title_zh || null,
+          level: data.level,
+          style: data.style,
+          topic: data.topic || null,
+          lyrics: finalLyrics as unknown as Json,
+          status: "generating_audio",
+          suno_audio_task_id: taskId,
+          created_by: context.userId,
+        })
+        .returning({ id: tables.songs.id });
+      return { songId: row.id, taskId } as const;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "DB insert 실패";
+      return { error: msg, retryable: false } as const;
+    }
   });
 
-// Poll Suno music task. Once SUCCESS, copy audio + cover into `songs` bucket
-// and update the row with permanent (signed) URLs. Idempotent.
+// Poll Suno music task. Once SUCCESS, copy audio + cover onto the media disk
+// and update the row with permanent URLs. Idempotent.
 export const pollSongGeneration = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ songId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
     const { sunoGetMusic, downloadAndStore } = await import("@/lib/suno.server");
 
-    const { data: song, error } = await supabaseAdmin
-      .from("songs")
-      .select(SONG_COLUMNS)
-      .eq("id", data.songId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!song) throw new Error("노래를 찾을 수 없습니다.");
-    const row = song as SongRow;
+    const row = await fetchSong(data.songId);
 
     // Already finished — return as-is.
     if (row.status === "ready" || row.status === "failed_audio") return row;
@@ -257,10 +251,7 @@ export const pollSongGeneration = createServerFn({ method: "POST" })
       rec.status === "SENSITIVE_WORD_ERROR" ||
       rec.status === "CALLBACK_EXCEPTION"
     ) {
-      await supabaseAdmin
-        .from("songs")
-        .update({ status: "failed_audio" })
-        .eq("id", row.id);
+      await updateSong(row.id, { status: "failed_audio" });
       const hint = AUDIO_FAIL_HINT[rec.status];
       const detail = rec.errorMessage ? ` — ${rec.errorMessage}` : "";
       throw new Error(`${hint ?? `Suno 생성 실패: ${rec.status}`}${detail}`);
@@ -279,7 +270,7 @@ export const pollSongGeneration = createServerFn({ method: "POST" })
       return row; // Wait for audio URL to appear (FIRST_SUCCESS may precede it).
     }
 
-    // Copy assets to Storage for permanent hosting.
+    // Copy assets onto the persistent disk.
     const base = `songs/${row.id}/${track.id}`;
     const audio = await downloadAndStore(
       audioUrl,
@@ -341,20 +332,13 @@ export const pollSongGeneration = createServerFn({ method: "POST" })
       // Keep status = ready so audio playback still works; editor can retry.
     }
 
-    const { data: updated, error: upErr } = await supabaseAdmin
-      .from("songs")
-      .update({
-        media_url: audio.url,
-        cover_url: coverUrl,
-        suno_audio_id: track.id,
-        ...lessonPatch,
-        ...mp4Patch,
-      })
-      .eq("id", row.id)
-      .select(SONG_COLUMNS)
-      .single();
-    if (upErr) throw new Error(upErr.message);
-    return updated as SongRow;
+    return updateSong(row.id, {
+      media_url: audio.url,
+      cover_url: coverUrl,
+      suno_audio_id: track.id,
+      ...lessonPatch,
+      ...mp4Patch,
+    });
   });
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -443,23 +427,13 @@ async function buildSongLessonContent(args: {
 }
 
 export const generateSongLessonContent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ songId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: song, error } = await supabaseAdmin
-      .from("songs")
-      .select(SONG_COLUMNS)
-      .eq("id", data.songId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!song) throw new Error("노래를 찾을 수 없습니다.");
-    const row = song as SongRow;
+    const row = await fetchSong(data.songId);
 
     const patch = await buildSongLessonContent({
       title: row.title,
@@ -468,36 +442,20 @@ export const generateSongLessonContent = createServerFn({ method: "POST" })
       lyrics: row.lyrics,
     });
 
-    const { data: updated, error: upErr } = await supabaseAdmin
-      .from("songs")
-      .update(patch)
-      .eq("id", row.id)
-      .select(SONG_COLUMNS)
-      .single();
-    if (upErr) throw new Error(upErr.message);
-    return updated as SongRow;
+    return updateSong(row.id, patch as unknown as Record<string, unknown>);
   });
 
 // Kick off MP4 video generation for a Suno-generated song.
 export const generateSongMp4 = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ songId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
     const { sunoCreateMp4 } = await import("@/lib/suno.server");
 
-    const { data: row, error } = await supabaseAdmin
-      .from("songs")
-      .select("id, suno_audio_task_id, suno_audio_id, status")
-      .eq("id", data.songId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!row) throw new Error("노래를 찾을 수 없습니다.");
+    const row = await fetchSong(data.songId);
     if (!row.suno_audio_task_id || !row.suno_audio_id) {
       throw new Error("Suno로 생성된 노래만 MP4 영상을 만들 수 있어요.");
     }
@@ -509,35 +467,24 @@ export const generateSongMp4 = createServerFn({ method: "POST" })
       domainName: "dingdong.lms",
     });
 
-    const { error: upErr } = await supabaseAdmin
-      .from("songs")
-      .update({ suno_mp4_task_id: taskId, status: "generating_video" })
-      .eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
+    await updateSong(row.id, {
+      suno_mp4_task_id: taskId,
+      status: "generating_video",
+    });
     return { taskId };
   });
 
-// Poll MP4 task; on SUCCESS copy the file into Storage and save the URL.
+// Poll MP4 task; on SUCCESS copy the file onto the media disk and save the URL.
 export const pollSongMp4 = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ songId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
     const { sunoGetMp4, downloadAndStore } = await import("@/lib/suno.server");
 
-    const { data: song, error } = await supabaseAdmin
-      .from("songs")
-      .select(SONG_COLUMNS)
-      .eq("id", data.songId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!song) throw new Error("노래를 찾을 수 없습니다.");
-    const row = song as SongRow;
+    const row = await fetchSong(data.songId);
     if (row.video_url) return row; // already done
     if (!row.suno_mp4_task_id) throw new Error("MP4 taskId가 없습니다.");
 
@@ -552,10 +499,7 @@ export const pollSongMp4 = createServerFn({ method: "POST" })
       rec.status === "GENERATE_MP4_FAILED" ||
       rec.status === "CALLBACK_EXCEPTION"
     ) {
-      await supabaseAdmin
-        .from("songs")
-        .update({ status: "failed_video" })
-        .eq("id", row.id);
+      await updateSong(row.id, { status: "failed_video" });
       const hint = MP4_FAIL_HINT[rec.status];
       const detail = rec.errorMessage ? ` — ${rec.errorMessage}` : "";
       throw new Error(`${hint ?? `MP4 생성 실패: ${rec.status}`}${detail}`);
@@ -570,14 +514,7 @@ export const pollSongMp4 = createServerFn({ method: "POST" })
       "video/mp4",
     );
 
-    const { data: updated, error: upErr } = await supabaseAdmin
-      .from("songs")
-      .update({ video_url: video.url, status: "ready" })
-      .eq("id", row.id)
-      .select(SONG_COLUMNS)
-      .single();
-    if (upErr) throw new Error(upErr.message);
-    return updated as SongRow;
+    return updateSong(row.id, { video_url: video.url, status: "ready" });
   });
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -674,7 +611,7 @@ ${numbered.map((x) => `${x.n}. ${x.zh}`).join("\n")}
 }
 
 export const draftSongFromKeyword = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => DraftSongInput.parse(input))
   .handler(async ({ data, context }): Promise<DraftedSong> => {
     await assertEditor(context.userId);
@@ -765,23 +702,13 @@ export const draftSongFromKeyword = createServerFn({ method: "POST" })
 // Re-annotate an existing song: regenerate pinyin + Korean for all lyric lines.
 // ──────────────────────────────────────────────────────────────────────────
 export const reannotateSong = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ songId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: song, error } = await supabaseAdmin
-      .from("songs")
-      .select(SONG_COLUMNS)
-      .eq("id", data.songId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!song) throw new Error("노래를 찾을 수 없습니다.");
-    const row = song as SongRow;
+    const row = await fetchSong(data.songId);
 
     const lines = row.lyrics ?? [];
     const zhLines = lines.map((l) => l.zh ?? "");
@@ -794,67 +721,40 @@ export const reannotateSong = createServerFn({ method: "POST" })
       ko: ann.ko[i] || "",
     }));
 
-    const { data: updated, error: upErr } = await supabaseAdmin
-      .from("songs")
-      .update({
-        lyrics: nextLyrics,
-        pinyin: ann.pinyin,
-        translation: ann.ko,
-      })
-      .eq("id", row.id)
-      .select(SONG_COLUMNS)
-      .single();
-    if (upErr) throw new Error(upErr.message);
-    return updated as SongRow;
+    return updateSong(row.id, {
+      lyrics: nextLyrics as unknown as Json,
+      pinyin: ann.pinyin as unknown as Json,
+      translation: ann.ko as unknown as Json,
+    });
   });
-
 
 // ──────────────────────────────────────────────────────────────────────────
 // Cancel a stuck Suno generation → mark as failed so the user can retry/delete.
 // ──────────────────────────────────────────────────────────────────────────
 export const cancelSongGeneration = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ songId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: row, error } = await supabaseAdmin
-      .from("songs")
-      .select("id, status")
-      .eq("id", data.songId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!row) throw new Error("노래를 찾을 수 없습니다.");
+    const row = await fetchSong(data.songId);
     const nextStatus =
       row.status === "generating_video" ? "failed_video" : "failed_audio";
-    const { error: upErr } = await supabaseAdmin
-      .from("songs")
-      .update({ status: nextStatus })
-      .eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
+    await updateSong(row.id, { status: nextStatus });
     return { ok: true, status: nextStatus } as const;
   });
 
 // Delete a song row (editor only).
 export const deleteSong = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ songId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { error } = await supabaseAdmin
-      .from("songs")
-      .delete()
-      .eq("id", data.songId);
-    if (error) throw new Error(error.message);
+    const { db, tables } = await import("@/db");
+    await db.delete(tables.songs).where(eq(tables.songs.id, data.songId));
     return { ok: true } as const;
   });
 
@@ -880,7 +780,7 @@ const CuratedSongInput = z.object({
 });
 
 export const createCuratedSong = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => CuratedSongInput.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
@@ -893,12 +793,10 @@ export const createCuratedSong = createServerFn({ method: "POST" })
       ko: data.translation[i] ?? "",
     }));
 
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
-    const { data: row, error } = await supabaseAdmin
-      .from("songs")
-      .insert({
+    const { db, tables } = await import("@/db");
+    const [row] = await db
+      .insert(tables.songs)
+      .values({
         title: data.title,
         title_zh: data.title_zh || null,
         artist: data.artist || null,
@@ -907,14 +805,12 @@ export const createCuratedSong = createServerFn({ method: "POST" })
         external_url: data.youtube_url,
         youtube_id: ytId,
         cover_url: `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`,
-        lyrics: parsedLyrics,
-        pinyin: data.pinyin,
-        translation: data.translation,
+        lyrics: parsedLyrics as unknown as Json,
+        pinyin: data.pinyin as unknown as Json,
+        translation: data.translation as unknown as Json,
         status: "ready",
         created_by: context.userId,
       })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { songId: row.id as string } as const;
+      .returning({ id: tables.songs.id });
+    return { songId: row.id } as const;
   });

@@ -1,58 +1,65 @@
-import type { Session, User } from "@supabase/supabase-js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { createAuthClient } from "better-auth/react";
+import { usernameClient } from "better-auth/client/plugins";
+import { useEffect, useRef } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
 import { ensureProfile, getMyProfile } from "@/lib/profile.functions";
 
-export function useSession(): { session: Session | null; user: User | null; loading: boolean } {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+export const authClient = createAuthClient({
+  plugins: [usernameClient()],
+});
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
-      setSession(sess);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+type SessionData = ReturnType<typeof authClient.useSession> extends {
+  data: infer D;
+}
+  ? NonNullable<D>
+  : never;
 
-  return { session, user: session?.user ?? null, loading };
+export type SessionUser = SessionData["user"];
+
+/** Drop-in replacement for the old Supabase useSession hook. */
+export function useSession(): {
+  session: SessionData | null;
+  user: SessionUser | null;
+  loading: boolean;
+} {
+  const { data, isPending } = authClient.useSession();
+  return {
+    session: data ?? null,
+    user: data?.user ?? null,
+    loading: isPending,
+  };
 }
 
 /**
  * Listens to auth state changes globally:
- * - On SIGNED_IN: ensures a profiles row exists, applies TEACHER_EMAILS allowlist,
- *   and bumps last_active_at.
+ * - When a session appears: ensures a profiles row exists, applies the
+ *   ADMIN_EMAILS/TEACHER_EMAILS allowlists, and bumps last_active_at.
  * - Invalidates the cached profile query.
  */
 export function AuthBridge() {
+  const { data } = authClient.useSession();
   const ensure = useServerFn(ensureProfile);
   const qc = useQueryClient();
+  const lastUserId = useRef<string | null>(null);
+
+  const userId = data?.user?.id ?? null;
 
   useEffect(() => {
-    // Run once on mount in case the user is already signed in.
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        ensure({}).catch(() => {});
-      }
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        ensure({}).then(() => {
+    if (userId && userId !== lastUserId.current) {
+      lastUserId.current = userId;
+      ensure({})
+        .then(() => {
           qc.invalidateQueries({ queryKey: ["my-profile"] });
-        }).catch(() => {});
-      }
-      if (event === "SIGNED_OUT") {
-        qc.removeQueries({ queryKey: ["my-profile"] });
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [ensure, qc]);
+        })
+        .catch(() => {});
+    }
+    if (!userId && lastUserId.current) {
+      lastUserId.current = null;
+      qc.removeQueries({ queryKey: ["my-profile"] });
+    }
+  }, [userId, ensure, qc]);
 
   return null;
 }

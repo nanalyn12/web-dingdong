@@ -1,1 +1,0 @@
-ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS level text CHECK (level IN ('beginner','intermediate','advanced'));

@@ -24,7 +24,7 @@ import {
   Pencil,
 } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { getLesson } from "@/lib/courses.functions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -164,17 +164,11 @@ function LessonPage() {
   const qc = useQueryClient();
   const callGenImages = useServerFn(generateLessonComicImages);
 
+  const callGetLesson = useServerFn(getLesson);
   const { data: lesson, isLoading, error } = useQuery({
     queryKey: ["lesson", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lessons")
-        .select(
-          "id, title, content_md, level, key_expressions, dialogues, slides, quiz, comic_panels, cultural_note, cultural_snippet",
-        )
-        .eq("id", id)
-        .single();
-      if (error) throw error;
+      const data = await callGetLesson({ data: { lessonId: id } });
       return data as unknown as LessonRow;
     },
   });

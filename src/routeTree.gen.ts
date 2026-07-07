@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as MediaSplatRouteImport } from './routes/media.$'
 import { Route as AppVocabularyRouteImport } from './routes/_app.vocabulary'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppCurriculumRouteImport } from './routes/_app.curriculum'
@@ -19,6 +20,7 @@ import { Route as AppCoursesRouteImport } from './routes/_app.courses'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppSongsIndexRouteImport } from './routes/_app.songs.index'
 import { Route as AppDramasIndexRouteImport } from './routes/_app.dramas.index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as AppVocabularyReviewRouteImport } from './routes/_app.vocabulary.review'
 import { Route as AppSongsIdRouteImport } from './routes/_app.songs.$id'
 import { Route as AppLessonsIdRouteImport } from './routes/_app.lessons.$id'
@@ -40,6 +42,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const MediaSplatRoute = MediaSplatRouteImport.update({
+  id: '/media/$',
+  path: '/media/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppVocabularyRoute = AppVocabularyRouteImport.update({
   id: '/vocabulary',
@@ -75,6 +82,11 @@ const AppDramasIndexRoute = AppDramasIndexRouteImport.update({
   id: '/dramas/',
   path: '/dramas/',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppVocabularyReviewRoute = AppVocabularyReviewRouteImport.update({
   id: '/review',
@@ -121,12 +133,14 @@ export interface FileRoutesByFullPath {
   '/curriculum': typeof AppCurriculumRouteWithChildren
   '/onboarding': typeof AppOnboardingRoute
   '/vocabulary': typeof AppVocabularyRouteWithChildren
+  '/media/$': typeof MediaSplatRoute
   '/courses/$id': typeof AppCoursesIdRoute
   '/curriculum/$id': typeof AppCurriculumIdRoute
   '/dramas/$id': typeof AppDramasIdRoute
   '/lessons/$id': typeof AppLessonsIdRoute
   '/songs/$id': typeof AppSongsIdRoute
   '/vocabulary/review': typeof AppVocabularyReviewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/dramas/': typeof AppDramasIndexRoute
   '/songs/': typeof AppSongsIndexRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
@@ -138,6 +152,7 @@ export interface FileRoutesByTo {
   '/curriculum': typeof AppCurriculumRouteWithChildren
   '/onboarding': typeof AppOnboardingRoute
   '/vocabulary': typeof AppVocabularyRouteWithChildren
+  '/media/$': typeof MediaSplatRoute
   '/': typeof AppIndexRoute
   '/courses/$id': typeof AppCoursesIdRoute
   '/curriculum/$id': typeof AppCurriculumIdRoute
@@ -145,6 +160,7 @@ export interface FileRoutesByTo {
   '/lessons/$id': typeof AppLessonsIdRoute
   '/songs/$id': typeof AppSongsIdRoute
   '/vocabulary/review': typeof AppVocabularyReviewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/dramas': typeof AppDramasIndexRoute
   '/songs': typeof AppSongsIndexRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
@@ -158,6 +174,7 @@ export interface FileRoutesById {
   '/_app/curriculum': typeof AppCurriculumRouteWithChildren
   '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/vocabulary': typeof AppVocabularyRouteWithChildren
+  '/media/$': typeof MediaSplatRoute
   '/_app/': typeof AppIndexRoute
   '/_app/courses/$id': typeof AppCoursesIdRoute
   '/_app/curriculum/$id': typeof AppCurriculumIdRoute
@@ -165,6 +182,7 @@ export interface FileRoutesById {
   '/_app/lessons/$id': typeof AppLessonsIdRoute
   '/_app/songs/$id': typeof AppSongsIdRoute
   '/_app/vocabulary/review': typeof AppVocabularyReviewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/_app/dramas/': typeof AppDramasIndexRoute
   '/_app/songs/': typeof AppSongsIndexRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
@@ -179,12 +197,14 @@ export interface FileRouteTypes {
     | '/curriculum'
     | '/onboarding'
     | '/vocabulary'
+    | '/media/$'
     | '/courses/$id'
     | '/curriculum/$id'
     | '/dramas/$id'
     | '/lessons/$id'
     | '/songs/$id'
     | '/vocabulary/review'
+    | '/api/auth/$'
     | '/dramas/'
     | '/songs/'
     | '/api/public/hooks/reengagement-push'
@@ -196,6 +216,7 @@ export interface FileRouteTypes {
     | '/curriculum'
     | '/onboarding'
     | '/vocabulary'
+    | '/media/$'
     | '/'
     | '/courses/$id'
     | '/curriculum/$id'
@@ -203,6 +224,7 @@ export interface FileRouteTypes {
     | '/lessons/$id'
     | '/songs/$id'
     | '/vocabulary/review'
+    | '/api/auth/$'
     | '/dramas'
     | '/songs'
     | '/api/public/hooks/reengagement-push'
@@ -215,6 +237,7 @@ export interface FileRouteTypes {
     | '/_app/curriculum'
     | '/_app/onboarding'
     | '/_app/vocabulary'
+    | '/media/$'
     | '/_app/'
     | '/_app/courses/$id'
     | '/_app/curriculum/$id'
@@ -222,6 +245,7 @@ export interface FileRouteTypes {
     | '/_app/lessons/$id'
     | '/_app/songs/$id'
     | '/_app/vocabulary/review'
+    | '/api/auth/$'
     | '/_app/dramas/'
     | '/_app/songs/'
     | '/api/public/hooks/reengagement-push'
@@ -230,6 +254,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  MediaSplatRoute: typeof MediaSplatRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPublicHooksReengagementPushRoute: typeof ApiPublicHooksReengagementPushRoute
 }
 
@@ -255,6 +281,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/media/$': {
+      id: '/media/$'
+      path: '/media/$'
+      fullPath: '/media/$'
+      preLoaderRoute: typeof MediaSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/vocabulary': {
       id: '/_app/vocabulary'
@@ -304,6 +337,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dramas/'
       preLoaderRoute: typeof AppDramasIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/vocabulary/review': {
       id: '/_app/vocabulary/review'
@@ -426,6 +466,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  MediaSplatRoute: MediaSplatRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPublicHooksReengagementPushRoute: ApiPublicHooksReengagementPushRoute,
 }
 export const routeTree = rootRouteImport
