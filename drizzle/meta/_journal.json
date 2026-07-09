@@ -15,6 +15,13 @@
       "when": 1783570351696,
       "tag": "0001_bored_robbie_robertson",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783572372414,
+      "tag": "0002_jazzy_timeslip",
+      "breakpoints": true
     }
   ]
 }

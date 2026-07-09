@@ -14,12 +14,15 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as MediaSplatRouteImport } from './routes/media.$'
 import { Route as AppVocabularyRouteImport } from './routes/_app.vocabulary'
+import { Route as AppStudioRouteImport } from './routes/_app.studio'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppCurriculumRouteImport } from './routes/_app.curriculum'
 import { Route as AppCoursesRouteImport } from './routes/_app.courses'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppSongsIndexRouteImport } from './routes/_app.songs.index'
 import { Route as AppDramasIndexRouteImport } from './routes/_app.dramas.index'
+import { Route as ApiYoutubeConnectRouteImport } from './routes/api/youtube.connect'
+import { Route as ApiYoutubeCallbackRouteImport } from './routes/api/youtube.callback'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as AppVocabularyReviewRouteImport } from './routes/_app.vocabulary.review'
 import { Route as AppSongsIdRouteImport } from './routes/_app.songs.$id'
@@ -53,6 +56,11 @@ const AppVocabularyRoute = AppVocabularyRouteImport.update({
   path: '/vocabulary',
   getParentRoute: () => AppRoute,
 } as any)
+const AppStudioRoute = AppStudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppOnboardingRoute = AppOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -82,6 +90,16 @@ const AppDramasIndexRoute = AppDramasIndexRouteImport.update({
   id: '/dramas/',
   path: '/dramas/',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiYoutubeConnectRoute = ApiYoutubeConnectRouteImport.update({
+  id: '/api/youtube/connect',
+  path: '/api/youtube/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiYoutubeCallbackRoute = ApiYoutubeCallbackRouteImport.update({
+  id: '/api/youtube/callback',
+  path: '/api/youtube/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -132,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/courses': typeof AppCoursesRouteWithChildren
   '/curriculum': typeof AppCurriculumRouteWithChildren
   '/onboarding': typeof AppOnboardingRoute
+  '/studio': typeof AppStudioRoute
   '/vocabulary': typeof AppVocabularyRouteWithChildren
   '/media/$': typeof MediaSplatRoute
   '/courses/$id': typeof AppCoursesIdRoute
@@ -141,6 +160,8 @@ export interface FileRoutesByFullPath {
   '/songs/$id': typeof AppSongsIdRoute
   '/vocabulary/review': typeof AppVocabularyReviewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/youtube/callback': typeof ApiYoutubeCallbackRoute
+  '/api/youtube/connect': typeof ApiYoutubeConnectRoute
   '/dramas/': typeof AppDramasIndexRoute
   '/songs/': typeof AppSongsIndexRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
@@ -151,6 +172,7 @@ export interface FileRoutesByTo {
   '/courses': typeof AppCoursesRouteWithChildren
   '/curriculum': typeof AppCurriculumRouteWithChildren
   '/onboarding': typeof AppOnboardingRoute
+  '/studio': typeof AppStudioRoute
   '/vocabulary': typeof AppVocabularyRouteWithChildren
   '/media/$': typeof MediaSplatRoute
   '/': typeof AppIndexRoute
@@ -161,6 +183,8 @@ export interface FileRoutesByTo {
   '/songs/$id': typeof AppSongsIdRoute
   '/vocabulary/review': typeof AppVocabularyReviewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/youtube/callback': typeof ApiYoutubeCallbackRoute
+  '/api/youtube/connect': typeof ApiYoutubeConnectRoute
   '/dramas': typeof AppDramasIndexRoute
   '/songs': typeof AppSongsIndexRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
@@ -173,6 +197,7 @@ export interface FileRoutesById {
   '/_app/courses': typeof AppCoursesRouteWithChildren
   '/_app/curriculum': typeof AppCurriculumRouteWithChildren
   '/_app/onboarding': typeof AppOnboardingRoute
+  '/_app/studio': typeof AppStudioRoute
   '/_app/vocabulary': typeof AppVocabularyRouteWithChildren
   '/media/$': typeof MediaSplatRoute
   '/_app/': typeof AppIndexRoute
@@ -183,6 +208,8 @@ export interface FileRoutesById {
   '/_app/songs/$id': typeof AppSongsIdRoute
   '/_app/vocabulary/review': typeof AppVocabularyReviewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/youtube/callback': typeof ApiYoutubeCallbackRoute
+  '/api/youtube/connect': typeof ApiYoutubeConnectRoute
   '/_app/dramas/': typeof AppDramasIndexRoute
   '/_app/songs/': typeof AppSongsIndexRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
@@ -196,6 +223,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/curriculum'
     | '/onboarding'
+    | '/studio'
     | '/vocabulary'
     | '/media/$'
     | '/courses/$id'
@@ -205,6 +233,8 @@ export interface FileRouteTypes {
     | '/songs/$id'
     | '/vocabulary/review'
     | '/api/auth/$'
+    | '/api/youtube/callback'
+    | '/api/youtube/connect'
     | '/dramas/'
     | '/songs/'
     | '/api/public/hooks/reengagement-push'
@@ -215,6 +245,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/curriculum'
     | '/onboarding'
+    | '/studio'
     | '/vocabulary'
     | '/media/$'
     | '/'
@@ -225,6 +256,8 @@ export interface FileRouteTypes {
     | '/songs/$id'
     | '/vocabulary/review'
     | '/api/auth/$'
+    | '/api/youtube/callback'
+    | '/api/youtube/connect'
     | '/dramas'
     | '/songs'
     | '/api/public/hooks/reengagement-push'
@@ -236,6 +269,7 @@ export interface FileRouteTypes {
     | '/_app/courses'
     | '/_app/curriculum'
     | '/_app/onboarding'
+    | '/_app/studio'
     | '/_app/vocabulary'
     | '/media/$'
     | '/_app/'
@@ -246,6 +280,8 @@ export interface FileRouteTypes {
     | '/_app/songs/$id'
     | '/_app/vocabulary/review'
     | '/api/auth/$'
+    | '/api/youtube/callback'
+    | '/api/youtube/connect'
     | '/_app/dramas/'
     | '/_app/songs/'
     | '/api/public/hooks/reengagement-push'
@@ -256,6 +292,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   MediaSplatRoute: typeof MediaSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiYoutubeCallbackRoute: typeof ApiYoutubeCallbackRoute
+  ApiYoutubeConnectRoute: typeof ApiYoutubeConnectRoute
   ApiPublicHooksReengagementPushRoute: typeof ApiPublicHooksReengagementPushRoute
 }
 
@@ -294,6 +332,13 @@ declare module '@tanstack/react-router' {
       path: '/vocabulary'
       fullPath: '/vocabulary'
       preLoaderRoute: typeof AppVocabularyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/studio': {
+      id: '/_app/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof AppStudioRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/onboarding': {
@@ -337,6 +382,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/dramas/'
       preLoaderRoute: typeof AppDramasIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/youtube/connect': {
+      id: '/api/youtube/connect'
+      path: '/api/youtube/connect'
+      fullPath: '/api/youtube/connect'
+      preLoaderRoute: typeof ApiYoutubeConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/youtube/callback': {
+      id: '/api/youtube/callback'
+      path: '/api/youtube/callback'
+      fullPath: '/api/youtube/callback'
+      preLoaderRoute: typeof ApiYoutubeCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -438,6 +497,7 @@ interface AppRouteChildren {
   AppCoursesRoute: typeof AppCoursesRouteWithChildren
   AppCurriculumRoute: typeof AppCurriculumRouteWithChildren
   AppOnboardingRoute: typeof AppOnboardingRoute
+  AppStudioRoute: typeof AppStudioRoute
   AppVocabularyRoute: typeof AppVocabularyRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppDramasIdRoute: typeof AppDramasIdRoute
@@ -452,6 +512,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCoursesRoute: AppCoursesRouteWithChildren,
   AppCurriculumRoute: AppCurriculumRouteWithChildren,
   AppOnboardingRoute: AppOnboardingRoute,
+  AppStudioRoute: AppStudioRoute,
   AppVocabularyRoute: AppVocabularyRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppDramasIdRoute: AppDramasIdRoute,
@@ -468,6 +529,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   MediaSplatRoute: MediaSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiYoutubeCallbackRoute: ApiYoutubeCallbackRoute,
+  ApiYoutubeConnectRoute: ApiYoutubeConnectRoute,
   ApiPublicHooksReengagementPushRoute: ApiPublicHooksReengagementPushRoute,
 }
 export const routeTree = rootRouteImport

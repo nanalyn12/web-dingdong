@@ -1,0 +1,169 @@
+import { createServerFn } from "@tanstack/react-start";
+import { desc, eq } from "drizzle-orm";
+import { z } from "zod";
+
+import { requireAuth } from "@/lib/auth-middleware";
+import { assertEditor } from "@/lib/courses.functions";
+import type { Json, VideoJob } from "@/db/schema";
+import type { VideoJobConfig } from "./config";
+
+const ConfigInput = z.object({
+  keyword: z.string().trim().min(1, "키워드를 입력하세요").max(60),
+  topic: z.string().trim().min(1, "주제를 입력하거나 추천받으세요").max(120),
+  audience: z.string().trim().min(1).max(80).default("중국어 입문 성인 학습자"),
+  lengthSeconds: z.number().int().min(30).max(300),
+  language: z.enum(["ko", "zh"]),
+  focus: z.enum(["culture", "grammar", "entertainment", "daily"]),
+  resolution: z.enum(["1280x720", "1920x1080"]),
+  clipCount: z.number().int().min(3).max(20),
+  voice: z.string().min(1),
+  burnSubtitles: z.boolean().default(true),
+  uploadMode: z.enum(["auto", "approval"]),
+  privacy: z.enum(["private", "unlisted", "public"]).default("private"),
+});
+
+const CreateInput = z.object({
+  config: ConfigInput,
+  count: z.number().int().min(1).max(3).default(1),
+});
+
+export const createVideoJobs = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => CreateInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const ids: string[] = [];
+    for (let i = 0; i < data.count; i++) {
+      const [row] = await db
+        .insert(tables.video_jobs)
+        .values({
+          created_by: context.userId,
+          config: data.config as unknown as Json,
+        })
+        .returning({ id: tables.video_jobs.id });
+      ids.push(row.id);
+    }
+    const { kickVideoWorker } = await import("./pipeline.server");
+    kickVideoWorker();
+    return { ids };
+  });
+
+export const listVideoJobs = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }): Promise<VideoJob[]> => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select()
+      .from(tables.video_jobs)
+      .orderBy(desc(tables.video_jobs.created_at))
+      .limit(30);
+    return rows;
+  });
+
+const IdInput = z.object({ id: z.string().uuid() });
+
+export const approveVideoUpload = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => IdInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { uploadAndFinalize } = await import("./pipeline.server");
+    // Fire and forget — UI polls job status.
+    void uploadAndFinalize(data.id).catch(() => {});
+    return { ok: true };
+  });
+
+export const retryVideoJob = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => IdInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select()
+      .from(tables.video_jobs)
+      .where(eq(tables.video_jobs.id, data.id))
+      .limit(1);
+    const job = rows[0];
+    if (!job) throw new Error("작업을 찾을 수 없습니다.");
+    if (job.status !== "failed") throw new Error("실패한 작업만 재시도할 수 있어요.");
+    // Rendered video already exists → only the upload phase failed.
+    if (job.video_path && job.error?.startsWith("업로드/콘텐츠")) {
+      const { uploadAndFinalize } = await import("./pipeline.server");
+      await db
+        .update(tables.video_jobs)
+        .set({ error: null })
+        .where(eq(tables.video_jobs.id, data.id));
+      void uploadAndFinalize(data.id).catch(() => {});
+    } else {
+      await db
+        .update(tables.video_jobs)
+        .set({ status: "queued", error: null, progress: 0, step: "대기 중" })
+        .where(eq(tables.video_jobs.id, data.id));
+      const { kickVideoWorker } = await import("./pipeline.server");
+      kickVideoWorker();
+    }
+    return { ok: true };
+  });
+
+export const deleteVideoJob = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => IdInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({ video_path: tables.video_jobs.video_path, thumbnail_path: tables.video_jobs.thumbnail_path })
+      .from(tables.video_jobs)
+      .where(eq(tables.video_jobs.id, data.id))
+      .limit(1);
+    await db.delete(tables.video_jobs).where(eq(tables.video_jobs.id, data.id));
+    // Clean media files
+    if (rows[0]) {
+      const { rm } = await import("node:fs/promises");
+      const { join } = await import("node:path");
+      const { getMediaDir } = await import("@/lib/suno.server");
+      for (const p of [rows[0].video_path, rows[0].thumbnail_path]) {
+        if (p) await rm(join(getMediaDir(), p), { force: true }).catch(() => {});
+      }
+    }
+    return { ok: true };
+  });
+
+export const getYouTubeStatus = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) => {
+    await assertEditor(context.userId);
+    const { youtubeConnected } = await import("./youtube.server");
+    return { connected: await youtubeConnected() };
+  });
+
+const SuggestInput = z.object({
+  keyword: z.string().trim().min(1).max(60),
+  focus: z.enum(["culture", "grammar", "entertainment", "daily"]),
+  audience: z.string().trim().max(80).default("중국어 입문 성인 학습자"),
+});
+
+export const suggestVideoTopics = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => SuggestInput.parse(i))
+  .handler(async ({ data, context }): Promise<string[]> => {
+    await assertEditor(context.userId);
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("LOVABLE_API_KEY 미설정");
+    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+    const { generateText } = await import("ai");
+    const gateway = createLovableAiGatewayProvider(key);
+    const focusKo = { culture: "중국 문화", grammar: "중국어 어법", entertainment: "중국 연예/트렌드", daily: "일상 회화" }[data.focus];
+    const { text } = await generateText({
+      model: gateway("google/gemini-2.5-flash"),
+      prompt: `키워드 "${data.keyword}", 분야 "${focusKo}", 타겟 "${data.audience}"에 맞는 유튜브 교육 영상 주제 5개를 제안해줘. 클릭하고 싶은 구체적인 제목형 주제로. JSON 배열만 출력: ["주제1","주제2","주제3","주제4","주제5"]`,
+      temperature: 0.8,
+    });
+    const s = text.indexOf("[");
+    const e = text.lastIndexOf("]");
+    if (s < 0 || e <= s) throw new Error("주제 추천 파싱 실패");
+    return (JSON.parse(text.slice(s, e + 1)) as string[]).slice(0, 5);
+  });

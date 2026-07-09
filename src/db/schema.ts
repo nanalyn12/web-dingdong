@@ -277,6 +277,35 @@ export const push_subscriptions = pgTable("push_subscriptions", {
   updated_at: ts("updated_at").notNull().defaultNow(),
 });
 
+export const video_jobs = pgTable("video_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  created_by: text("created_by")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  // Wizard settings snapshot (keyword, topic, audience, length, language,
+  // focus, resolution, clip count, voice, subtitle mode, upload mode, ...)
+  config: jsonb("config").$type<Json>().notNull(),
+  status: text("status").notNull().default("queued"), // queued|running|awaiting_approval|uploading|done|failed
+  step: text("step").notNull().default("대기 중"),
+  progress: integer("progress").notNull().default(0), // 0-100
+  error: text("error"),
+  script: jsonb("script").$type<Json>(), // generated scenes w/ timings
+  srt: text("srt"),
+  video_path: text("video_path"), // relative path under MEDIA_DIR
+  thumbnail_path: text("thumbnail_path"),
+  youtube_video_id: text("youtube_video_id"),
+  drama_id: uuid("drama_id").references(() => dramas.id, { onDelete: "set null" }),
+  created_at: ts("created_at").notNull().defaultNow(),
+  updated_at: ts("updated_at").notNull().defaultNow(),
+});
+
+// Single-row style credential store (e.g. YouTube OAuth refresh token).
+export const app_credentials = pgTable("app_credentials", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<Json>().notNull(),
+  updated_at: ts("updated_at").notNull().defaultNow(),
+});
+
 // Row types (drop-in replacements for the old supabase Row types)
 export type Profile = typeof profiles.$inferSelect;
 export type Course = typeof courses.$inferSelect;
@@ -286,3 +315,4 @@ export type Drama = typeof dramas.$inferSelect;
 export type Song = typeof songs.$inferSelect;
 export type VocabRow = typeof vocabulary.$inferSelect;
 export type PushSubscription = typeof push_subscriptions.$inferSelect;
+export type VideoJob = typeof video_jobs.$inferSelect;

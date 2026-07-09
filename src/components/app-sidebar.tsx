@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarClock, ChevronRight, Film, GraduationCap, Home, Music, ShieldCheck, Sparkles } from "lucide-react";
+import { BookOpen, CalendarClock, ChevronRight, Clapperboard, Film, GraduationCap, Home, Music, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import { listCoursesWithLessons } from "@/lib/courses.functions";
@@ -74,6 +74,20 @@ export function AppSidebar() {
           >
             <CalendarClock className="size-4" />
             <span>커리큘럼 생성기</span>
+          </Link>
+        )}
+        {isEditor && (
+          <Link
+            to="/studio"
+            className={[
+              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
+              pathname.startsWith("/studio")
+                ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
+                : "text-foreground/80 hover:bg-white/40",
+            ].join(" ")}
+          >
+            <Clapperboard className="size-4" />
+            <span>영상 스튜디오</span>
           </Link>
         )}
         {isAdmin && (
