@@ -57,8 +57,11 @@ export function kickVideoWorker() {
 // ─── ffmpeg helpers ──────────────────────────────────────────────────────────
 
 async function ffmpegPath(): Promise<string> {
-  const mod = await import("ffmpeg-static");
-  const p = (mod.default ?? mod) as unknown as string;
+  // ffmpeg-static is CJS and relies on __dirname — load it natively via
+  // createRequire so the bundler leaves it alone.
+  const { createRequire } = await import("node:module");
+  const req = createRequire(import.meta.url);
+  const p = req("ffmpeg-static") as string | null;
   if (!p) throw new Error("ffmpeg 바이너리를 찾을 수 없습니다.");
   return p;
 }
