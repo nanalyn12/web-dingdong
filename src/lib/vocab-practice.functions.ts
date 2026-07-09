@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { z } from "zod";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { createTextProvider } from "./ai-gateway.server";
 
 const Input = z.object({
   zh: z.string().min(1),
@@ -47,9 +47,7 @@ function extractJson(text: string) {
 export const generateVocabPractice = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<VocabPractice> => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY missing");
-    const gateway = createLovableAiGatewayProvider(key);
+    const gateway = createTextProvider();
 
     const system = [
       "당신은 친절한 중국어 선생님 '叮叮'입니다.",

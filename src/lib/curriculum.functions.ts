@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { Json } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-middleware";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { createTextProvider } from "./ai-gateway.server";
 import { assertEditor, getRole } from "./courses.functions";
 
 const GenerateInput = z.object({
@@ -119,9 +119,6 @@ export const generateCurriculum = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
-
     const { db, tables } = await import("@/db");
 
     let courseName: string | null = null;
@@ -143,7 +140,7 @@ export const generateCurriculum = createServerFn({ method: "POST" })
       lessonName = l[0]?.title ?? null;
     }
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
+    const gateway = createTextProvider();
     const model = gateway("google/gemini-2.5-flash");
 
     let parsed: z.infer<typeof OutputSchema>;

@@ -11,8 +11,50 @@ const InputSchema = z.object({
 const STYLE_SUFFIX =
   ", warm pastel watercolor illustration, cute friendly chibi style, soft lighting, no text, no characters, no captions, no letters, no words, no logos, no signs";
 
+// Image generation with two backends: Gemini native API (GEMINI_API_KEY)
+// or the legacy Lovable gateway (LOVABLE_API_KEY). Returns base64 PNG.
+async function generateImageBase64(prompt: string): Promise<string> {
+  const gemini = process.env.GEMINI_API_KEY;
+  if (gemini) return generateImageGemini(prompt, gemini);
+  const lovable = process.env.LOVABLE_API_KEY;
+  if (lovable) return generateImageLovable(prompt, lovable);
+  throw new Error("이미지 생성 키가 없습니다 — GEMINI_API_KEY 또는 LOVABLE_API_KEY 필요");
+}
+
+async function generateImageGemini(prompt: string, apiKey: string): Promise<string> {
+  const res = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt + STYLE_SUFFIX }] }],
+        generationConfig: { responseModalities: ["IMAGE"] },
+      }),
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`이미지 생성 실패 (${res.status}): ${text.slice(0, 300)}`);
+  }
+  const payload = (await res.json()) as {
+    candidates?: Array<{
+      content?: { parts?: Array<{ inlineData?: { data?: string } }> };
+    }>;
+  };
+  const b64 = payload.candidates?.[0]?.content?.parts?.find(
+    (p) => p.inlineData?.data,
+  )?.inlineData?.data;
+  if (!b64) {
+    throw new Error(
+      `이미지 응답 형식을 인식할 수 없습니다: ${JSON.stringify(payload).slice(0, 300)}`,
+    );
+  }
+  return b64;
+}
+
 // Lovable AI Gateway image endpoint. Returns base64 in JSON response.
-async function generateImageBase64(prompt: string, apiKey: string): Promise<string> {
+async function generateImageLovable(prompt: string, apiKey: string): Promise<string> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -56,9 +98,6 @@ export const generateLessonComicImages = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY 미설정");
-
     const { db, tables } = await import("@/db");
     const { eq } = await import("drizzle-orm");
     const { mkdir, writeFile } = await import("node:fs/promises");
@@ -88,7 +127,7 @@ export const generateLessonComicImages = createServerFn({ method: "POST" })
         (typeof p.image_prompt === "string" && p.image_prompt) ||
         (typeof p.narration === "string" && p.narration) ||
         "cute friendly scene of two characters chatting";
-      const b64 = await generateImageBase64(prompt, apiKey);
+      const b64 = await generateImageBase64(prompt);
       const bytes = Buffer.from(b64, "base64");
 
       const relPath = `lesson-images/${data.lessonId}/panel-${i}-${Date.now()}.png`;

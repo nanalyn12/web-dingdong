@@ -111,11 +111,9 @@ function escapeDrawtext(t: string): string {
 // ─── script generation ───────────────────────────────────────────────────────
 
 async function generateScript(cfg: VideoJobConfig): Promise<VideoScript> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY 미설정");
-  const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+  const { createTextProvider } = await import("@/lib/ai-gateway.server");
   const { generateText } = await import("ai");
-  const gateway = createLovableAiGatewayProvider(key);
+  const gateway = createTextProvider();
 
   const focusKo = {
     culture: "중국 문화 상식",

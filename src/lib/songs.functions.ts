@@ -4,7 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { createTextProvider } from "@/lib/ai-gateway.server";
 import { assertEditor } from "@/lib/courses.functions";
 import type { Json } from "@/db/schema";
 
@@ -371,8 +371,6 @@ async function buildSongLessonContent(args: {
   level: "beginner" | "intermediate" | "advanced";
   lyrics: LyricLine[];
 }): Promise<{ vocab: VocabItem[]; grammar_notes: GrammarNote[] }> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY is missing");
 
   const targets = {
     beginner: { vocab: 6, grammar: 3 },
@@ -386,7 +384,7 @@ async function buildSongLessonContent(args: {
     .join("\n");
 
   const { generateText, Output } = await import("ai");
-  const gateway = createLovableAiGatewayProvider(key);
+  const gateway = createTextProvider();
   const model = gateway("google/gemini-3-flash-preview");
 
   const systemMsg =
@@ -547,8 +545,6 @@ async function annotateLyricsInternal(
   zhLines: string[],
 ): Promise<{ pinyin: string[]; ko: string[]; error?: string }> {
   const empty = zhLines.map(() => "");
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) return { pinyin: empty, ko: empty, error: "LOVABLE_API_KEY 없음" };
   if (zhLines.length === 0) return { pinyin: [], ko: [] };
 
   // Mark which lines to annotate; keep 1-based line numbers for the prompt.
@@ -557,7 +553,7 @@ async function annotateLyricsInternal(
     .filter((x) => !x.skip);
   if (numbered.length === 0) return { pinyin: empty, ko: empty };
 
-  const gateway = createLovableAiGatewayProvider(key);
+  const gateway = createTextProvider();
   const prompt = `아래 중국어 학습송 가사의 각 라인에 성조 기호가 포함된 한어병음과 자연스러운 한국어 번역을 붙여주세요.
 반드시 아래 JSON만 출력하세요 (코드펜스 없이). "lines" 배열의 각 항목은 { "n": 라인번호, "pinyin": "...", "ko": "..." } 형식이고, 입력 라인 번호를 그대로 사용하세요.
 
@@ -615,10 +611,8 @@ export const draftSongFromKeyword = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => DraftSongInput.parse(input))
   .handler(async ({ data, context }): Promise<DraftedSong> => {
     await assertEditor(context.userId);
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY가 설정되지 않았습니다.");
 
-    const gateway = createLovableAiGatewayProvider(key);
+    const gateway = createTextProvider();
     const levelHint =
       data.level === "beginner"
         ? "HSK 1~2 수준의 아주 쉬운 단어와 짧은 문장 (4~7자)"
@@ -655,7 +649,7 @@ export const draftSongFromKeyword = createServerFn({ method: "POST" })
         : /402|credit|insufficient/i.test(msg)
           ? "AI 크레딧이 부족해요. 관리자에게 문의하거나 충전 후 다시 시도해주세요."
           : /401|unauthor|api.?key/i.test(msg)
-            ? "Gemini API 키 인증 실패. LOVABLE_API_KEY 시크릿을 확인해주세요."
+            ? "Gemini API 키 인증 실패. GEMINI_API_KEY 시크릿을 확인해주세요."
             : null;
       throw new Error(`Gemini 호출 실패 — ${friendly ?? msg}`);
     }

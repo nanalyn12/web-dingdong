@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { generateText } from "ai";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
@@ -120,9 +121,6 @@ export async function generateSceneData(args: {
   title?: string;
   lang?: "auto" | "zh-CN" | "zh-TW" | "en";
 }): Promise<GenerateSceneResult> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
-
   const videoId = extractVideoId(args.youtubeUrl);
   if (!videoId) throw new Error("올바른 YouTube URL이 아닙니다.");
 
@@ -175,48 +173,32 @@ export async function generateSceneData(args: {
     captionsBlock +
     captionRule;
 
-  // Note: we intentionally send captions as the primary source. The Lovable
-  // AI gateway (OpenAI-compatible) doesn't accept YouTube URL as a native
-  // video part, so we surface the URL prominently in the prompt and let
-  // Gemini fetch it when the model chooses to.
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
-      messages: [{ role: "user", content: [{ type: "text", text: promptText }] }],
+  // Note: we intentionally send captions as the primary source — the
+  // OpenAI-compatible endpoints don't accept a YouTube URL as a native video
+  // part, so we surface the URL prominently in the prompt.
+  const { createTextProvider } = await import("@/lib/ai-gateway.server");
+  const gateway = createTextProvider();
+  let text = "";
+  try {
+    const result = await generateText({
+      model: gateway("google/gemini-2.5-pro"),
+      prompt: promptText,
       temperature: 0.2,
-      max_tokens: 16384,
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    if (res.status === 429) throw new Error("AI 요청 한도를 잠깐 초과했어요. 30초~1분 후 다시 시도해주세요. (429)");
-    if (res.status === 402) throw new Error("AI 크레딧이 소진되었습니다. 관리자에게 크레딧 충전을 요청해주세요. (402)");
-    if (res.status === 408 || res.status === 504) throw new Error("AI 응답이 너무 오래 걸려요. 영상이 너무 긴 경우일 수 있어요.");
-    if (res.status >= 500) throw new Error(`AI 서버가 일시적으로 불안정해요. (${res.status})`);
-    if (res.status === 400) throw new Error(`AI가 이 영상을 분석하지 못했어요. (400) ${errText.slice(0, 200)}`);
-    throw new Error(`AI 호출 실패 (${res.status}): ${errText.slice(0, 300)}`);
-  }
-  const json = (await res.json()) as {
-    choices?: { message?: { content?: string }; finish_reason?: string }[];
-    usage?: { completion_tokens?: number; prompt_tokens?: number };
-  };
-  const choice = json.choices?.[0];
-  const text = choice?.message?.content ?? "";
-  const finish = choice?.finish_reason;
-  if (!text) {
-    console.error("[generate-drama] Empty AI response", {
-      finish_reason: finish,
-      usage: json.usage,
+      maxOutputTokens: 16384,
     });
-    if (finish === "length" || finish === "MAX_TOKENS") {
-      throw new Error(
-        "AI 응답이 최대 길이를 초과했어요 (thinking 토큰이 예산을 다 씀). 영상이 너무 길거나 자막이 많은 경우예요 — 더 짧은 영상으로 시도해주세요.",
-      );
-    }
-    throw new Error(`AI 응답이 비어 있습니다. (finish_reason=${finish ?? "unknown"})`);
+    text = result.text;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/429|rate.?limit|quota/i.test(msg))
+      throw new Error("AI 요청 한도를 잠깐 초과했어요. 30초~1분 후 다시 시도해주세요. (429)");
+    if (/402|credit|insufficient/i.test(msg))
+      throw new Error("AI 크레딧이 소진되었습니다. 충전 후 다시 시도해주세요. (402)");
+    if (/timeout|408|504/i.test(msg))
+      throw new Error("AI 응답이 너무 오래 걸려요. 영상이 너무 긴 경우일 수 있어요.");
+    throw new Error(`AI 호출 실패: ${msg.slice(0, 300)}`);
+  }
+  if (!text) {
+    throw new Error("AI 응답이 비어 있습니다. 더 짧은 영상으로 시도해주세요.");
   }
   let parsed: GenerateSceneResult["parsed"];
   try {

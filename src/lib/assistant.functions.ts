@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { z } from "zod";
 
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { createTextProvider } from "./ai-gateway.server";
 
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -53,10 +53,7 @@ const NAV_RE = /<<NAV:(\/[a-zA-Z0-9/_-]*)>>/;
 export const assistantChat = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
-
-    const gateway = createLovableAiGatewayProvider(key);
+    const gateway = createTextProvider();
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-flash"),
       system: SYSTEM_PROMPT,

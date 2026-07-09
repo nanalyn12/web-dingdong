@@ -151,11 +151,9 @@ export const suggestVideoTopics = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => SuggestInput.parse(i))
   .handler(async ({ data, context }): Promise<string[]> => {
     await assertEditor(context.userId);
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY 미설정");
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+    const { createTextProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(key);
+    const gateway = createTextProvider();
     const focusKo = { culture: "중국 문화", grammar: "중국어 어법", entertainment: "중국 연예/트렌드", daily: "일상 회화" }[data.focus];
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-flash"),

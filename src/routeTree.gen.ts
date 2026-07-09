@@ -31,6 +31,7 @@ import { Route as AppDramasIdRouteImport } from './routes/_app.dramas.$id'
 import { Route as AppCurriculumIdRouteImport } from './routes/_app.curriculum.$id'
 import { Route as AppCoursesIdRouteImport } from './routes/_app.courses.$id'
 import { Route as ApiPublicHooksReengagementPushRouteImport } from './routes/api/public/hooks/reengagement-push'
+import { Route as ApiPublicHooksGenerateVideoRouteImport } from './routes/api/public/hooks/generate-video'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -142,6 +143,12 @@ const ApiPublicHooksReengagementPushRoute =
     path: '/api/public/hooks/reengagement-push',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksGenerateVideoRoute =
+  ApiPublicHooksGenerateVideoRouteImport.update({
+    id: '/api/public/hooks/generate-video',
+    path: '/api/public/hooks/generate-video',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/api/youtube/connect': typeof ApiYoutubeConnectRoute
   '/dramas/': typeof AppDramasIndexRoute
   '/songs/': typeof AppSongsIndexRoute
+  '/api/public/hooks/generate-video': typeof ApiPublicHooksGenerateVideoRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
 }
 export interface FileRoutesByTo {
@@ -187,6 +195,7 @@ export interface FileRoutesByTo {
   '/api/youtube/connect': typeof ApiYoutubeConnectRoute
   '/dramas': typeof AppDramasIndexRoute
   '/songs': typeof AppSongsIndexRoute
+  '/api/public/hooks/generate-video': typeof ApiPublicHooksGenerateVideoRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
 }
 export interface FileRoutesById {
@@ -212,6 +221,7 @@ export interface FileRoutesById {
   '/api/youtube/connect': typeof ApiYoutubeConnectRoute
   '/_app/dramas/': typeof AppDramasIndexRoute
   '/_app/songs/': typeof AppSongsIndexRoute
+  '/api/public/hooks/generate-video': typeof ApiPublicHooksGenerateVideoRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
 }
 export interface FileRouteTypes {
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/api/youtube/connect'
     | '/dramas/'
     | '/songs/'
+    | '/api/public/hooks/generate-video'
     | '/api/public/hooks/reengagement-push'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/api/youtube/connect'
     | '/dramas'
     | '/songs'
+    | '/api/public/hooks/generate-video'
     | '/api/public/hooks/reengagement-push'
   id:
     | '__root__'
@@ -284,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/youtube/connect'
     | '/_app/dramas/'
     | '/_app/songs/'
+    | '/api/public/hooks/generate-video'
     | '/api/public/hooks/reengagement-push'
   fileRoutesById: FileRoutesById
 }
@@ -294,6 +307,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiYoutubeCallbackRoute: typeof ApiYoutubeCallbackRoute
   ApiYoutubeConnectRoute: typeof ApiYoutubeConnectRoute
+  ApiPublicHooksGenerateVideoRoute: typeof ApiPublicHooksGenerateVideoRoute
   ApiPublicHooksReengagementPushRoute: typeof ApiPublicHooksReengagementPushRoute
 }
 
@@ -453,6 +467,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksReengagementPushRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/generate-video': {
+      id: '/api/public/hooks/generate-video'
+      path: '/api/public/hooks/generate-video'
+      fullPath: '/api/public/hooks/generate-video'
+      preLoaderRoute: typeof ApiPublicHooksGenerateVideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -531,6 +552,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiYoutubeCallbackRoute: ApiYoutubeCallbackRoute,
   ApiYoutubeConnectRoute: ApiYoutubeConnectRoute,
+  ApiPublicHooksGenerateVideoRoute: ApiPublicHooksGenerateVideoRoute,
   ApiPublicHooksReengagementPushRoute: ApiPublicHooksReengagementPushRoute,
 }
 export const routeTree = rootRouteImport

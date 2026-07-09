@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import type { Json } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-middleware";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { createTextProvider } from "./ai-gateway.server";
 import { assertEditor } from "./courses.functions";
 
 // ---------- Input ----------
@@ -163,8 +163,6 @@ export const generateLesson = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { db, tables } = await import("@/db");
     const { asc, eq } = await import("drizzle-orm");
@@ -182,7 +180,7 @@ export const generateLesson = createServerFn({ method: "POST" })
     const nextOrder =
       existing.reduce((m, r) => Math.max(m, r.order_index), 0) + 1;
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
+    const gateway = createTextProvider();
     const model = gateway("google/gemini-2.5-flash");
 
     const system =
@@ -211,7 +209,7 @@ export const generateLesson = createServerFn({ method: "POST" })
         : /402|credit|insufficient/i.test(msg)
           ? "AI 크레딧이 부족해요. 충전 후 다시 시도해주세요."
           : /401|unauthor|api.?key/i.test(msg)
-            ? "Gemini API 키 인증 실패. LOVABLE_API_KEY 시크릿을 확인해주세요."
+            ? "Gemini API 키 인증 실패. GEMINI_API_KEY 시크릿을 확인해주세요."
             : /timeout|ETIMEDOUT|ECONNRESET/i.test(msg)
               ? "AI 응답 대기 시간이 초과되었어요. 다시 시도해주세요."
               : /JSON|parse|extract/i.test(msg)
