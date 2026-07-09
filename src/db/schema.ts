@@ -114,6 +114,8 @@ export const profiles = pgTable("profiles", {
   teacher_status: teacherStatus("teacher_status").notNull().default("none"),
   teacher_applied_at: ts("teacher_applied_at"),
   teacher_application_note: text("teacher_application_note"),
+  teacher_school: text("teacher_school"),
+  teacher_department: text("teacher_department"),
   last_active_at: ts("last_active_at"),
   created_at: ts("created_at").notNull().defaultNow(),
   updated_at: ts("updated_at").notNull().defaultNow(),

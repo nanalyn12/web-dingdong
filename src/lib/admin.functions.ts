@@ -25,11 +25,16 @@ const TeacherApplyInput = z.object({
     .trim()
     .regex(/^[0-9+\-\s()]{9,20}$/, "올바른 전화번호 형식이 아니에요."),
   job: JobEnum,
-  note: z
+  school: z
     .string()
     .trim()
-    .min(20, "신청 사유를 20자 이상 작성해 주세요.")
-    .max(1000, "신청 사유는 1000자 이하로 작성해 주세요."),
+    .min(2, "재직/강의 중인 학교 이름을 입력해 주세요.")
+    .max(100),
+  department: z
+    .string()
+    .trim()
+    .min(1, "학과를 입력해 주세요.")
+    .max(100),
 });
 
 /** Student requests teacher role with contact info + application note. */
@@ -60,7 +65,8 @@ export const requestTeacher = createServerFn({ method: "POST" })
         real_name: data.realName,
         phone: data.phone,
         job: data.job,
-        teacher_application_note: data.note,
+        teacher_school: data.school,
+        teacher_department: data.department,
         teacher_status: "pending",
         teacher_applied_at: new Date().toISOString(),
       })
@@ -76,6 +82,8 @@ export type PendingTeacher = {
   learning_goal: string | null;
   phone: string | null;
   teacher_application_note: string | null;
+  teacher_school: string | null;
+  teacher_department: string | null;
   teacher_applied_at: string | null;
   created_at: string;
   email: string | null;
@@ -96,6 +104,8 @@ export const listPendingTeachers = createServerFn({ method: "GET" })
         learning_goal: tables.profiles.learning_goal,
         phone: tables.profiles.phone,
         teacher_application_note: tables.profiles.teacher_application_note,
+        teacher_school: tables.profiles.teacher_school,
+        teacher_department: tables.profiles.teacher_department,
         teacher_applied_at: tables.profiles.teacher_applied_at,
         created_at: tables.profiles.created_at,
         email: tables.user.email,

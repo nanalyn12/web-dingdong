@@ -113,6 +113,8 @@ type PendingRow = {
   learning_goal: string | null;
   phone: string | null;
   teacher_application_note: string | null;
+  teacher_school: string | null;
+  teacher_department: string | null;
   teacher_applied_at: string | null;
   created_at: string;
   email: string | null;
@@ -132,7 +134,8 @@ function PendingTeacherCard({
   const displayName = p.real_name || p.nickname || p.id.slice(0, 8);
   const phone = p.phone || p.auth_phone;
   const appliedAt = p.teacher_applied_at || p.created_at;
-  const legacy = !p.teacher_application_note && !p.phone;
+  const legacy =
+    !p.teacher_school && !p.teacher_application_note && !p.phone;
 
   async function copy(text: string, label: string) {
     try {
@@ -189,6 +192,19 @@ function PendingTeacherCard({
               )}
             </div>
           </div>
+
+          {(p.teacher_school || p.teacher_department) && (
+            <div className="flex items-center gap-2 text-sm text-foreground/90">
+              <span className="font-medium">
+                {p.teacher_school || "학교 미입력"}
+              </span>
+              {p.teacher_department && (
+                <span className="text-muted-foreground">
+                  · {p.teacher_department}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="text-xs text-muted-foreground">
             {(p.job && JOB_LABEL[p.job]) || "직업 미입력"} ·{" "}

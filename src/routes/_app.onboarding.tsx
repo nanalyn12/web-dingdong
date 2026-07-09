@@ -106,7 +106,8 @@ function OnboardingPage() {
   const [applyName, setApplyName] = useState("");
   const [applyPhone, setApplyPhone] = useState("");
   const [applyJob, setApplyJob] = useState<typeof JOBS[number]["value"]>("teacher");
-  const [applyNote, setApplyNote] = useState("");
+  const [applySchool, setApplySchool] = useState("");
+  const [applyDepartment, setApplyDepartment] = useState("");
   const [myEmail, setMyEmail] = useState<string>("");
 
   useEffect(() => {
@@ -119,13 +120,19 @@ function OnboardingPage() {
     setApplyName(profile?.real_name ?? realName ?? "");
     setApplyPhone(profile?.phone ?? "");
     setApplyJob(profile?.job ?? job);
-    setApplyNote(profile?.teacher_application_note ?? "");
+    setApplySchool(profile?.teacher_school ?? "");
+    setApplyDepartment(profile?.teacher_department ?? "");
     setApplyOpen(true);
   }
 
   const applyMutation = useMutation({
-    mutationFn: (v: { realName: string; phone: string; job: typeof JOBS[number]["value"]; note: string }) =>
-      apply({ data: v }),
+    mutationFn: (v: {
+      realName: string;
+      phone: string;
+      job: typeof JOBS[number]["value"];
+      school: string;
+      department: string;
+    }) => apply({ data: v }),
     onSuccess: (r) => {
       if (r && (r as { already?: boolean }).already) {
         toast.info("이미 신청했거나 권한이 있어요.");
@@ -284,13 +291,22 @@ function OnboardingPage() {
               e.preventDefault();
               const name = applyName.trim();
               const phone = applyPhone.trim();
-              const note = applyNote.trim();
+              const school = applySchool.trim();
+              const department = applyDepartment.trim();
               if (name.length < 2) return toast.error("실명을 입력해 주세요.");
               if (!/^[0-9+\-\s()]{9,20}$/.test(phone))
                 return toast.error("올바른 전화번호를 입력해 주세요.");
-              if (note.length < 20)
-                return toast.error("신청 사유를 20자 이상 작성해 주세요.");
-              applyMutation.mutate({ realName: name, phone, job: applyJob, note });
+              if (school.length < 2)
+                return toast.error("재직/강의 중인 학교 이름을 입력해 주세요.");
+              if (!department)
+                return toast.error("학과를 입력해 주세요.");
+              applyMutation.mutate({
+                realName: name,
+                phone,
+                job: applyJob,
+                school,
+                department,
+              });
             }}
           >
             <div className="space-y-2">
@@ -337,20 +353,29 @@ function OnboardingPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ap-note">신청 사유 * (20~1000자)</Label>
-              <Textarea
-                id="ap-note"
-                value={applyNote}
-                onChange={(e) => setApplyNote(e.target.value)}
-                placeholder="예: 5년간 대학에서 중국어를 강의했고, HSK 6급 대비 커리큘럼을 만들고 싶어요."
-                maxLength={1000}
-                rows={5}
-                required
-              />
-              <p className="text-xs text-muted-foreground text-right">
-                {applyNote.length} / 1000
-              </p>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="ap-school">재직/강의 중인 학교 *</Label>
+                <Input
+                  id="ap-school"
+                  value={applySchool}
+                  onChange={(e) => setApplySchool(e.target.value)}
+                  placeholder="예: 서울고등학교"
+                  required
+                  maxLength={100}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ap-department">학과 *</Label>
+                <Input
+                  id="ap-department"
+                  value={applyDepartment}
+                  onChange={(e) => setApplyDepartment(e.target.value)}
+                  placeholder="예: 중국어과"
+                  required
+                  maxLength={100}
+                />
+              </div>
             </div>
 
             <DialogFooter>
