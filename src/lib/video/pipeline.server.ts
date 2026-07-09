@@ -56,14 +56,27 @@ export function kickVideoWorker() {
 
 // ─── ffmpeg helpers ──────────────────────────────────────────────────────────
 
+let cachedFfmpeg: string | undefined;
+
 async function ffmpegPath(): Promise<string> {
-  // ffmpeg-static is CJS and relies on __dirname — load it natively via
-  // createRequire so the bundler leaves it alone.
+  if (cachedFfmpeg) return cachedFfmpeg;
+  if (process.env.FFMPEG_PATH) return (cachedFfmpeg = process.env.FFMPEG_PATH);
+  // Prefer the system ffmpeg — full build with drawtext/subtitles filters
+  // (installed on Railway via RAILPACK_DEPLOY_APT_PACKAGES=ffmpeg).
+  const systemOk = await new Promise<boolean>((resolve) => {
+    const ps = spawn("ffmpeg", ["-version"], { stdio: "ignore" });
+    ps.on("error", () => resolve(false));
+    ps.on("close", (code) => resolve(code === 0));
+  });
+  if (systemOk) return (cachedFfmpeg = "ffmpeg");
+  // Fallback: ffmpeg-static (CJS, relies on __dirname — load natively via
+  // createRequire so the bundler leaves it alone). Note: its Linux build
+  // lacks drawtext/subtitles; fine for local Windows dev.
   const { createRequire } = await import("node:module");
   const req = createRequire(import.meta.url);
   const p = req("ffmpeg-static") as string | null;
   if (!p) throw new Error("ffmpeg 바이너리를 찾을 수 없습니다.");
-  return p;
+  return (cachedFfmpeg = p);
 }
 
 function run(cmd: string, args: string[]): Promise<void> {
