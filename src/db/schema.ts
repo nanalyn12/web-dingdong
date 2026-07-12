@@ -299,6 +299,27 @@ export const video_jobs = pgTable("video_jobs", {
   updated_at: ts("updated_at").notNull().defaultNow(),
 });
 
+// Recurring video generation schedules. The in-process scheduler ticks every
+// minute and creates a video_jobs row when a schedule is due (KST times).
+export const video_schedules = pgTable("video_schedules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  created_by: text("created_by")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  // Keywords rotate — one video per run using the next keyword.
+  keywords: text("keywords").array().notNull(),
+  next_keyword_index: integer("next_keyword_index").notNull().default(0),
+  frequency: text("frequency").notNull().default("daily"), // daily | weekly
+  weekdays: integer("weekdays").array().notNull().default([]), // 0=일 … 6=토 (weekly)
+  time_kst: text("time_kst").notNull(), // "HH:MM"
+  enabled: boolean("enabled").notNull().default(true),
+  // Partial VideoJobConfig (no keyword/topic — filled per run)
+  config: jsonb("config").$type<Json>().notNull(),
+  last_run_at: ts("last_run_at"),
+  created_at: ts("created_at").notNull().defaultNow(),
+});
+
 // Single-row style credential store (e.g. YouTube OAuth refresh token).
 export const app_credentials = pgTable("app_credentials", {
   key: text("key").primaryKey(),
@@ -316,3 +337,4 @@ export type Song = typeof songs.$inferSelect;
 export type VocabRow = typeof vocabulary.$inferSelect;
 export type PushSubscription = typeof push_subscriptions.$inferSelect;
 export type VideoJob = typeof video_jobs.$inferSelect;
+export type VideoSchedule = typeof video_schedules.$inferSelect;

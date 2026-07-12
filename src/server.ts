@@ -40,6 +40,13 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // Lazy one-time start of the video schedule ticker (needs DB env,
+      // so we start it on the first request rather than at module load).
+      if (!globalThis.__videoSchedulerStarted) {
+        import("@/lib/video/scheduler.server")
+          .then((m) => m.initVideoScheduler())
+          .catch((e) => console.error("[scheduler] init failed:", e));
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

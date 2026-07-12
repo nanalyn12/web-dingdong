@@ -140,8 +140,13 @@ async function generateScript(cfg: VideoJobConfig): Promise<VideoScript> {
   const perScene = Math.round(cfg.lengthSeconds / cfg.clipCount);
   const narrLang = cfg.language === "ko" ? "한국어" : "중국어(간체)";
 
+  const topicLine = cfg.topic?.trim()
+    ? `주제: "${cfg.topic}" — 반드시 이 주제를 그대로 다뤄. 키워드는 참고일 뿐, 주제를 바꾸지 마.`
+    : `주제: (지정 없음 — 키워드 "${cfg.keyword}"에 딱 맞는 흥미로운 주제를 직접 정해)`;
+
   const prompt = `너는 한국인 중국어 학습자를 위한 유튜브 교육 영상 작가야.
-키워드: "${cfg.keyword}" / 주제: "${cfg.topic}" / 중점: ${focusKo}
+키워드: "${cfg.keyword}" / 중점: ${focusKo}
+${topicLine}
 타겟 시청자: ${cfg.audience}
 영상 길이: 약 ${cfg.lengthSeconds}초, 장면 ${cfg.clipCount}개 (장면당 약 ${perScene}초)
 나레이션 언어: ${narrLang}
@@ -485,8 +490,26 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
     await setJob(jobId, { youtube_video_id: videoId, step: "학습 콘텐츠 생성 중" });
 
     // Learning content: build drama scenes directly from our own script timings.
-    const dramaId = await createDramaFromScript(job.created_by, cfg, script, videoId, job.srt ?? "");
-    await setJob(jobId, { drama_id: dramaId, status: "done", step: "완료" });
+    // Use OUR thumbnail — YouTube serves a gray placeholder for private videos.
+    const dramaId = await createDramaFromScript(
+      job.created_by,
+      cfg,
+      script,
+      videoId,
+      job.srt ?? "",
+      job.thumbnail_path ? `/media/${job.thumbnail_path}` : null,
+    );
+
+    // The mp4 lives on YouTube now — free the volume (keep the thumbnail).
+    const { rm } = await import("node:fs/promises");
+    await rm(join(getMediaDir(), job.video_path), { force: true }).catch(() => {});
+
+    await setJob(jobId, {
+      drama_id: dramaId,
+      status: "done",
+      step: "완료",
+      video_path: null,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await setJob(jobId, { status: "failed", error: `업로드/콘텐츠 생성 실패: ${msg}` });
@@ -515,6 +538,7 @@ async function createDramaFromScript(
   script: VideoScript,
   youtubeVideoId: string,
   srt: string,
+  thumbnailUrl: string | null,
 ): Promise<string> {
   const times = parseSrtTimes(srt);
   const intro = 1.5;
@@ -548,7 +572,8 @@ async function createDramaFromScript(
       genre: "AI 생성 영상",
       youtube_url: `https://www.youtube.com/watch?v=${youtubeVideoId}`,
       youtube_video_id: youtubeVideoId,
-      thumbnail_url: `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`,
+      thumbnail_url:
+        thumbnailUrl ?? `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`,
       duration_seconds: Math.ceil((times.at(-1)?.end ?? cfg.lengthSeconds) + intro),
       has_captions: true,
       scenes: scenes as unknown as Json,

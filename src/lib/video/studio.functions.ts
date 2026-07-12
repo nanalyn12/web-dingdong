@@ -140,6 +140,94 @@ export const getYouTubeStatus = createServerFn({ method: "GET" })
     return { connected: await youtubeConnected() };
   });
 
+// ── 예약·반복 ────────────────────────────────────────────────────────────────
+
+const ScheduleConfigInput = ConfigInput.omit({ keyword: true, topic: true });
+
+const ScheduleInput = z.object({
+  name: z.string().trim().min(1, "예약 이름을 입력하세요").max(60),
+  keywords: z
+    .array(z.string().trim().min(1).max(60))
+    .min(1, "키워드를 1개 이상 입력하세요")
+    .max(50),
+  frequency: z.enum(["daily", "weekly"]),
+  weekdays: z.array(z.number().int().min(0).max(6)).default([]),
+  time_kst: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "시간은 HH:MM 형식"),
+  config: ScheduleConfigInput,
+});
+
+export const createVideoSchedule = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => ScheduleInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    if (data.frequency === "weekly" && data.weekdays.length === 0) {
+      throw new Error("매주 반복은 요일을 1개 이상 선택하세요.");
+    }
+    const { db, tables } = await import("@/db");
+    const [row] = await db
+      .insert(tables.video_schedules)
+      .values({
+        created_by: context.userId,
+        name: data.name,
+        keywords: data.keywords,
+        frequency: data.frequency,
+        weekdays: data.weekdays,
+        time_kst: data.time_kst,
+        config: data.config as unknown as Json,
+      })
+      .returning({ id: tables.video_schedules.id });
+    return { id: row.id };
+  });
+
+export const listVideoSchedules = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    return db
+      .select()
+      .from(tables.video_schedules)
+      .orderBy(desc(tables.video_schedules.created_at));
+  });
+
+export const toggleVideoSchedule = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ id: z.string().uuid(), enabled: z.boolean() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    await db
+      .update(tables.video_schedules)
+      .set({ enabled: data.enabled })
+      .where(eq(tables.video_schedules.id, data.id));
+    return { ok: true };
+  });
+
+export const deleteVideoSchedule = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => IdInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    await db
+      .delete(tables.video_schedules)
+      .where(eq(tables.video_schedules.id, data.id));
+    return { ok: true };
+  });
+
+export const runVideoScheduleNow = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => IdInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { runScheduleOnce } = await import("./scheduler.server");
+    const jobId = await runScheduleOnce(data.id);
+    return { jobId };
+  });
+
 const SuggestInput = z.object({
   keyword: z.string().trim().min(1).max(60),
   focus: z.enum(["culture", "grammar", "entertainment", "daily"]),

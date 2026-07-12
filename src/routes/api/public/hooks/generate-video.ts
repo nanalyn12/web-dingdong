@@ -19,9 +19,9 @@ export const Route = createFileRoute("/api/public/hooks/generate-video")({
         } catch {
           return Response.json({ ok: false, error: "invalid json" }, { status: 400 });
         }
-        if (!body.keyword || !body.topic) {
+        if (!body.keyword) {
           return Response.json(
-            { ok: false, error: "keyword and topic are required" },
+            { ok: false, error: "keyword is required" },
             { status: 400 },
           );
         }
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/public/hooks/generate-video")({
 
         const config = {
           keyword: String(body.keyword),
-          topic: String(body.topic),
+          topic: String(body.topic ?? ""),
           audience: String(body.audience ?? "중국어 입문 성인 학습자"),
           lengthSeconds: Number(body.lengthSeconds ?? 60),
           language: (body.language as string) === "zh" ? "zh" : "ko",
