@@ -225,7 +225,7 @@ export const generateDrama = createServerFn({ method: "POST" })
       lang: data.lang,
     });
     const finalTitle =
-      (data.title?.trim() || parsed.title || oembed.title || "드라마 학습").slice(0, 80);
+      (data.title?.trim() || parsed.title || oembed.title || "영상 학습").slice(0, 80);
 
     const { db, tables } = await import("@/db");
     const [row] = await db

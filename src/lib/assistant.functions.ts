@@ -17,7 +17,7 @@ const InputSchema = z.object({
 const NAV_TARGETS: Record<string, string> = {
   "/": "홈",
   "/courses": "강의 목록",
-  "/dramas": "드라마 학습",
+  "/dramas": "영상 학습",
   "/songs": "학습송",
   "/vocabulary": "단어장",
   "/curriculum": "커리큘럼 생성기 (교수자 전용)",

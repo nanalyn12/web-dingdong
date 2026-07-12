@@ -24,7 +24,7 @@ import { probeCaptions, type ProbeResult } from "@/lib/youtube-captions.function
 export const Route = createFileRoute("/_app/dramas/")({
   head: () => ({
     meta: [
-      { title: "드라마 학습 — DingDong" },
+      { title: "영상 학습 — DingDong" },
       {
         name: "description",
         content:
@@ -89,7 +89,7 @@ function DramasPage() {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Film className="size-7 text-primary" /> 드라마 학습
+            <Film className="size-7 text-primary" /> 영상 학습
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             유튜브 영상을 넣으면 AI가 장면을 나누고 학습 자료를 만들어 드려요 🎬
@@ -270,7 +270,7 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
     mutationFn: () =>
       generateDrama({ data: { youtubeUrl, title, level, genre, lang } }),
     onSuccess: (res) => {
-      toast.success("드라마 학습 자료를 만들었어요 🎬");
+      toast.success("영상 학습 자료를 만들었어요 🎬");
       qc.invalidateQueries({ queryKey: ["dramas"] });
       onDone();
       navigate({ to: "/dramas/$id", params: { id: res.dramaId } });
@@ -295,7 +295,7 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
   return (
     <div className="glass rounded-3xl p-5 space-y-4 border border-primary/30">
       <h2 className="font-semibold flex items-center gap-2">
-        <Sparkles className="size-4 text-primary" /> AI로 드라마 학습 만들기
+        <Sparkles className="size-4 text-primary" /> AI로 영상 학습 만들기
       </h2>
       <p className="text-xs text-muted-foreground">
         AI가 영상을 시청하고 장면을 나눠 학습 자료를 생성해요. 영상 길이에 따라 30초~2분 정도 걸려요.

@@ -9,7 +9,7 @@ import { useIsEditor, useMyProfile } from "@/lib/auth-client";
 const items = [
   { title: "홈", url: "/", icon: Home },
   { title: "강의", url: "/courses", icon: GraduationCap },
-  { title: "드라마 학습", url: "/dramas", icon: Film },
+  { title: "영상 학습", url: "/dramas", icon: Film },
   { title: "학습송", url: "/songs", icon: Music },
   { title: "단어장", url: "/vocabulary", icon: BookOpen },
 ];

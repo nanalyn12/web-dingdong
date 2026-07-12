@@ -54,7 +54,7 @@ export function sidebarTourSteps(): DriveStep[] {
       element: '[data-tour="sidebar-nav"]',
       popover: {
         title: "주요 학습 메뉴",
-        description: "강의, 드라마 학습, 학습송, 단어장에 한 번에 접근할 수 있어요.",
+        description: "강의, 영상 학습, 학습송, 단어장에 한 번에 접근할 수 있어요.",
       },
     },
     {
