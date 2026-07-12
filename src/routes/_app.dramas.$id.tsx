@@ -33,6 +33,28 @@ function fmtTime(sec: number) {
   return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
 
+// Per-line timestamp: explicit time_seconds when present, otherwise spread
+// evenly across the scene span (same approximation the scene panel uses).
+function lineTimes(scene: DramaScene): { time: number; isExact: boolean }[] {
+  const n = scene.key_lines?.length ?? 0;
+  if (n === 0) return [];
+  const start = scene.start_seconds;
+  const end = scene.end_seconds;
+  const span = Math.max(0, end - start);
+  const slot = span / Math.max(1, n);
+  const buffer = Math.min(1.5, slot * 0.15);
+  const usable = Math.max(0, span - buffer * 2);
+  const step = usable / Math.max(1, n);
+  return scene.key_lines.map((l, i) => {
+    if (typeof l.time_seconds === "number") {
+      return { time: Math.round(l.time_seconds), isExact: true };
+    }
+    const raw = start + buffer + step * (i + 0.5);
+    const clamped = Math.min(Math.max(raw, start), Math.max(start, end - 1));
+    return { time: Math.round(clamped), isExact: false };
+  });
+}
+
 // Minimal YouTube IFrame API loader
 function useYoutubePlayer(videoId: string) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -216,6 +238,8 @@ function DramaDetail() {
         </div>
       </div>
 
+      <TranscriptPanel scenes={scenes} currentTime={currentTime} onSeek={seek} />
+
       {scene && (
         <ScenePanel
           scene={scene}
@@ -224,6 +248,137 @@ function DramaDetail() {
           sceneIndex={shownIndex}
           currentTime={currentTime}
         />
+      )}
+    </div>
+  );
+}
+
+/* 전체 대사: 스크롤 목록 + 재생 중 문장 하이라이트/자동 스크롤 + 클릭 점프 */
+function TranscriptPanel({
+  scenes,
+  currentTime,
+  onSeek,
+}: {
+  scenes: DramaScene[];
+  currentTime: number;
+  onSeek: (s: number) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  const lines = useMemo(() => {
+    const flat = scenes.flatMap((scene, sIdx) => {
+      const times = lineTimes(scene);
+      return (scene.key_lines ?? []).map((l, i) => ({
+        key: `${sIdx}-${i}`,
+        sceneIndex: sIdx,
+        zh: l.zh,
+        pinyin: l.pinyin,
+        ko: l.ko,
+        speaker: l.speaker,
+        time: times[i]?.time ?? scene.start_seconds,
+        isExact: times[i]?.isExact ?? false,
+      }));
+    });
+    return flat.sort((a, b) => a.time - b.time);
+  }, [scenes]);
+
+  // Active line = the last line whose timestamp has been reached.
+  const activeKey = useMemo(() => {
+    let key: string | null = null;
+    for (const l of lines) {
+      if (currentTime >= l.time - 0.3) key = l.key;
+      else break;
+    }
+    return key;
+  }, [lines, currentTime]);
+
+  // Auto-scroll the active line into view (inside the panel only).
+  useEffect(() => {
+    if (!open || !activeKey) return;
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-line-key="${activeKey}"]`,
+    );
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [activeKey, open]);
+
+  if (lines.length === 0) return null;
+
+  return (
+    <div className="glass rounded-3xl p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-1"
+      >
+        <span className="font-semibold">📜 전체 대사</span>
+        <span className="text-xs text-muted-foreground">
+          {lines.length}줄 {open ? "접기 ▲" : "펼치기 ▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          ref={listRef}
+          className="mt-3 max-h-72 overflow-y-auto pr-1 space-y-1 scroll-smooth"
+        >
+          {lines.map((l) => {
+            const active = l.key === activeKey;
+            return (
+              <button
+                key={l.key}
+                data-line-key={l.key}
+                type="button"
+                onClick={() => onSeek(l.time)}
+                className={[
+                  "w-full text-left rounded-2xl px-3 py-2 transition-all flex items-start gap-3",
+                  active
+                    ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)] scale-[1.01]"
+                    : "hover:bg-white/70",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "shrink-0 font-mono text-[10px] mt-1 px-1.5 py-0.5 rounded-full",
+                    active
+                      ? "bg-white/25"
+                      : l.isExact
+                        ? "bg-emerald-500/15 text-emerald-700"
+                        : "bg-amber-500/15 text-amber-800",
+                  ].join(" ")}
+                >
+                  {fmtTime(l.time)}
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold leading-snug">
+                    {l.speaker ? `${l.speaker} · ` : ""}
+                    {l.zh}
+                  </span>
+                  {l.pinyin && (
+                    <span
+                      className={[
+                        "block text-[11px] font-mono",
+                        active ? "text-primary-foreground/85" : "text-muted-foreground",
+                      ].join(" ")}
+                    >
+                      {l.pinyin}
+                    </span>
+                  )}
+                  {l.ko && (
+                    <span
+                      className={[
+                        "block text-xs",
+                        active ? "text-primary-foreground/90" : "text-foreground/80",
+                      ].join(" ")}
+                    >
+                      {l.ko}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );
