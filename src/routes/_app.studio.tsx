@@ -31,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsEditor } from "@/lib/auth-client";
+import { listCoursesWithCounts } from "@/lib/courses.functions";
 import type { VideoJob, VideoSchedule } from "@/db/schema";
 import {
   FOCUS_LABEL,
@@ -74,6 +75,55 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
 };
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** 강의 연동 셀렉트 (없음 / 기존 강의 / 새 강의 만들기) */
+function CourseLinkSelect({
+  courseLink,
+  setCourseLink,
+  newCourseTitle,
+  setNewCourseTitle,
+}: {
+  courseLink: string; // "none" | "__new__" | courseId
+  setCourseLink: (v: string) => void;
+  newCourseTitle: string;
+  setNewCourseTitle: (v: string) => void;
+}) {
+  const callCourses = useServerFn(listCoursesWithCounts);
+  const courses = useQuery({
+    queryKey: ["studio-courses"],
+    queryFn: () => callCourses({}),
+  });
+  return (
+    <div className="grid md:grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>강의 연동 (선택 — 영상이 세부 강의로 추가돼요)</Label>
+        <Select value={courseLink} onValueChange={setCourseLink}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">연동 안 함</SelectItem>
+            {(courses.data ?? []).map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                📚 {c.title} (세부 강의 {c.lesson_count}개)
+              </SelectItem>
+            ))}
+            <SelectItem value="__new__">➕ 새 강의 만들기</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {courseLink === "__new__" && (
+        <div className="space-y-2">
+          <Label>새 강의 제목 *</Label>
+          <Input
+            value={newCourseTitle}
+            onChange={(e) => setNewCourseTitle(e.target.value)}
+            placeholder="예: 영상으로 배우는 중국 문화"
+            maxLength={80}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function StudioPage() {
   const isEditor = useIsEditor();
@@ -186,6 +236,8 @@ function CreateWizard() {
   const [uploadMode, setUploadMode] =
     useState<VideoJobConfig["uploadMode"]>("approval");
   const [privacy, setPrivacy] = useState<VideoJobConfig["privacy"]>("unlisted");
+  const [courseLink, setCourseLink] = useState("none");
+  const [newCourseTitle, setNewCourseTitle] = useState("");
 
   const suggestMut = useMutation({
     mutationFn: () => callSuggest({ data: { keyword, focus, audience } }),
@@ -211,6 +263,10 @@ function CreateWizard() {
             burnSubtitles,
             uploadMode,
             privacy,
+            courseId:
+              courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
+            newCourseTitle:
+              courseLink === "__new__" ? newCourseTitle.trim() : undefined,
           },
         },
       }),
@@ -414,6 +470,13 @@ function CreateWizard() {
         </div>
       </div>
 
+      <CourseLinkSelect
+        courseLink={courseLink}
+        setCourseLink={setCourseLink}
+        newCourseTitle={newCourseTitle}
+        setNewCourseTitle={setNewCourseTitle}
+      />
+
       <p className="text-xs text-muted-foreground">
         💡 비공개(private) 영상은 YouTube 정책상 학습 페이지에서 다른 사람이 재생할 수
         없어요. 학습 콘텐츠용은 <b>일부 공개(unlisted)</b>를 권장합니다.
@@ -425,6 +488,8 @@ function CreateWizard() {
         onClick={() => {
           if (!keyword.trim()) return toast.error("키워드를 입력하세요.");
           if (!topic.trim()) return toast.error("주제를 입력하거나 추천받으세요.");
+          if (courseLink === "__new__" && !newCourseTitle.trim())
+            return toast.error("새 강의 제목을 입력하세요.");
           createMut.mutate();
         }}
       >
@@ -563,6 +628,15 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
                       <Clapperboard className="size-4" /> 학습 콘텐츠
                     </Link>
                   )}
+                  {j.lesson_id && (
+                    <Link
+                      to="/lessons/$id"
+                      params={{ id: j.lesson_id }}
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      📚 강의 열기
+                    </Link>
+                  )}
                   {!busy && (
                     <Button
                       size="sm"
@@ -609,6 +683,8 @@ function SchedulePanel() {
   const [uploadMode, setUploadMode] =
     useState<VideoJobConfig["uploadMode"]>("auto");
   const [privacy, setPrivacy] = useState<VideoJobConfig["privacy"]>("unlisted");
+  const [courseLink, setCourseLink] = useState("none");
+  const [newCourseTitle, setNewCourseTitle] = useState("");
 
   const createMut = useMutation({
     mutationFn: () => {
@@ -634,6 +710,10 @@ function SchedulePanel() {
             burnSubtitles: true,
             uploadMode,
             privacy,
+            courseId:
+              courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
+            newCourseTitle:
+              courseLink === "__new__" ? newCourseTitle.trim() : undefined,
           },
         },
       });
@@ -780,6 +860,13 @@ function SchedulePanel() {
           </div>
         </div>
 
+        <CourseLinkSelect
+          courseLink={courseLink}
+          setCourseLink={setCourseLink}
+          newCourseTitle={newCourseTitle}
+          setNewCourseTitle={setNewCourseTitle}
+        />
+
         <Button
           disabled={createMut.isPending}
           onClick={() => {
@@ -787,6 +874,8 @@ function SchedulePanel() {
             if (!keywordsRaw.trim()) return toast.error("키워드를 입력하세요.");
             if (frequency === "weekly" && weekdays.length === 0)
               return toast.error("요일을 선택하세요.");
+            if (courseLink === "__new__" && !newCourseTitle.trim())
+              return toast.error("새 강의 제목을 입력하세요.");
             createMut.mutate();
           }}
         >

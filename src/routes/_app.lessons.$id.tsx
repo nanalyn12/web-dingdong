@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -118,6 +118,7 @@ type LessonRow = {
   comic_panels: ComicPanel[];
   cultural_note: CulturalCard | null;
   cultural_snippet: CulturalCard | null;
+  video?: { youtube_video_id?: string; drama_id?: string } | null;
 };
 
 const HAN_RE = /[\u3400-\u9fff]/;
@@ -172,6 +173,7 @@ function LessonPage() {
       return data as unknown as LessonRow;
     },
   });
+  const lessonVideo = lesson?.video ?? null;
 
   const [tab, setTab] = useState<string>(
     () => loadProgress(id).completedTabs[0] ?? "content",
@@ -248,12 +250,40 @@ function LessonPage() {
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex flex-wrap gap-1 h-auto bg-white/60 backdrop-blur-xl rounded-2xl border border-white/70 shadow-sm p-1">
+          {lessonVideo?.youtube_video_id && (
+            <TabsTrigger value="video" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">🎬 영상</TabsTrigger>
+          )}
           <TabsTrigger value="key" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">핵심표현</TabsTrigger>
           <TabsTrigger value="content" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">본문</TabsTrigger>
           <TabsTrigger value="dialogue" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">실전대화</TabsTrigger>
           <TabsTrigger value="slides" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">슬라이드</TabsTrigger>
           <TabsTrigger value="quiz" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">퀴즈</TabsTrigger>
         </TabsList>
+
+        {lessonVideo?.youtube_video_id && (
+          <TabsContent value="video" className="mt-4 space-y-3">
+            <div className="glass rounded-3xl p-3">
+              <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
+                <iframe
+                  className="w-full h-full"
+                  src={`https://www.youtube.com/embed/${lessonVideo.youtube_video_id}?rel=0`}
+                  title={lesson.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+            {lessonVideo.drama_id && (
+              <Link
+                to="/dramas/$id"
+                params={{ id: lessonVideo.drama_id }}
+                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                📜 영상 학습 페이지에서 대사·단어·장면별로 학습하기 →
+              </Link>
+            )}
+          </TabsContent>
+        )}
 
         <TabsContent value="key" className="mt-4">
           <div className="grid gap-3 sm:gap-4 md:grid-cols-2">

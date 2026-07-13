@@ -6,6 +6,9 @@
 # Build info
 tsconfig.tsbuildinfo
 
+# Generated media (video renders, thumbnails, fonts) — lives on the volume
+data/
+
 # Logs
 logs
 *.log

@@ -20,6 +20,8 @@ const ConfigInput = z.object({
   burnSubtitles: z.boolean().default(true),
   uploadMode: z.enum(["auto", "approval"]),
   privacy: z.enum(["private", "unlisted", "public"]).default("private"),
+  courseId: z.string().uuid().nullable().optional(),
+  newCourseTitle: z.string().trim().max(80).optional(),
 });
 
 const CreateInput = z.object({

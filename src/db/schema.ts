@@ -295,6 +295,7 @@ export const video_jobs = pgTable("video_jobs", {
   thumbnail_path: text("thumbnail_path"),
   youtube_video_id: text("youtube_video_id"),
   drama_id: uuid("drama_id").references(() => dramas.id, { onDelete: "set null" }),
+  lesson_id: uuid("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
   created_at: ts("created_at").notNull().defaultNow(),
   updated_at: ts("updated_at").notNull().defaultNow(),
 });

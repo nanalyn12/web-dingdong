@@ -350,9 +350,10 @@ function TranscriptPanel({
                   {fmtTime(l.time)}
                 </span>
                 <span className="min-w-0">
+                  {/* 나레이션 전용 줄(zh 없음)은 한국어 문장을 본문으로 표시 */}
                   <span className="block font-semibold leading-snug">
                     {l.speaker ? `${l.speaker} · ` : ""}
-                    {l.zh}
+                    {l.zh || l.ko}
                   </span>
                   {l.pinyin && (
                     <span
@@ -364,7 +365,7 @@ function TranscriptPanel({
                       {l.pinyin}
                     </span>
                   )}
-                  {l.ko && (
+                  {l.zh && l.ko && l.ko !== l.zh && (
                     <span
                       className={[
                         "block text-xs",
@@ -533,14 +534,17 @@ function LineRow({
   return (
     <div className="rounded-2xl bg-white/85 hover:bg-white border border-white p-3 flex items-start gap-3">
       <button
-        onClick={() => speak(line.zh, id)}
+        onClick={() => line.zh && speak(line.zh, id)}
+        disabled={!line.zh}
         className={[
           "shrink-0 size-9 rounded-full grid place-items-center transition-all",
-          speaking
-            ? "gradient-primary text-primary-foreground animate-pulse"
-            : "bg-primary/10 hover:bg-primary/20 text-primary",
+          !line.zh
+            ? "bg-muted text-muted-foreground/40"
+            : speaking
+              ? "gradient-primary text-primary-foreground animate-pulse"
+              : "bg-primary/10 hover:bg-primary/20 text-primary",
         ].join(" ")}
-        title="중국어 듣기"
+        title={line.zh ? "중국어 듣기" : "나레이션 문장"}
       >
         <Volume2 className="size-4" />
       </button>
@@ -578,12 +582,14 @@ function LineRow({
           )}
         </div>
         <div className="text-lg font-semibold tracking-wide leading-snug">
-          {line.zh}
+          {line.zh || line.ko}
         </div>
         {line.pinyin && (
           <div className="text-xs text-muted-foreground font-mono">{line.pinyin}</div>
         )}
-        {line.ko && <div className="text-sm mt-0.5">{line.ko}</div>}
+        {line.zh && line.ko && line.ko !== line.zh && (
+          <div className="text-sm mt-0.5">{line.ko}</div>
+        )}
       </div>
     </div>
   );

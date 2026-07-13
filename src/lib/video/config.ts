@@ -17,6 +17,17 @@ export type VideoJobConfig = {
   burnSubtitles: boolean;
   uploadMode: UploadMode;
   privacy: "private" | "unlisted" | "public";
+  // Optional course linkage: attach the finished video as a lesson.
+  courseId?: string | null;
+  newCourseTitle?: string;
+};
+
+// Chinese voice used for Han runs inside Korean narration (gender-matched).
+export const ZH_PAIR_VOICE: Record<string, string> = {
+  "ko-KR-Neural2-A": "cmn-CN-Standard-A",
+  "ko-KR-Neural2-C": "cmn-CN-Standard-B",
+  "ko-KR-Standard-A": "cmn-CN-Standard-A",
+  "ko-KR-Standard-C": "cmn-CN-Standard-B",
 };
 
 export const FOCUS_LABEL: Record<VideoFocus, string> = {
@@ -52,6 +63,20 @@ export const LENGTHS = [
   { value: 300, label: "5분" },
 ] as const;
 
+export type SceneVocab = {
+  zh: string;
+  pinyin: string;
+  ko: string;
+  hsk?: number;
+  emoji?: string;
+};
+
+export type SceneSegment = {
+  text: string; // one narration sentence
+  start: number; // seconds from video start (intro NOT included)
+  end: number;
+};
+
 export type ScriptScene = {
   index: number;
   narration: string; // narration text in target language
@@ -59,6 +84,8 @@ export type ScriptScene = {
   pinyin: string;
   ko: string; // Korean translation
   pexels_query: string; // English search query for stock footage
+  vocab?: SceneVocab[]; // 3-5 words per scene → 단어장 저장 UI
+  segments?: SceneSegment[]; // filled by the pipeline after TTS
 };
 
 export type VideoScript = {

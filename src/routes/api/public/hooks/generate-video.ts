@@ -59,6 +59,9 @@ export const Route = createFileRoute("/api/public/hooks/generate-video")({
           privacy: ["private", "unlisted", "public"].includes(String(body.privacy))
             ? body.privacy
             : "private",
+          courseId: typeof body.courseId === "string" ? body.courseId : null,
+          newCourseTitle:
+            typeof body.newCourseTitle === "string" ? body.newCourseTitle : undefined,
         };
 
         const [row] = await db

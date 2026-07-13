@@ -152,15 +152,20 @@ ${topicLine}
 나레이션 언어: ${narrLang}
 
 각 장면 구성:
-- narration: ${narrLang} 나레이션 1~2문장. 소리내어 읽으면 약 ${perScene}초 분량 (${cfg.language === "ko" ? `${Math.round(perScene * 5.5)}자 내외` : `${Math.round(perScene * 4)}자 내외`}). 마크다운/이모지 금지.
+- narration: ${narrLang} 나레이션 2~3문장. 소리내어 읽으면 약 ${perScene}초 분량 (${cfg.language === "ko" ? `${Math.round(perScene * 5.5)}자 내외` : `${Math.round(perScene * 4)}자 내외`}). 각 문장은 마침표/물음표/느낌표로 끝나야 해. 마크다운/이모지 금지.${
+    cfg.language === "ko"
+      ? `\n- narration 안에 이 장면의 핵심 중국어 표현(zh)을 간체 한자 그대로 자연스럽게 넣어 (예: "이럴 땐 你好라고 인사해요"). 발음을 한글로 옮겨 적지 마 — 한자로 쓰면 중국어 원어민 음성으로 읽어줘.`
+      : ""
+  }
 - zh: 이 장면에서 가르치는 핵심 중국어 문장/표현 (간체 한자만)
 - pinyin: zh의 병음 (성조 기호)
 - ko: zh의 한국어 번역
 - pexels_query: 이 장면에 어울리는 스톡 영상 검색어 (영어 2~4단어, 구체적 사물/풍경/행동)
+- vocab: 이 장면에서 배우는 중국어 단어 3~5개. 각 항목 { "zh": 한자, "pinyin": 성조 병음, "ko": 뜻, "hsk": 1~9 }
 
 첫 장면은 주제 소개(훅), 마지막 장면은 요약+구독 유도.
 반드시 아래 JSON만 출력 (코드펜스 금지):
-{"title":"유튜브 제목(한국어, 40자 이내, 키워드 포함)","description":"유튜브 설명 2~3문장 + 해시태그 3개","tags":["태그1","태그2","태그3","태그4","태그5"],"scenes":[{"index":1,"narration":"...","zh":"...","pinyin":"...","ko":"...","pexels_query":"..."}]}`;
+{"title":"유튜브 제목(한국어, 40자 이내, 키워드 포함)","description":"유튜브 설명 2~3문장 + 해시태그 3개","tags":["태그1","태그2","태그3","태그4","태그5"],"scenes":[{"index":1,"narration":"...","zh":"...","pinyin":"...","ko":"...","pexels_query":"...","vocab":[{"zh":"...","pinyin":"...","ko":"...","hsk":1}]}]}`;
 
   const { text } = await generateText({
     model: gateway("google/gemini-2.5-flash"),
@@ -217,11 +222,11 @@ async function pexelsClip(
 
 // ─── Google Cloud TTS ───────────────────────────────────────────────────────
 
-// Returns WAV (LINEAR16) buffer + duration in seconds.
-async function synthesize(
-  textInput: string,
-  voice: string,
-): Promise<{ wav: Buffer; seconds: number }> {
+const SAMPLE_RATE = 24000;
+const WAV_HEADER = 44;
+
+// Returns WAV (LINEAR16 24kHz mono) buffer.
+async function synthesize(textInput: string, voice: string): Promise<Buffer> {
   const key = process.env.GOOGLE_TTS_API_KEY;
   if (!key) throw new Error("GOOGLE_TTS_API_KEY 미설정 — Cloud Text-to-Speech API 키 필요");
   const languageCode = voice.split("-").slice(0, 2).join("-");
@@ -233,7 +238,7 @@ async function synthesize(
       body: JSON.stringify({
         input: { text: textInput },
         voice: { languageCode, name: voice },
-        audioConfig: { audioEncoding: "LINEAR16", sampleRateHertz: 24000 },
+        audioConfig: { audioEncoding: "LINEAR16", sampleRateHertz: SAMPLE_RATE },
       }),
     },
   );
@@ -242,10 +247,87 @@ async function synthesize(
     throw new Error(`TTS 실패 (${res.status}): ${t.slice(0, 200)}`);
   }
   const { audioContent } = (await res.json()) as { audioContent: string };
-  const wav = Buffer.from(audioContent, "base64");
-  // LINEAR16 mono 24kHz → 2 bytes/sample; WAV header 44 bytes.
-  const seconds = (wav.length - 44) / (24000 * 2);
-  return { wav, seconds: Math.max(0.5, seconds) };
+  return Buffer.from(audioContent, "base64");
+}
+
+function wavSeconds(wav: Buffer): number {
+  return Math.max(0, (wav.length - WAV_HEADER) / (SAMPLE_RATE * 2));
+}
+
+// Concatenate LINEAR16 WAVs (same format) into one — strip headers, patch sizes.
+function concatWavs(wavs: Buffer[]): Buffer {
+  const bodies = wavs.map((w) => w.subarray(WAV_HEADER));
+  const dataLen = bodies.reduce((s, b) => s + b.length, 0);
+  const header = Buffer.from(wavs[0].subarray(0, WAV_HEADER));
+  header.writeUInt32LE(36 + dataLen, 4); // RIFF chunk size
+  header.writeUInt32LE(dataLen, 40); // data chunk size
+  return Buffer.concat([header, ...bodies]);
+}
+
+function silenceWav(seconds: number): Buffer {
+  const dataLen = Math.round(SAMPLE_RATE * seconds) * 2;
+  const buf = Buffer.alloc(WAV_HEADER + dataLen);
+  buf.write("RIFF", 0);
+  buf.writeUInt32LE(36 + dataLen, 4);
+  buf.write("WAVE", 8);
+  buf.write("fmt ", 12);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20); // PCM
+  buf.writeUInt16LE(1, 22); // mono
+  buf.writeUInt32LE(SAMPLE_RATE, 24);
+  buf.writeUInt32LE(SAMPLE_RATE * 2, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write("data", 36);
+  buf.writeUInt32LE(dataLen, 40);
+  return buf;
+}
+
+const HAN_RUN = /[㐀-鿿][㐀-鿿\s，。！？、]*[㐀-鿿。！？]|[㐀-鿿]/g;
+
+/**
+ * Synthesize one sentence, speaking Han runs with the paired Chinese voice
+ * and everything else with the selected narration voice. No SSML needed —
+ * runs are synthesized separately and the WAVs concatenated.
+ */
+async function synthesizeMixed(
+  sentence: string,
+  voice: string,
+  zhVoice: string | undefined,
+): Promise<Buffer> {
+  if (!zhVoice || !/[㐀-鿿]/.test(sentence)) {
+    return synthesize(sentence, voice);
+  }
+  const parts: { text: string; v: string }[] = [];
+  let last = 0;
+  for (const m of sentence.matchAll(HAN_RUN)) {
+    const idx = m.index ?? 0;
+    const before = sentence.slice(last, idx).trim();
+    if (before) parts.push({ text: before, v: voice });
+    parts.push({ text: m[0].trim(), v: zhVoice });
+    last = idx + m[0].length;
+  }
+  const tail = sentence.slice(last).trim();
+  if (tail) parts.push({ text: tail, v: voice });
+  if (parts.length === 0) return synthesize(sentence, voice);
+
+  const wavs: Buffer[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    // Strip dangling punctuation-only fragments (e.g. lone quotes).
+    if (!/[\p{L}\p{N}㐀-鿿]/u.test(parts[i].text)) continue;
+    wavs.push(await synthesize(parts[i].text, parts[i].v));
+    if (i < parts.length - 1) wavs.push(silenceWav(0.12));
+  }
+  if (wavs.length === 0) return synthesize(sentence, voice);
+  return concatWavs(wavs);
+}
+
+// Sentence splitter for narration (ko/zh punctuation).
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?。！？…])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 // ─── SRT ─────────────────────────────────────────────────────────────────────
@@ -259,20 +341,15 @@ function srtTime(t: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`;
 }
 
-function buildSrt(
-  scenes: ScriptScene[],
-  starts: number[],
-  durations: number[],
-  language: string,
+function buildSrtFromSegments(
+  segments: { text: string; start: number; end: number }[],
+  offset: number,
 ): string {
-  return scenes
-    .map((sc, i) => {
-      const line =
-        language === "zh"
-          ? `${sc.narration}`
-          : `${sc.narration}${sc.zh ? `\n${sc.zh} (${sc.pinyin})` : ""}`;
-      return `${i + 1}\n${srtTime(starts[i])} --> ${srtTime(starts[i] + durations[i])}\n${line}\n`;
-    })
+  return segments
+    .map(
+      (s, i) =>
+        `${i + 1}\n${srtTime(s.start + offset)} --> ${srtTime(s.end + offset)}\n${s.text}\n`,
+    )
     .join("\n");
 }
 
@@ -302,22 +379,39 @@ export async function runVideoJob(jobId: string): Promise<void> {
     await setJob(jobId, { script: script as unknown as Json });
     const scenes = script.scenes;
 
-    // 2) TTS per scene → durations
+    // 2) TTS — sentence by sentence. Han runs inside Korean narration are
+    //    spoken by the paired Chinese voice; per-sentence durations give
+    //    exact timings for subtitles and the transcript.
     await step(jobId, "나레이션 합성 중 (TTS)", 15);
+    const { ZH_PAIR_VOICE } = await import("./config");
+    const zhVoice =
+      cfg.language === "ko"
+        ? (ZH_PAIR_VOICE[cfg.voice] ?? "cmn-CN-Standard-A")
+        : undefined;
+    const GAP = 0.4; // physical silence between sentences
     const durations: number[] = [];
+    let clock = 0;
     for (let i = 0; i < scenes.length; i++) {
-      const { wav, seconds } = await synthesize(scenes[i].narration, cfg.voice);
-      await writeFile(join(work, `audio-${i}.wav`), wav);
-      durations.push(seconds + 0.4); // small breathing gap
+      const sentences = splitSentences(scenes[i].narration || scenes[i].zh || "…");
+      const pieces: Buffer[] = [];
+      const segs: { text: string; start: number; end: number }[] = [];
+      for (const sentence of sentences) {
+        const wav = await synthesizeMixed(sentence, cfg.voice, zhVoice);
+        const sec = wavSeconds(wav);
+        segs.push({ text: sentence, start: clock, end: clock + sec });
+        clock += sec + GAP;
+        pieces.push(wav, silenceWav(GAP));
+      }
+      const sceneWav = concatWavs(pieces);
+      await writeFile(join(work, `audio-${i}.wav`), sceneWav);
+      durations.push(wavSeconds(sceneWav));
+      scenes[i].segments = segs;
     }
-    const starts = durations.reduce<number[]>((acc, _d, i) => {
-      acc.push(i === 0 ? 0 : acc[i - 1] + durations[i - 1]);
-      return acc;
-    }, []);
-    const total = starts[starts.length - 1] + durations[durations.length - 1];
+    await setJob(jobId, { script: { ...script, scenes } as unknown as Json });
 
-    // 3) SRT
-    const srt = buildSrt(scenes, starts, durations, cfg.language);
+    // 3) SRT — one entry per sentence.
+    const allSegs = scenes.flatMap((s) => s.segments ?? []);
+    const srt = buildSrtFromSegments(allSegs, 0);
     await setJob(jobId, { srt });
     await writeFile(join(work, "subs.srt"), srt, "utf8");
 
@@ -405,12 +499,7 @@ export async function runVideoJob(jobId: string): Promise<void> {
     const finalPath = join(getMediaDir(), finalName);
     await mkdir(join(getMediaDir(), "videos"), { recursive: true });
     // Shift SRT by intro duration for the burned/muxed output.
-    const shifted = buildSrt(
-      scenes,
-      starts.map((st) => st + 1.5),
-      durations,
-      cfg.language,
-    );
+    const shifted = buildSrtFromSegments(allSegs, 1.5);
     const shiftedSrt = join(work, "subs-shifted.srt");
     await writeFile(shiftedSrt, shifted, "utf8");
 
@@ -500,12 +589,29 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
       job.thumbnail_path ? `/media/${job.thumbnail_path}` : null,
     );
 
+    // Optional course linkage: the video becomes a lesson in the course.
+    let lessonId: string | null = null;
+    if (cfg.courseId || cfg.newCourseTitle?.trim()) {
+      try {
+        lessonId = await createLessonFromScript(
+          job.created_by,
+          cfg,
+          script,
+          videoId,
+          dramaId,
+        );
+      } catch (e) {
+        console.warn("[video] 강의 연동 실패 (비치명):", e);
+      }
+    }
+
     // The mp4 lives on YouTube now — free the volume (keep the thumbnail).
     const { rm } = await import("node:fs/promises");
     await rm(join(getMediaDir(), job.video_path), { force: true }).catch(() => {});
 
     await setJob(jobId, {
       drama_id: dramaId,
+      lesson_id: lessonId,
       status: "done",
       step: "완료",
       video_path: null,
@@ -517,7 +623,8 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
   }
 }
 
-// Parse SRT back into (start,end) pairs — single source of truth for timings.
+// Parse SRT back into (start,end) pairs — fallback for jobs generated before
+// sentence segments existed.
 function parseSrtTimes(srt: string): { start: number; end: number }[] {
   const out: { start: number; end: number }[] = [];
   const re = /(\d{2}):(\d{2}):(\d{2}),(\d{3}) --> (\d{2}):(\d{2}):(\d{2}),(\d{3})/g;
@@ -532,6 +639,72 @@ function parseSrtTimes(srt: string): { start: number; end: number }[] {
   return out;
 }
 
+const HAN_EXTRACT = /[㐀-鿿][㐀-鿿，、\s]*[㐀-鿿]|[㐀-鿿]/;
+
+/** Attach the finished video to a course as a "video" lesson. */
+async function createLessonFromScript(
+  userId: string,
+  cfg: VideoJobConfig,
+  script: VideoScript,
+  youtubeVideoId: string,
+  dramaId: string,
+): Promise<string> {
+  const { asc, eq } = await import("drizzle-orm");
+
+  let courseId = cfg.courseId ?? null;
+  if (!courseId && cfg.newCourseTitle?.trim()) {
+    const [course] = await db
+      .insert(tables.courses)
+      .values({
+        title: cfg.newCourseTitle.trim().slice(0, 80),
+        description: `"${cfg.keyword}" 키워드로 생성된 영상 강의 모음`,
+        level: "beginner",
+        weeks: 4,
+        created_by: userId,
+      })
+      .returning({ id: tables.courses.id });
+    courseId = course.id;
+  }
+  if (!courseId) throw new Error("연동할 강의가 없습니다.");
+
+  const existing = await db
+    .select({ order_index: tables.lessons.order_index })
+    .from(tables.lessons)
+    .where(eq(tables.lessons.course_id, courseId))
+    .orderBy(asc(tables.lessons.order_index));
+  const nextOrder = existing.reduce((m, r) => Math.max(m, r.order_index), 0) + 1;
+
+  const contentMd = script.scenes
+    .map((sc, i) => {
+      const zhBlock = sc.zh ? `\n\n**${sc.zh}** (${sc.pinyin})\n${sc.ko}` : "";
+      return `## ${i + 1}. ${sc.ko || `장면 ${i + 1}`}\n\n${sc.narration}${zhBlock}`;
+    })
+    .join("\n\n");
+
+  const keyExpressions = script.scenes
+    .filter((sc) => sc.zh)
+    .map((sc) => ({ zh: sc.zh, pinyin: sc.pinyin, ko: sc.ko }));
+
+  const [lesson] = await db
+    .insert(tables.lessons)
+    .values({
+      course_id: courseId,
+      created_by: userId,
+      order_index: nextOrder,
+      title: script.title.slice(0, 80),
+      lesson_type: "video",
+      level: "beginner",
+      content_md: contentMd,
+      key_expressions: keyExpressions as unknown as Json,
+      video: {
+        youtube_video_id: youtubeVideoId,
+        drama_id: dramaId,
+      } as unknown as Json,
+    })
+    .returning({ id: tables.lessons.id });
+  return lesson.id;
+}
+
 async function createDramaFromScript(
   userId: string,
   cfg: VideoJobConfig,
@@ -542,25 +715,47 @@ async function createDramaFromScript(
 ): Promise<string> {
   const times = parseSrtTimes(srt);
   const intro = 1.5;
-  const scenes = script.scenes.map((sc, i) => ({
-    index: i + 1,
-    title: sc.ko ? sc.ko.slice(0, 12) : `장면 ${i + 1}`,
-    start_seconds: Math.floor((times[i]?.start ?? 0) + intro),
-    end_seconds: Math.ceil((times[i]?.end ?? 0) + intro),
-    summary_ko: sc.narration.slice(0, 120),
-    key_lines: sc.zh
-      ? [
-          {
-            zh: sc.zh,
-            pinyin: sc.pinyin,
-            ko: sc.ko,
-            time_seconds: Math.floor((times[i]?.start ?? 0) + intro),
-          },
-        ]
-      : [],
-    vocab: [],
-    quiz: [],
-  }));
+  const scenes = script.scenes.map((sc, i) => {
+    const segs = sc.segments ?? [];
+    const sceneStart = segs[0]?.start ?? times[i]?.start ?? 0;
+    const sceneEnd = segs.at(-1)?.end ?? times[i]?.end ?? sceneStart;
+
+    // One key line per narration sentence (exact timestamps). Chinese-narration
+    // videos put the sentence in zh; Korean narration extracts the Han run.
+    const key_lines = segs.length
+      ? segs.map((seg) => {
+          const isZhNarration = cfg.language === "zh";
+          const containsSceneZh = !!sc.zh && seg.text.includes(sc.zh);
+          const han = seg.text.match(HAN_EXTRACT)?.[0]?.trim() ?? "";
+          return {
+            zh: isZhNarration ? seg.text : containsSceneZh ? sc.zh : han,
+            pinyin: containsSceneZh || isZhNarration ? sc.pinyin ?? "" : "",
+            ko: isZhNarration ? sc.ko ?? "" : seg.text,
+            time_seconds: Math.floor(seg.start + intro),
+          };
+        })
+      : sc.zh
+        ? [
+            {
+              zh: sc.zh,
+              pinyin: sc.pinyin,
+              ko: sc.ko,
+              time_seconds: Math.floor(sceneStart + intro),
+            },
+          ]
+        : [];
+
+    return {
+      index: i + 1,
+      title: sc.ko ? sc.ko.slice(0, 12) : `장면 ${i + 1}`,
+      start_seconds: Math.floor(sceneStart + intro),
+      end_seconds: Math.ceil(sceneEnd + intro),
+      summary_ko: sc.narration.slice(0, 120),
+      key_lines,
+      vocab: (sc.vocab ?? []).filter((v) => v?.zh),
+      quiz: [],
+    };
+  });
 
   const [row] = await db
     .insert(tables.dramas)

@@ -161,6 +161,7 @@ export const getLesson = createServerFn({ method: "GET" })
         comic_panels: tables.lessons.comic_panels,
         cultural_note: tables.lessons.cultural_note,
         cultural_snippet: tables.lessons.cultural_snippet,
+        video: tables.lessons.video,
       })
       .from(tables.lessons)
       .where(eq(tables.lessons.id, data.lessonId))
