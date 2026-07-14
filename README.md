@@ -6,7 +6,7 @@
 - **DB**: Railway Postgres + Drizzle ORM (스키마: [src/db/schema.ts](src/db/schema.ts), 마이그레이션: `drizzle/`)
 - **인증**: better-auth (아이디/비밀번호 + Google OAuth), 세션 쿠키 방식
 - **미디어**: Suno 음원/영상·레슨 이미지를 Railway 볼륨(`/data`)에 저장, `/media/*` 라우트로 서빙
-- **AI**: Lovable AI Gateway (드라마 생성, 레슨 이미지, 가사 병음·번역), Suno(노래 생성)
+- **AI**: Google Gemini API (드라마 생성, 레슨 이미지, 가사 병음·번역, 영상 대본), Suno(노래 생성)
 - **배포**: GitHub → Railway 자동 배포
 
 ## 로컬 개발

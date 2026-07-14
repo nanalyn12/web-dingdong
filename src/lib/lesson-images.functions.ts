@@ -11,14 +11,11 @@ const InputSchema = z.object({
 const STYLE_SUFFIX =
   ", warm pastel watercolor illustration, cute friendly chibi style, soft lighting, no text, no characters, no captions, no letters, no words, no logos, no signs";
 
-// Image generation with two backends: Gemini native API (GEMINI_API_KEY)
-// or the legacy Lovable gateway (LOVABLE_API_KEY). Returns base64 PNG.
+// Image generation via the Gemini native API (GEMINI_API_KEY). Returns base64 PNG.
 async function generateImageBase64(prompt: string): Promise<string> {
   const gemini = process.env.GEMINI_API_KEY;
   if (gemini) return generateImageGemini(prompt, gemini);
-  const lovable = process.env.LOVABLE_API_KEY;
-  if (lovable) return generateImageLovable(prompt, lovable);
-  throw new Error("이미지 생성 키가 없습니다 — GEMINI_API_KEY 또는 LOVABLE_API_KEY 필요");
+  throw new Error("이미지 생성 키가 없습니다 — GEMINI_API_KEY 필요");
 }
 
 async function generateImageGemini(prompt: string, apiKey: string): Promise<string> {
@@ -51,46 +48,6 @@ async function generateImageGemini(prompt: string, apiKey: string): Promise<stri
     );
   }
   return b64;
-}
-
-// Lovable AI Gateway image endpoint. Returns base64 in JSON response.
-async function generateImageLovable(prompt: string, apiKey: string): Promise<string> {
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash-image-preview",
-      messages: [{ role: "user", content: prompt + STYLE_SUFFIX }],
-      modalities: ["image", "text"],
-    }),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`이미지 생성 실패 (${res.status}): ${text.slice(0, 300)}`);
-  }
-  const payload = (await res.json()) as {
-    choices?: Array<{
-      message?: {
-        images?: Array<{ image_url?: { url?: string } }>;
-      };
-    }>;
-  };
-  const imgUrl = payload.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-  if (imgUrl) {
-    if (imgUrl.startsWith("data:")) {
-      const comma = imgUrl.indexOf(",");
-      if (comma > 0) return imgUrl.slice(comma + 1);
-    }
-    const r = await fetch(imgUrl);
-    const buf = new Uint8Array(await r.arrayBuffer());
-    let bin = "";
-    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-    return btoa(bin);
-  }
-  throw new Error(`이미지 응답 형식을 인식할 수 없습니다: ${JSON.stringify(payload).slice(0, 300)}`);
 }
 
 export const generateLessonComicImages = createServerFn({ method: "POST" })
