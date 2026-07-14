@@ -47,6 +47,11 @@ export default {
           .then((m) => m.initVideoScheduler())
           .catch((e) => console.error("[scheduler] init failed:", e));
       }
+      if (!globalThis.__supabaseMediaMigrationStarted) {
+        import("@/lib/media-migration.server")
+          .then((m) => m.migrateSupabaseMedia())
+          .catch((e) => console.error("[media-migration] failed:", e));
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
