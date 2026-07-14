@@ -37,6 +37,7 @@ import {
   FOCUS_LABEL,
   LENGTHS,
   RESOLUTIONS,
+  SPEAKING_RATES,
   VOICES,
   type VideoFocus,
   type VideoJobConfig,
@@ -238,6 +239,8 @@ function CreateWizard() {
   const [privacy, setPrivacy] = useState<VideoJobConfig["privacy"]>("unlisted");
   const [courseLink, setCourseLink] = useState("none");
   const [newCourseTitle, setNewCourseTitle] = useState("");
+  const [speakingRate, setSpeakingRate] = useState(1.0);
+  const [repeatZh, setRepeatZh] = useState(false);
 
   const suggestMut = useMutation({
     mutationFn: () => callSuggest({ data: { keyword, focus, audience } }),
@@ -267,6 +270,8 @@ function CreateWizard() {
               courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
             newCourseTitle:
               courseLink === "__new__" ? newCourseTitle.trim() : undefined,
+            speakingRate,
+            repeatZh,
           },
         },
       }),
@@ -435,6 +440,26 @@ function CreateWizard() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 items-end">
+        <div className="space-y-2">
+          <Label>말하기 속도</Label>
+          <Select
+            value={String(speakingRate)}
+            onValueChange={(v) => setSpeakingRate(Number(v))}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SPEAKING_RATES.map((r) => (
+                <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl bg-white/50 border border-border px-4 py-3">
+          <Switch checked={repeatZh} onCheckedChange={setRepeatZh} id="repeatzh" />
+          <Label htmlFor="repeatzh" className="cursor-pointer">
+            중국어 표현 2회 읽기
+          </Label>
+        </div>
         <div className="flex items-center gap-3 rounded-2xl bg-white/50 border border-border px-4 py-3">
           <Switch checked={burnSubtitles} onCheckedChange={setBurnSubtitles} id="burn" />
           <Label htmlFor="burn" className="cursor-pointer">

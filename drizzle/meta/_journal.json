@@ -36,6 +36,13 @@
       "when": 1783832792496,
       "tag": "0004_cute_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783948482915,
+      "tag": "0005_daffy_tigra",
+      "breakpoints": true
     }
   ]
 }

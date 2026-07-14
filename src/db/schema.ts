@@ -321,6 +321,24 @@ export const video_schedules = pgTable("video_schedules", {
   created_at: ts("created_at").notNull().defaultNow(),
 });
 
+// Per-user learning progress for 영상 학습 (dramas).
+export const drama_progress = pgTable(
+  "drama_progress",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    drama_id: uuid("drama_id")
+      .notNull()
+      .references(() => dramas.id, { onDelete: "cascade" }),
+    last_seconds: real("last_seconds").notNull().default(0),
+    completed_scenes: jsonb("completed_scenes").$type<Json>().notNull().default([]),
+    quiz_scores: jsonb("quiz_scores").$type<Json>().notNull().default({}),
+    updated_at: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [unique("drama_progress_user_drama").on(t.user_id, t.drama_id)],
+);
+
 // Single-row style credential store (e.g. YouTube OAuth refresh token).
 export const app_credentials = pgTable("app_credentials", {
   key: text("key").primaryKey(),

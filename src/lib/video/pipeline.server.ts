@@ -120,6 +120,15 @@ function filterPath(p: string): string {
   return p.replace(/\\/g, "/").replace(/:/g, "\\:");
 }
 
+// Split a title into up to two lines of ~max chars, breaking on spaces.
+function wrapTitle(title: string, max: number): [string, string] {
+  const t = title.trim().slice(0, max * 2);
+  if (t.length <= max) return [t, ""];
+  const cut = t.lastIndexOf(" ", max);
+  const at = cut > max * 0.4 ? cut : max;
+  return [t.slice(0, at).trim(), t.slice(at).trim()];
+}
+
 function escapeDrawtext(t: string): string {
   return t.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\\'").replace(/%/g, "\\%");
 }
@@ -162,10 +171,11 @@ ${topicLine}
 - ko: zh의 한국어 번역
 - pexels_query: 이 장면에 어울리는 스톡 영상 검색어 (영어 2~4단어, 구체적 사물/풍경/행동)
 - vocab: 이 장면에서 배우는 중국어 단어 3~5개. 각 항목 { "zh": 한자, "pinyin": 성조 병음, "ko": 뜻, "hsk": 1~9 }
+- quiz: 이 장면 내용 기반 문제 정확히 2개. 1개는 {"type":"choice","question":"...","options":["A안","B안","C안","D안"],"answer":"정답 옵션 텍스트 그대로","explanation":"..."}, 1개는 {"type":"fill","question":"빈칸이 ___인 중국어 문장","answer":"빈칸 한자","explanation":"..."}
 
 첫 장면은 주제 소개(훅), 마지막 장면은 요약+구독 유도.
 반드시 아래 JSON만 출력 (코드펜스 금지):
-{"title":"유튜브 제목(한국어, 40자 이내, 키워드 포함)","description":"유튜브 설명 2~3문장 + 해시태그 3개","tags":["태그1","태그2","태그3","태그4","태그5"],"scenes":[{"index":1,"narration":"...","zh":"...","pinyin":"...","ko":"...","pexels_query":"...","vocab":[{"zh":"...","pinyin":"...","ko":"...","hsk":1}]}]}`;
+{"title":"유튜브 제목(한국어, 40자 이내, 키워드 포함)","description":"유튜브 설명 2~3문장 + 해시태그 3개","tags":["태그1","태그2","태그3","태그4","태그5"],"scenes":[{"index":1,"narration":"...","zh":"...","pinyin":"...","ko":"...","pexels_query":"...","vocab":[{"zh":"...","pinyin":"...","ko":"...","hsk":1}],"quiz":[{"type":"choice","question":"...","options":["..."],"answer":"...","explanation":"..."}]}]}`;
 
   const { text } = await generateText({
     model: gateway("google/gemini-2.5-flash"),
@@ -226,7 +236,11 @@ const SAMPLE_RATE = 24000;
 const WAV_HEADER = 44;
 
 // Returns WAV (LINEAR16 24kHz mono) buffer.
-async function synthesize(textInput: string, voice: string): Promise<Buffer> {
+async function synthesize(
+  textInput: string,
+  voice: string,
+  speakingRate = 1.0,
+): Promise<Buffer> {
   const key = process.env.GOOGLE_TTS_API_KEY;
   if (!key) throw new Error("GOOGLE_TTS_API_KEY 미설정 — Cloud Text-to-Speech API 키 필요");
   const languageCode = voice.split("-").slice(0, 2).join("-");
@@ -238,7 +252,11 @@ async function synthesize(textInput: string, voice: string): Promise<Buffer> {
       body: JSON.stringify({
         input: { text: textInput },
         voice: { languageCode, name: voice },
-        audioConfig: { audioEncoding: "LINEAR16", sampleRateHertz: SAMPLE_RATE },
+        audioConfig: {
+          audioEncoding: "LINEAR16",
+          sampleRateHertz: SAMPLE_RATE,
+          speakingRate,
+        },
       }),
     },
   );
@@ -294,31 +312,39 @@ async function synthesizeMixed(
   sentence: string,
   voice: string,
   zhVoice: string | undefined,
+  opts: { speakingRate?: number; repeatZh?: boolean } = {},
 ): Promise<Buffer> {
+  const rate = opts.speakingRate ?? 1.0;
   if (!zhVoice || !/[㐀-鿿]/.test(sentence)) {
-    return synthesize(sentence, voice);
+    return synthesize(sentence, voice, rate);
   }
-  const parts: { text: string; v: string }[] = [];
+  const parts: { text: string; v: string; zh?: boolean }[] = [];
   let last = 0;
   for (const m of sentence.matchAll(HAN_RUN)) {
     const idx = m.index ?? 0;
     const before = sentence.slice(last, idx).trim();
     if (before) parts.push({ text: before, v: voice });
-    parts.push({ text: m[0].trim(), v: zhVoice });
+    parts.push({ text: m[0].trim(), v: zhVoice, zh: true });
     last = idx + m[0].length;
   }
   const tail = sentence.slice(last).trim();
   if (tail) parts.push({ text: tail, v: voice });
-  if (parts.length === 0) return synthesize(sentence, voice);
+  if (parts.length === 0) return synthesize(sentence, voice, rate);
 
   const wavs: Buffer[] = [];
   for (let i = 0; i < parts.length; i++) {
     // Strip dangling punctuation-only fragments (e.g. lone quotes).
     if (!/[\p{L}\p{N}㐀-鿿]/u.test(parts[i].text)) continue;
-    wavs.push(await synthesize(parts[i].text, parts[i].v));
+    const wav = await synthesize(parts[i].text, parts[i].v, rate);
+    wavs.push(wav);
+    // Learner mode: read the Chinese run one more time, slightly slower.
+    if (opts.repeatZh && parts[i].zh) {
+      wavs.push(silenceWav(0.3));
+      wavs.push(await synthesize(parts[i].text, parts[i].v, Math.min(rate, 0.9)));
+    }
     if (i < parts.length - 1) wavs.push(silenceWav(0.12));
   }
-  if (wavs.length === 0) return synthesize(sentence, voice);
+  if (wavs.length === 0) return synthesize(sentence, voice, rate);
   return concatWavs(wavs);
 }
 
@@ -396,7 +422,10 @@ export async function runVideoJob(jobId: string): Promise<void> {
       const pieces: Buffer[] = [];
       const segs: { text: string; start: number; end: number }[] = [];
       for (const sentence of sentences) {
-        const wav = await synthesizeMixed(sentence, cfg.voice, zhVoice);
+        const wav = await synthesizeMixed(sentence, cfg.voice, zhVoice, {
+          speakingRate: cfg.speakingRate,
+          repeatZh: cfg.repeatZh,
+        });
         const sec = wavSeconds(wav);
         segs.push({ text: sentence, start: clock, end: clock + sec });
         clock += sec + GAP;
@@ -519,15 +548,21 @@ export async function runVideoJob(jobId: string): Promise<void> {
     muxArgs.push("-c:a", "aac", "-b:a", "160k", "-shortest", finalPath);
     await run(ff, muxArgs);
 
-    // 9) Thumbnail: frame from first scene + title overlay
+    // 9) Thumbnail — frame from the pre-subtitle video (no burned captions),
+    //    title wrapped to two lines on a translucent box.
     await step(jobId, "썸네일 생성 중", 92);
     const thumbName = `videos/${jobId}-thumb.jpg`;
     const thumbPath = join(getMediaDir(), thumbName);
-    const thumbText = escapeDrawtext(script.title.slice(0, 22));
+    const [line1, line2] = wrapTitle(script.title, 15);
+    const fs1 = Math.round(H / 9);
+    const boxArgs = `box=1:boxcolor=black@0.45:boxborderw=${Math.round(H / 40)}`;
+    const draw1 = `drawtext=fontfile='${filterPath(font)}':text='${escapeDrawtext(line1)}':fontcolor=white:fontsize=${fs1}:${boxArgs}:x=(w-text_w)/2:y=${line2 ? `h-2.6*${fs1}` : `h-1.8*${fs1}`}`;
+    const draw2 = line2
+      ? `,drawtext=fontfile='${filterPath(font)}':text='${escapeDrawtext(line2)}':fontcolor=white:fontsize=${fs1}:${boxArgs}:x=(w-text_w)/2:y=h-1.3*${fs1}`
+      : "";
     await run(ff, [
-      "-y", "-ss", "2.0", "-i", finalPath, "-frames:v", "1",
-      "-vf",
-      `drawtext=fontfile='${filterPath(font)}':text='${thumbText}':fontcolor=white:borderw=4:bordercolor=black:fontsize=${Math.round(H / 10)}:x=(w-text_w)/2:y=h-text_h-${Math.round(H / 8)}`,
+      "-y", "-ss", "3.2", "-i", videoOnly, "-frames:v", "1",
+      "-vf", draw1 + draw2,
       "-q:v", "3", thumbPath,
     ]);
 
@@ -546,6 +581,8 @@ export async function runVideoJob(jobId: string): Promise<void> {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`[video ${jobId.slice(0, 8)}] failed:`, msg);
     await setJob(jobId, { status: "failed", error: msg });
+    const { notifyAdmins } = await import("@/lib/notify.server");
+    await notifyAdmins("🎬 영상 생성 실패", `${cfg.topic || cfg.keyword}: ${msg}`);
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
@@ -589,6 +626,22 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
       job.thumbnail_path ? `/media/${job.thumbnail_path}` : null,
     );
 
+    // Funnel: append the DingDong learning link to the description and file
+    // the video into the channel playlist. Both best-effort.
+    try {
+      const { updateVideoDescription, addToDingdongPlaylist, appBaseUrl } =
+        await import("./youtube.server");
+      const learnUrl = `${appBaseUrl()}/dramas/${dramaId}`;
+      await updateVideoDescription(
+        videoId,
+        script.title,
+        `${script.description}\n\n📚 딩동에서 이 영상으로 학습하기 (전체 대사·단어장·퀴즈):\n${learnUrl}`,
+      );
+      await addToDingdongPlaylist(videoId);
+    } catch (e) {
+      console.warn("[video] 유튜브 설명/재생목록 갱신 실패 (비치명):", e);
+    }
+
     // Optional course linkage: the video becomes a lesson in the course.
     let lessonId: string | null = null;
     if (cfg.courseId || cfg.newCourseTitle?.trim()) {
@@ -619,6 +672,8 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await setJob(jobId, { status: "failed", error: `업로드/콘텐츠 생성 실패: ${msg}` });
+    const { notifyAdmins } = await import("@/lib/notify.server");
+    await notifyAdmins("🎬 영상 업로드 실패", msg);
     throw e;
   }
 }
@@ -753,7 +808,7 @@ async function createDramaFromScript(
       summary_ko: sc.narration.slice(0, 120),
       key_lines,
       vocab: (sc.vocab ?? []).filter((v) => v?.zh),
-      quiz: [],
+      quiz: (sc.quiz ?? []).filter((q) => q?.question && q?.answer),
     };
   });
 

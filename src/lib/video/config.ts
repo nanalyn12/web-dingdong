@@ -20,7 +20,16 @@ export type VideoJobConfig = {
   // Optional course linkage: attach the finished video as a lesson.
   courseId?: string | null;
   newCourseTitle?: string;
+  // Voice options
+  speakingRate?: number; // 0.8 ~ 1.2 (default 1.0)
+  repeatZh?: boolean; // speak Chinese runs twice for learners
 };
+
+export const SPEAKING_RATES = [
+  { value: 0.85, label: "천천히 (초급)" },
+  { value: 1.0, label: "보통" },
+  { value: 1.1, label: "빠르게" },
+] as const;
 
 // Chinese voice used for Han runs inside Korean narration (gender-matched).
 export const ZH_PAIR_VOICE: Record<string, string> = {
@@ -77,6 +86,14 @@ export type SceneSegment = {
   end: number;
 };
 
+export type SceneQuiz = {
+  type: "choice" | "fill";
+  question: string;
+  options?: string[];
+  answer: string;
+  explanation?: string;
+};
+
 export type ScriptScene = {
   index: number;
   narration: string; // narration text in target language
@@ -85,6 +102,7 @@ export type ScriptScene = {
   ko: string; // Korean translation
   pexels_query: string; // English search query for stock footage
   vocab?: SceneVocab[]; // 3-5 words per scene → 단어장 저장 UI
+  quiz?: SceneQuiz[]; // 2 questions per scene → 기존 MiniQuiz UI
   segments?: SceneSegment[]; // filled by the pipeline after TTS
 };
 

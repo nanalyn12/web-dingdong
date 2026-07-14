@@ -103,6 +103,111 @@ async function accessToken(): Promise<string> {
   return data.access_token;
 }
 
+export function appBaseUrl(): string {
+  return (
+    process.env.BETTER_AUTH_URL ||
+    (process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : "http://localhost:8080")
+  );
+}
+
+/** Append the DingDong learning link to the video description (funnel). */
+export async function updateVideoDescription(
+  videoId: string,
+  title: string,
+  description: string,
+): Promise<void> {
+  const token = await accessToken();
+  const res = await fetch(
+    "https://www.googleapis.com/youtube/v3/videos?part=snippet",
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: videoId,
+        snippet: {
+          title: title.slice(0, 100),
+          description: description.slice(0, 4900),
+          categoryId: "27",
+        },
+      }),
+    },
+  );
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`설명 업데이트 실패 (${res.status}): ${t.slice(0, 200)}`);
+  }
+}
+
+/** Add the video to the "DingDong 학습 영상" playlist (created on first use). */
+export async function addToDingdongPlaylist(videoId: string): Promise<void> {
+  const token = await accessToken();
+  const { eq } = await import("drizzle-orm");
+
+  let playlistId = (
+    (
+      await db
+        .select()
+        .from(tables.app_credentials)
+        .where(eq(tables.app_credentials.key, "youtube_playlist"))
+        .limit(1)
+    )[0]?.value as { id?: string } | undefined
+  )?.id;
+
+  if (!playlistId) {
+    const create = await fetch(
+      "https://www.googleapis.com/youtube/v3/playlists?part=snippet,status",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          snippet: {
+            title: "DingDong 학습 영상",
+            description: "딩동 중국어 학습 플랫폼의 AI 생성 학습 영상 모음",
+          },
+          status: { privacyStatus: "unlisted" },
+        }),
+      },
+    );
+    if (!create.ok) throw new Error(`재생목록 생성 실패 (${create.status})`);
+    const created = (await create.json()) as { id: string };
+    playlistId = created.id;
+    const value = { id: playlistId } as unknown as Json;
+    await db
+      .insert(tables.app_credentials)
+      .values({ key: "youtube_playlist", value })
+      .onConflictDoUpdate({
+        target: tables.app_credentials.key,
+        set: { value, updated_at: new Date().toISOString() },
+      });
+  }
+
+  const add = await fetch(
+    "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        snippet: {
+          playlistId,
+          resourceId: { kind: "youtube#video", videoId },
+        },
+      }),
+    },
+  );
+  if (!add.ok) throw new Error(`재생목록 추가 실패 (${add.status})`);
+}
+
 export async function uploadToYouTube(args: {
   filePath: string;
   thumbnailPath?: string;

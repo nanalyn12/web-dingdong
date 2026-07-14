@@ -22,6 +22,8 @@ const ConfigInput = z.object({
   privacy: z.enum(["private", "unlisted", "public"]).default("private"),
   courseId: z.string().uuid().nullable().optional(),
   newCourseTitle: z.string().trim().max(80).optional(),
+  speakingRate: z.number().min(0.7).max(1.3).optional(),
+  repeatZh: z.boolean().optional(),
 });
 
 const CreateInput = z.object({

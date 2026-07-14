@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useMyProfile } from "@/lib/auth-client";
 import { deleteDrama, listDramas } from "@/lib/dramas.functions";
+import { listMyDramaProgress } from "@/lib/drama-progress.functions";
 import { generateDrama } from "@/lib/generate-drama.functions";
 import { resyncAllDramasWithoutCaptions } from "@/lib/resync-dramas.functions";
 import { probeCaptions, type ProbeResult } from "@/lib/youtube-captions.functions";
@@ -56,6 +57,14 @@ function DramasPage() {
     queryKey: ["dramas"],
     queryFn: () => listDramas(),
   });
+  const { data: progressList } = useQuery({
+    queryKey: ["drama-progress-list"],
+    queryFn: () => listMyDramaProgress({}),
+    enabled: !!profile,
+  });
+  const progressMap = new Map(
+    (progressList ?? []).map((p) => [p.drama_id, p.completed]),
+  );
   const [creating, setCreating] = useState(false);
 
   const del = useMutation({
@@ -184,6 +193,12 @@ function DramasPage() {
                   </div>
                   <div className="absolute bottom-2 left-2 bg-black/60 text-white rounded-full px-2 py-0.5 text-[10px] font-semibold">
                     🎞 {d.scenes?.length ?? 0}장면
+                    {(progressMap.get(d.id) ?? 0) > 0 && (
+                      <span className="ml-1 text-emerald-300">
+                        · ✅ {Math.min(progressMap.get(d.id)!, d.scenes?.length ?? 0)}
+                        /{d.scenes?.length ?? 0}
+                      </span>
+                    )}
                   </div>
                   {d.has_captions === false && (
                     <div

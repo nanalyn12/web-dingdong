@@ -5,7 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { useMyProfile } from "@/lib/auth-client";
+import { useMyProfile, useSession } from "@/lib/auth-client";
+import {
+  getMyDramaProgress,
+  saveMyDramaProgress,
+} from "@/lib/drama-progress.functions";
 import {
   getDrama,
   updateDramaLineTime,
@@ -159,6 +163,59 @@ function DramaDetail() {
     el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [shownIndex]);
 
+  // ── 학습 진도 (로그인 사용자만): 이어보기 + 시청 위치/장면 완료 자동 저장 ──
+  const { session } = useSession();
+  const { data: progress } = useQuery({
+    queryKey: ["drama-progress", id],
+    queryFn: () => getMyDramaProgress({ data: { dramaId: id } }),
+    enabled: !!session,
+    staleTime: Infinity,
+  });
+  const [resumeDismissed, setResumeDismissed] = useState(false);
+  const completedRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (progress?.completed_scenes) {
+      completedRef.current = new Set(progress.completed_scenes);
+    }
+  }, [progress]);
+
+  // Autosave every 10s while playing; mark scenes completed when playback
+  // passes their end time.
+  const timeRef = useRef(currentTime);
+  timeRef.current = currentTime;
+  const scenesRef = useRef(scenes);
+  scenesRef.current = scenes;
+  useEffect(() => {
+    if (!session || !drama) return;
+    const t = setInterval(() => {
+      const now = timeRef.current;
+      if (now <= 3) return;
+      const done: number[] = [];
+      scenesRef.current.forEach((s, i) => {
+        if (now >= s.end_seconds - 1 && !completedRef.current.has(i)) {
+          completedRef.current.add(i);
+          done.push(i);
+        }
+      });
+      saveMyDramaProgress({
+        data: {
+          dramaId: id,
+          lastSeconds: Math.floor(now),
+          ...(done.length ? { completedScenes: [...completedRef.current] } : {}),
+        },
+      }).catch(() => {});
+    }, 10_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, drama?.id]);
+
+  const saveQuizScore = (sceneIndex: number, score: number, total: number) => {
+    if (!session) return;
+    saveMyDramaProgress({
+      data: { dramaId: id, quizScore: { sceneIndex, score, total } },
+    }).catch(() => {});
+  };
+
   if (isLoading) return <div className="glass rounded-3xl p-6">불러오는 중…</div>;
   if (!drama) return <div className="glass rounded-3xl p-6">드라마를 찾을 수 없어요.</div>;
 
@@ -203,6 +260,36 @@ function DramaDetail() {
         <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
           <div ref={containerRef} className="w-full h-full" />
         </div>
+        {!!progress?.last_seconds &&
+          progress.last_seconds > 15 &&
+          !resumeDismissed &&
+          currentTime < 3 && (
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-2xl bg-primary/10 px-3 py-2 text-sm">
+              <span>
+                ⏱️ 지난번 {fmtTime(progress.last_seconds)}까지 학습했어요.
+              </span>
+              <span className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  onClick={() => {
+                    seek(progress.last_seconds);
+                    setResumeDismissed(true);
+                  }}
+                >
+                  ▶ 이어보기
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-muted-foreground"
+                  onClick={() => setResumeDismissed(true)}
+                >
+                  처음부터
+                </Button>
+              </span>
+            </div>
+          )}
       </div>
 
       {/* Scene timeline chips */}
@@ -247,6 +334,7 @@ function DramaDetail() {
           dramaId={drama.id}
           sceneIndex={shownIndex}
           currentTime={currentTime}
+          onQuizComplete={(score, total) => saveQuizScore(shownIndex, score, total)}
         />
       )}
     </div>
@@ -391,12 +479,14 @@ function ScenePanel({
   dramaId,
   sceneIndex,
   currentTime,
+  onQuizComplete,
 }: {
   scene: DramaScene;
   onSeek: (s: number) => void;
   dramaId: string;
   sceneIndex: number;
   currentTime: number;
+  onQuizComplete?: (score: number, total: number) => void;
 }) {
   const { data: profile } = useMyProfile();
   const isEditor = profile?.role === "teacher" || profile?.role === "admin";
@@ -485,7 +575,9 @@ function ScenePanel({
         </div>
       )}
 
-      {scene.quiz?.length > 0 && <MiniQuiz quiz={scene.quiz} sceneKey={scene.index} />}
+      {scene.quiz?.length > 0 && (
+        <MiniQuiz quiz={scene.quiz} sceneKey={scene.index} onComplete={onQuizComplete} />
+      )}
     </div>
   );
 }
@@ -688,9 +780,11 @@ function VocabRow({ item }: { item: DramaScene["vocab"][number] }) {
 function MiniQuiz({
   quiz,
   sceneKey,
+  onComplete,
 }: {
   quiz: DramaScene["quiz"];
   sceneKey: number;
+  onComplete?: (score: number, total: number) => void;
 }) {
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<string>("");
@@ -733,8 +827,11 @@ function MiniQuiz({
 
   const check = () => {
     if (!picked) return;
-    if (isCorrect(picked)) setScore((s) => s + 1);
+    const nextScore = score + (isCorrect(picked) ? 1 : 0);
+    setScore(nextScore);
     setRevealed(true);
+    // Last question answered → report the final score once.
+    if (step >= quiz.length - 1) onComplete?.(nextScore, quiz.length);
   };
   const next = () => {
     setStep((s) => s + 1);
