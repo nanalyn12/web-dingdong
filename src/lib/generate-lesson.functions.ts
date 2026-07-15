@@ -249,6 +249,13 @@ export const generateLesson = createServerFn({ method: "POST" })
       })
       .returning({ id: tables.lessons.id });
 
+    // Keep weeks >= lesson count (adding beyond the planned weeks grows the course).
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      UPDATE courses
+      SET weeks = GREATEST(weeks, (SELECT count(*) FROM lessons WHERE course_id = ${data.courseId}))
+      WHERE id = ${data.courseId}`);
+
     return { lessonId: inserted.id };
   });
 

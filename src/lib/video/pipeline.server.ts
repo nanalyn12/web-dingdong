@@ -757,6 +757,15 @@ async function createLessonFromScript(
       } as unknown as Json,
     })
     .returning({ id: tables.lessons.id });
+
+  // Keep weeks >= lesson count so the course card's progress ring never
+  // shows a "full" course that keeps growing.
+  const { sql } = await import("drizzle-orm");
+  await db.execute(sql`
+    UPDATE courses
+    SET weeks = GREATEST(weeks, (SELECT count(*) FROM lessons WHERE course_id = ${courseId}))
+    WHERE id = ${courseId}`);
+
   return lesson.id;
 }
 

@@ -537,6 +537,16 @@ function CourseCard({ course }: { course: CourseWithCount }) {
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-4">
               <CourseStructureDialog course={course} />
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full rounded-xl text-xs"
+                onClick={() =>
+                  navigate({ to: "/studio", search: { courseId: course.id } })
+                }
+              >
+                🎬 이 강의에 새 영상 강의 만들기
+              </Button>
               <LessonListEditor courseId={course.id} />
               <form
                 className="space-y-3 pt-3 border-t border-white/30"

@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { useState } from "react";
 import {
   CalendarClock,
@@ -61,8 +63,14 @@ import {
   updateVideoSchedule,
 } from "@/lib/video/studio.functions";
 
+const studioSearchSchema = z.object({
+  // 강의 카드의 "새 영상 강의 만들기"에서 진입 시 강의 연동 프리셋.
+  courseId: fallback(z.string(), "").default(""),
+});
+
 export const Route = createFileRoute("/_app/studio")({
   head: () => ({ meta: [{ title: "영상 스튜디오 — DingDong" }] }),
+  validateSearch: zodValidator(studioSearchSchema),
   component: StudioPage,
 });
 
@@ -131,6 +139,7 @@ function CourseLinkSelect({
 
 function StudioPage() {
   const isEditor = useIsEditor();
+  const search = Route.useSearch();
   const qc = useQueryClient();
 
   const callList = useServerFn(listVideoJobs);
@@ -202,7 +211,7 @@ function StudioPage() {
         </TabsList>
 
         <TabsContent value="create" className="mt-4">
-          <CreateWizard />
+          <CreateWizard initialCourseId={search.courseId || null} />
         </TabsContent>
 
         <TabsContent value="jobs" className="mt-4">
@@ -219,7 +228,7 @@ function StudioPage() {
 
 /* ── 새 영상 위저드 ─────────────────────────────────────────────────────── */
 
-function CreateWizard() {
+function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
   const qc = useQueryClient();
   const callCreate = useServerFn(createVideoJobs);
   const callSuggest = useServerFn(suggestVideoTopics);
@@ -240,7 +249,7 @@ function CreateWizard() {
   const [uploadMode, setUploadMode] =
     useState<VideoJobConfig["uploadMode"]>("approval");
   const [privacy, setPrivacy] = useState<VideoJobConfig["privacy"]>("unlisted");
-  const [courseLink, setCourseLink] = useState("none");
+  const [courseLink, setCourseLink] = useState(initialCourseId || "none");
   const [newCourseTitle, setNewCourseTitle] = useState("");
   const [speakingRate, setSpeakingRate] = useState(1.0);
   const [repeatZh, setRepeatZh] = useState(false);
