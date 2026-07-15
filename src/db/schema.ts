@@ -339,6 +339,48 @@ export const drama_progress = pgTable(
   (t) => [unique("drama_progress_user_drama").on(t.user_id, t.drama_id)],
 );
 
+// Per-user daily learning activity counters (KST dates), one row per day.
+// Powers the dashboard streak + activity grass chart.
+export const learning_activity = pgTable(
+  "learning_activity",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    activity_date: text("activity_date").notNull(), // "YYYY-MM-DD" (KST)
+    reviews: integer("reviews").notNull().default(0), // SRS 복습 채점
+    words_added: integer("words_added").notNull().default(0),
+    lessons: integer("lessons").notNull().default(0), // 레슨 탭 완료
+    videos: integer("videos").notNull().default(0), // 영상 학습 장면 완료
+    quizzes: integer("quizzes").notNull().default(0), // 퀴즈 제출
+    updated_at: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("learning_activity_user_date").on(t.user_id, t.activity_date),
+    index("idx_learning_activity_user").on(t.user_id, t.activity_date),
+  ],
+);
+
+// Per-user lesson progress (server-side twin of the localStorage guest
+// progress in the lesson page).
+export const lesson_progress = pgTable(
+  "lesson_progress",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    lesson_id: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    completed_tabs: jsonb("completed_tabs").$type<Json>().notNull().default([]),
+    quiz_correct: integer("quiz_correct"),
+    quiz_total: integer("quiz_total"),
+    completed_at: ts("completed_at"), // 퀴즈 70% 이상 통과 시각
+    updated_at: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [unique("lesson_progress_user_lesson").on(t.user_id, t.lesson_id)],
+);
+
 // Single-row style credential store (e.g. YouTube OAuth refresh token).
 export const app_credentials = pgTable("app_credentials", {
   key: text("key").primaryKey(),
@@ -357,3 +399,5 @@ export type VocabRow = typeof vocabulary.$inferSelect;
 export type PushSubscription = typeof push_subscriptions.$inferSelect;
 export type VideoJob = typeof video_jobs.$inferSelect;
 export type VideoSchedule = typeof video_schedules.$inferSelect;
+export type LearningActivity = typeof learning_activity.$inferSelect;
+export type LessonProgress = typeof lesson_progress.$inferSelect;

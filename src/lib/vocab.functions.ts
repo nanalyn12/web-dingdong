@@ -99,6 +99,16 @@ export const saveVocabulary = createServerFn({ method: "POST" })
       srs_lapses: seed.lapses,
       srs_due_at: seed.dueAt,
     };
+    const existed = await db
+      .select({ id: tables.vocabulary.id })
+      .from(tables.vocabulary)
+      .where(
+        and(
+          eq(tables.vocabulary.user_id, context.userId),
+          eq(tables.vocabulary.zh, data.zh),
+        ),
+      )
+      .limit(1);
     const [row] = await db
       .insert(tables.vocabulary)
       .values(values)
@@ -107,6 +117,10 @@ export const saveVocabulary = createServerFn({ method: "POST" })
         set: { ...values },
       })
       .returning();
+    if (!existed[0]) {
+      const { bumpActivity } = await import("@/lib/learning-activity.server");
+      void bumpActivity(context.userId, { words_added: 1 }).catch(() => {});
+    }
     return shape(row);
   });
 
@@ -217,6 +231,8 @@ export const gradeVocabulary = createServerFn({ method: "POST" })
         ),
       )
       .returning();
+    const { bumpActivity } = await import("@/lib/learning-activity.server");
+    void bumpActivity(context.userId, { reviews: 1 }).catch(() => {});
     return shape(row);
   });
 

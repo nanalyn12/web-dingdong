@@ -37,6 +37,11 @@ import { cn } from "@/lib/utils";
 import { RichLessonContent } from "@/components/lesson-rich-content";
 import { LessonPdfButton } from "@/components/lesson-pdf-button";
 import { loadProgress, saveProgress } from "@/lib/lesson-progress";
+import {
+  getMyLessonProgress,
+  saveMyLessonProgress,
+} from "@/lib/lesson-progress.functions";
+import { useSession } from "@/lib/auth-client";
 import { useZhTts } from "@/lib/use-zh-tts";
 import { generateLessonComicImages } from "@/lib/lesson-images.functions";
 import { KeyExpressionCard } from "@/components/key-expression-card";
@@ -185,13 +190,45 @@ function LessonPage() {
     { correct: number; total: number } | undefined
   >(() => loadProgress(id).quizScore);
 
+  // Signed-in users also sync progress to the server (dashboard + cross-device).
+  const { session } = useSession();
+  const callSaveLessonProgress = useServerFn(saveMyLessonProgress);
+  const callGetLessonProgress = useServerFn(getMyLessonProgress);
+  const { data: serverProgress } = useQuery({
+    queryKey: ["lesson-progress", id],
+    queryFn: () => callGetLessonProgress({ data: { lessonId: id } }),
+    enabled: !!session,
+  });
+  useEffect(() => {
+    if (!serverProgress) return;
+    setCompletedTabs((prev) => {
+      const merged = [...new Set([...prev, ...serverProgress.completed_tabs])];
+      return merged.length === prev.length ? prev : merged;
+    });
+    if (serverProgress.quiz_correct != null && serverProgress.quiz_total != null) {
+      setQuizScore(
+        (prev) =>
+          prev ?? {
+            correct: serverProgress.quiz_correct as number,
+            total: serverProgress.quiz_total as number,
+          },
+      );
+    }
+  }, [serverProgress]);
+
   useEffect(() => {
     if (!completedTabs.includes(tab)) {
       const next = [...completedTabs, tab];
       setCompletedTabs(next);
       saveProgress(id, { completedTabs: next });
+      if (session) {
+        void callSaveLessonProgress({
+          data: { lessonId: id, completedTabs: [tab] },
+        }).catch(() => {});
+      }
     }
-  }, [tab, completedTabs, id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, completedTabs, id, session]);
 
   const { speak, speakingId } = useZhTts();
 
@@ -243,8 +280,10 @@ function LessonPage() {
       <div className="flex items-start gap-2 rounded-2xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/60 px-3 py-2 text-xs text-sky-900 dark:text-sky-100">
         <Info className="size-4 mt-0.5 shrink-0" />
         <span>
-          중국어 옆 🔊 버튼을 누르면 발음을 들을 수 있어요. 게스트 진도와 퀴즈 점수는
-          이 브라우저에만 저장됩니다.
+          중국어 옆 🔊 버튼을 누르면 발음을 들을 수 있어요.{" "}
+          {session
+            ? "진도와 퀴즈 점수는 계정에 저장돼요."
+            : "게스트 진도와 퀴즈 점수는 이 브라우저에만 저장됩니다."}
         </span>
       </div>
 
@@ -381,6 +420,15 @@ function LessonPage() {
                 quizScore: { correct, total },
                 completedTabs: ["quiz"],
               });
+              if (session) {
+                void callSaveLessonProgress({
+                  data: {
+                    lessonId: id,
+                    completedTabs: ["quiz"],
+                    quizScore: { correct, total },
+                  },
+                }).catch(() => {});
+              }
             }}
           />
         </TabsContent>

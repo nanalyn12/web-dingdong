@@ -43,6 +43,13 @@
       "when": 1783948482915,
       "tag": "0005_daffy_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784122518781,
+      "tag": "0006_hesitant_peter_quill",
+      "breakpoints": true
     }
   ]
 }

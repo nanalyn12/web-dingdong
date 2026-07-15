@@ -91,6 +91,17 @@ export const saveMyDramaProgress = createServerFn({ method: "POST" })
         target: [tables.drama_progress.user_id, tables.drama_progress.drama_id],
         set: values,
       });
+
+    // Daily activity: newly completed scenes / quiz submits count as events;
+    // a plain position save still marks the day active (streak).
+    const prevScenes = new Set<number>((prev?.completed_scenes as number[]) ?? []);
+    const newScenes = (data.completedScenes ?? []).filter((s) => !prevScenes.has(s));
+    const { bumpActivity } = await import("@/lib/learning-activity.server");
+    void bumpActivity(context.userId, {
+      videos: newScenes.length,
+      quizzes: data.quizScore ? 1 : 0,
+    }).catch(() => {});
+
     return { ok: true };
   });
 

@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarClock, ChevronRight, Clapperboard, Film, GraduationCap, Home, Music, ShieldCheck, Sparkles } from "lucide-react";
+import { BookOpen, CalendarClock, ChevronRight, Clapperboard, Film, GraduationCap, Home, LayoutDashboard, Music, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import { listCoursesWithLessons } from "@/lib/courses.functions";
@@ -8,6 +8,7 @@ import { useIsEditor, useMyProfile } from "@/lib/auth-client";
 
 const items = [
   { title: "홈", url: "/", icon: Home },
+  { title: "대시보드", url: "/dashboard", icon: LayoutDashboard },
   { title: "강의", url: "/courses", icon: GraduationCap },
   { title: "영상 학습", url: "/dramas", icon: Film },
   { title: "학습송", url: "/songs", icon: Music },
