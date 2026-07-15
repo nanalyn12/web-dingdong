@@ -8,11 +8,13 @@ import {
   Clapperboard,
   ExternalLink,
   Loader2,
+  Pencil,
   Play,
   RefreshCcw,
   Sparkles,
   Trash2,
   Upload,
+  X,
   Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -56,6 +58,7 @@ import {
   runVideoScheduleNow,
   suggestVideoTopics,
   toggleVideoSchedule,
+  updateVideoSchedule,
 } from "@/lib/video/studio.functions";
 
 export const Route = createFileRoute("/_app/studio")({
@@ -703,6 +706,9 @@ function SchedulePanel() {
     queryFn: () => callList({}),
   });
 
+  const callUpdate = useServerFn(updateVideoSchedule);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [keywordsRaw, setKeywordsRaw] = useState("");
   const [frequency, setFrequency] = useState<"daily" | "weekly">("weekly");
@@ -717,45 +723,85 @@ function SchedulePanel() {
   const [courseLink, setCourseLink] = useState("none");
   const [newCourseTitle, setNewCourseTitle] = useState("");
 
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setKeywordsRaw("");
+    setFrequency("weekly");
+    setWeekdays([1, 4]);
+    setTimeKst("09:00");
+    setLengthSeconds(60);
+    setLanguage("ko");
+    setFocus("culture");
+    setUploadMode("auto");
+    setPrivacy("unlisted");
+    setCourseLink("none");
+    setNewCourseTitle("");
+  }
+
+  function startEdit(s: VideoSchedule) {
+    const cfg = (s.config ?? {}) as Partial<VideoJobConfig>;
+    setEditingId(s.id);
+    setName(s.name);
+    setKeywordsRaw(s.keywords.join("\n"));
+    setFrequency(s.frequency === "daily" ? "daily" : "weekly");
+    setWeekdays(s.weekdays?.length ? s.weekdays : [1, 4]);
+    setTimeKst(s.time_kst);
+    setLengthSeconds(cfg.lengthSeconds ?? 60);
+    setLanguage(cfg.language === "zh" ? "zh" : "ko");
+    setFocus((cfg.focus as VideoFocus) ?? "culture");
+    setUploadMode(cfg.uploadMode === "approval" ? "approval" : "auto");
+    setPrivacy(
+      cfg.privacy === "private" || cfg.privacy === "public"
+        ? cfg.privacy
+        : "unlisted",
+    );
+    setCourseLink(cfg.courseId ?? "none");
+    setNewCourseTitle("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function buildPayload() {
+    const keywords = keywordsRaw
+      .split(/\r?\n|,/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return {
+      name: name.trim(),
+      keywords,
+      frequency,
+      weekdays: frequency === "weekly" ? weekdays : [],
+      time_kst: timeKst,
+      config: {
+        audience: "중국어 입문 성인 학습자",
+        lengthSeconds,
+        language,
+        focus,
+        resolution: "1280x720",
+        clipCount: 6,
+        voice: VOICES[language][0].value,
+        burnSubtitles: true,
+        uploadMode,
+        privacy,
+        courseId:
+          courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
+        newCourseTitle:
+          courseLink === "__new__" ? newCourseTitle.trim() : undefined,
+      },
+    };
+  }
+
   const createMut = useMutation({
-    mutationFn: () => {
-      const keywords = keywordsRaw
-        .split(/\r?\n|,/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-      return callCreate({
-        data: {
-          name: name.trim(),
-          keywords,
-          frequency,
-          weekdays: frequency === "weekly" ? weekdays : [],
-          time_kst: timeKst,
-          config: {
-            audience: "중국어 입문 성인 학습자",
-            lengthSeconds,
-            language,
-            focus,
-            resolution: "1280x720",
-            clipCount: 6,
-            voice: VOICES[language][0].value,
-            burnSubtitles: true,
-            uploadMode,
-            privacy,
-            courseId:
-              courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
-            newCourseTitle:
-              courseLink === "__new__" ? newCourseTitle.trim() : undefined,
-          },
-        },
-      });
+    mutationFn: async () => {
+      if (editingId) await callUpdate({ data: { id: editingId, ...buildPayload() } });
+      else await callCreate({ data: buildPayload() });
     },
     onSuccess: () => {
-      toast.success("예약을 등록했어요.");
-      setName("");
-      setKeywordsRaw("");
+      toast.success(editingId ? "예약을 수정했어요." : "예약을 등록했어요.");
+      resetForm();
       qc.invalidateQueries({ queryKey: ["video-schedules"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "등록 실패"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "저장 실패"),
   });
 
   function toggleWeekday(d: number) {
@@ -769,7 +815,13 @@ function SchedulePanel() {
       {/* 등록 폼 */}
       <div className="glass rounded-3xl p-6 space-y-4">
         <h3 className="font-semibold flex items-center gap-2">
-          <CalendarClock className="size-4" /> 새 예약 만들기
+          <CalendarClock className="size-4" />
+          {editingId ? "예약 수정" : "새 예약 만들기"}
+          {editingId && (
+            <span className="text-xs font-normal text-muted-foreground">
+              — 저장하면 키워드 순환이 처음부터 다시 시작돼요
+            </span>
+          )}
         </h3>
 
         <div className="grid md:grid-cols-2 gap-4">
@@ -898,21 +950,28 @@ function SchedulePanel() {
           setNewCourseTitle={setNewCourseTitle}
         />
 
-        <Button
-          disabled={createMut.isPending}
-          onClick={() => {
-            if (!name.trim()) return toast.error("예약 이름을 입력하세요.");
-            if (!keywordsRaw.trim()) return toast.error("키워드를 입력하세요.");
-            if (frequency === "weekly" && weekdays.length === 0)
-              return toast.error("요일을 선택하세요.");
-            if (courseLink === "__new__" && !newCourseTitle.trim())
-              return toast.error("새 강의 제목을 입력하세요.");
-            createMut.mutate();
-          }}
-        >
-          {createMut.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-          예약 등록
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            disabled={createMut.isPending}
+            onClick={() => {
+              if (!name.trim()) return toast.error("예약 이름을 입력하세요.");
+              if (!keywordsRaw.trim()) return toast.error("키워드를 입력하세요.");
+              if (frequency === "weekly" && weekdays.length === 0)
+                return toast.error("요일을 선택하세요.");
+              if (courseLink === "__new__" && !newCourseTitle.trim())
+                return toast.error("새 강의 제목을 입력하세요.");
+              createMut.mutate();
+            }}
+          >
+            {createMut.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {editingId ? "수정 저장" : "예약 등록"}
+          </Button>
+          {editingId && (
+            <Button variant="outline" onClick={resetForm}>
+              <X className="size-4 mr-1" /> 취소
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 예약 목록 */}
@@ -942,6 +1001,14 @@ function SchedulePanel() {
                     ` · 마지막 실행 ${new Date(s.last_run_at).toLocaleDateString("ko-KR")}`}
                 </div>
               </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() => startEdit(s)}
+              >
+                <Pencil className="size-3.5 mr-1" /> 수정
+              </Button>
               <Button
                 size="sm"
                 variant="outline"

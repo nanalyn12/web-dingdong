@@ -19,12 +19,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
   createCourse,
   listCoursesWithCounts,
   listCoursesWithLessons,
   updateLesson,
   deleteLesson,
   deleteCourse,
+  moveLessons,
+  mergeCourses,
+  splitCourse,
   type CourseWithCount,
 } from "@/lib/courses.functions";
 
@@ -525,6 +536,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
               <span className="text-[10px] opacity-70 group-open/details:rotate-180 transition-transform">▾</span>
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-4">
+              <CourseStructureDialog course={course} />
               <LessonListEditor courseId={course.id} />
               <form
                 className="space-y-3 pt-3 border-t border-white/30"
@@ -592,6 +604,233 @@ function CourseCard({ course }: { course: CourseWithCount }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** 강의 구조 편집: 레슨 이동 / 강의 분리 / 강의 합치기 */
+function CourseStructureDialog({ course }: { course: CourseWithCount }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [moveTarget, setMoveTarget] = useState("");
+  const [mergeTarget, setMergeTarget] = useState("");
+  const [splitTitle, setSplitTitle] = useState("");
+
+  const move = useServerFn(moveLessons);
+  const merge = useServerFn(mergeCourses);
+  const split = useServerFn(splitCourse);
+
+  const { data } = useQuery({
+    queryKey: ["sidebar-courses-with-lessons"],
+    queryFn: () => listCoursesWithLessons(),
+  });
+  const lessons = data?.find((c) => c.id === course.id)?.lessons ?? [];
+  const otherCourses = (data ?? []).filter((c) => c.id !== course.id);
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["courses-with-counts"] });
+    qc.invalidateQueries({ queryKey: ["sidebar-courses-with-lessons"] });
+  };
+
+  const toggle = (id: string) =>
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const moveMut = useMutation({
+    mutationFn: () =>
+      move({ data: { lessonIds: selected, targetCourseId: moveTarget } }),
+    onSuccess: (r) => {
+      toast.success(`세부 강의 ${r.moved}개를 이동했어요.`);
+      setSelected([]);
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "이동 실패"),
+  });
+
+  const splitMut = useMutation({
+    mutationFn: () =>
+      split({
+        data: {
+          sourceCourseId: course.id,
+          lessonIds: selected,
+          title: splitTitle.trim(),
+        },
+      }),
+    onSuccess: () => {
+      toast.success(`"${splitTitle.trim()}" 강의로 분리했어요.`);
+      setSelected([]);
+      setSplitTitle("");
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "분리 실패"),
+  });
+
+  const mergeMut = useMutation({
+    mutationFn: () =>
+      merge({
+        data: { sourceCourseId: course.id, targetCourseId: mergeTarget },
+      }),
+    onSuccess: () => {
+      toast.success("강의를 합쳤어요.");
+      setOpen(false);
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "합치기 실패"),
+  });
+
+  const busy = moveMut.isPending || splitMut.isPending || mergeMut.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="w-full rounded-xl text-xs">
+          🧩 강의 구조 편집 (이동·분리·합치기)
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-base">
+            구조 편집 — {course.title}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* 레슨 선택 */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">
+            세부 강의 선택 ({selected.length}개 선택됨)
+          </p>
+          {lessons.length === 0 ? (
+            <p className="text-sm text-muted-foreground">세부 강의가 없어요.</p>
+          ) : (
+            <ul className="space-y-1 max-h-48 overflow-y-auto rounded-xl border border-border bg-white/40 p-2">
+              {lessons.map((l) => (
+                <li key={l.id}>
+                  <label className="flex items-center gap-2 text-sm rounded-lg px-2 py-1 hover:bg-white/70 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(l.id)}
+                      onChange={() => toggle(l.id)}
+                      className="size-4 rounded accent-primary"
+                    />
+                    <span className="truncate">
+                      {l.order_index}. {l.title}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+          {lessons.length > 0 && (
+            <button
+              type="button"
+              className="text-xs text-primary underline"
+              onClick={() =>
+                setSelected(
+                  selected.length === lessons.length ? [] : lessons.map((l) => l.id),
+                )
+              }
+            >
+              {selected.length === lessons.length ? "전체 해제" : "전체 선택"}
+            </button>
+          )}
+        </div>
+
+        {/* ① 선택 레슨 이동 */}
+        <div className="rounded-2xl border border-border bg-white/40 p-3 space-y-2">
+          <p className="text-xs font-semibold">① 선택한 세부 강의를 다른 강의로 이동</p>
+          <div className="flex gap-2">
+            <Select value={moveTarget} onValueChange={setMoveTarget}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="이동할 강의 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {otherCourses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.title} ({c.lessons.length}개)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              disabled={busy || selected.length === 0 || !moveTarget}
+              onClick={() => moveMut.mutate()}
+            >
+              {moveMut.isPending && <Loader2 className="size-3.5 mr-1 animate-spin" />}
+              이동
+            </Button>
+          </div>
+        </div>
+
+        {/* ② 선택 레슨 분리 */}
+        <div className="rounded-2xl border border-border bg-white/40 p-3 space-y-2">
+          <p className="text-xs font-semibold">② 선택한 세부 강의로 새 강의 만들기 (분리)</p>
+          <div className="flex gap-2">
+            <Input
+              value={splitTitle}
+              onChange={(e) => setSplitTitle(e.target.value)}
+              placeholder="새 강의 제목"
+              className="flex-1"
+              maxLength={80}
+            />
+            <Button
+              size="sm"
+              disabled={busy || selected.length === 0 || !splitTitle.trim()}
+              onClick={() => splitMut.mutate()}
+            >
+              {splitMut.isPending && <Loader2 className="size-3.5 mr-1 animate-spin" />}
+              분리
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            난이도는 현재 강의를 따라가요. 선택한 레슨이 새 강의로 옮겨져요.
+          </p>
+        </div>
+
+        {/* ③ 강의 전체 합치기 */}
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+          <p className="text-xs font-semibold">③ 이 강의 전체를 다른 강의에 합치기</p>
+          <div className="flex gap-2">
+            <Select value={mergeTarget} onValueChange={setMergeTarget}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="합칠 대상 강의 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {otherCourses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.title} ({c.lessons.length}개)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={busy || !mergeTarget}
+              onClick={() => {
+                const targetTitle =
+                  otherCourses.find((c) => c.id === mergeTarget)?.title ?? "";
+                if (
+                  confirm(
+                    `"${course.title}"의 모든 세부 강의를 "${targetTitle}" 뒤에 붙이고,\n"${course.title}" 강의는 삭제됩니다. 계속할까요?`,
+                  )
+                ) {
+                  mergeMut.mutate();
+                }
+              }}
+            >
+              {mergeMut.isPending && <Loader2 className="size-3.5 mr-1 animate-spin" />}
+              합치기
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            모든 세부 강의가 대상 강의 뒤에 이어 붙고, 이 강의(빈 껍데기)는 삭제돼요.
+            학습 진도 기록은 레슨을 따라 그대로 유지됩니다.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

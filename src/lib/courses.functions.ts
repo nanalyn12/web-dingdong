@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
@@ -242,4 +242,229 @@ export const deleteCourse = createServerFn({ method: "POST" })
     // lessons cascade via FK
     await db.delete(tables.courses).where(eq(tables.courses.id, data.courseId));
     return { ok: true as const };
+  });
+
+// ── 강의 구조 편집 (이동·합치기·분리) ─────────────────────────────────────
+
+type SqlRunner = { execute(query: ReturnType<typeof sql>): Promise<unknown> };
+
+/** Re-number a course's lessons to 1..n (two-phase to dodge the unique index).
+ * Phase 1 shifts everything above the current max so no transient value can
+ * collide; phase 2 assigns 1..n (all below the shifted range). */
+async function renumberCourseLessons(tx: SqlRunner, courseId: string) {
+  await tx.execute(sql`
+    UPDATE lessons
+    SET order_index = order_index + (
+      SELECT coalesce(max(order_index), 0) + 1 FROM lessons WHERE course_id = ${courseId}
+    )
+    WHERE course_id = ${courseId}`);
+  await tx.execute(sql`
+    UPDATE lessons l SET order_index = sub.rn
+    FROM (
+      SELECT id, row_number() OVER (ORDER BY order_index) AS rn
+      FROM lessons WHERE course_id = ${courseId}
+    ) sub
+    WHERE l.id = sub.id`);
+}
+
+/** Keep weeks >= lesson count so the progress ring stays sensible. */
+async function syncCourseWeeks(tx: SqlRunner, courseId: string) {
+  await tx.execute(sql`
+    UPDATE courses
+    SET weeks = GREATEST(weeks, (SELECT count(*) FROM lessons WHERE course_id = ${courseId}))
+    WHERE id = ${courseId}`);
+}
+
+type DbOrTx = Pick<
+  typeof import("@/db").db,
+  "select" | "update" | "insert" | "delete" | "execute"
+>;
+
+/** Move lessons into targetCourseId (appended at the end, original order kept). */
+async function moveLessonRows(
+  tx: DbOrTx,
+  lessonRows: Array<{ id: string; course_id: string; order_index: number }>,
+  targetCourseId: string,
+) {
+  const { tables } = await import("@/db");
+  const moving = lessonRows
+    .filter((l) => l.course_id !== targetCourseId)
+    .sort(
+      (a, b) =>
+        a.course_id.localeCompare(b.course_id) || a.order_index - b.order_index,
+    );
+  if (moving.length === 0) return { movedCount: 0, sourceCourseIds: [] as string[] };
+
+  const [{ maxIdx }] = await tx
+    .select({ maxIdx: sql<number>`coalesce(max(order_index), 0)::int` })
+    .from(tables.lessons)
+    .where(eq(tables.lessons.course_id, targetCourseId));
+
+  // maxIdx+1.. is free in the target course, so no offset phase is needed here.
+  for (let i = 0; i < moving.length; i++) {
+    await tx
+      .update(tables.lessons)
+      .set({ course_id: targetCourseId, order_index: maxIdx + 1 + i })
+      .where(eq(tables.lessons.id, moving[i].id));
+  }
+  const sourceCourseIds = [...new Set(moving.map((l) => l.course_id))];
+  await renumberCourseLessons(tx, targetCourseId);
+  for (const cid of sourceCourseIds) await renumberCourseLessons(tx, cid);
+  await syncCourseWeeks(tx, targetCourseId);
+  return { movedCount: moving.length, sourceCourseIds };
+}
+
+const MoveLessonsInput = z.object({
+  lessonIds: z.array(z.string().uuid()).min(1).max(100),
+  targetCourseId: z.string().uuid(),
+});
+
+/** 선택한 세부 강의들을 다른 강의로 이동 (뒤에 이어 붙임). */
+export const moveLessons = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => MoveLessonsInput.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const isAdmin = (await getRole(context.userId)) === "admin";
+
+    const target = await db
+      .select({ id: tables.courses.id })
+      .from(tables.courses)
+      .where(eq(tables.courses.id, data.targetCourseId))
+      .limit(1);
+    if (!target[0]) throw new Error("이동할 대상 강의를 찾을 수 없습니다.");
+
+    const lessons = await db
+      .select({
+        id: tables.lessons.id,
+        course_id: tables.lessons.course_id,
+        order_index: tables.lessons.order_index,
+        created_by: tables.lessons.created_by,
+      })
+      .from(tables.lessons)
+      .where(inArray(tables.lessons.id, data.lessonIds));
+    if (lessons.length !== data.lessonIds.length) {
+      throw new Error("일부 세부 강의를 찾을 수 없습니다.");
+    }
+    if (!isAdmin && lessons.some((l) => l.created_by !== context.userId)) {
+      throw new Error("본인이 만든 세부 강의만 이동할 수 있어요.");
+    }
+
+    const moved = await db.transaction((tx) =>
+      moveLessonRows(tx, lessons, data.targetCourseId),
+    );
+    return { ok: true as const, moved: moved.movedCount };
+  });
+
+const MergeCoursesInput = z.object({
+  sourceCourseId: z.string().uuid(),
+  targetCourseId: z.string().uuid(),
+});
+
+/** 강의 합치기: source의 모든 세부 강의를 target 뒤에 붙이고 source를 삭제. */
+export const mergeCourses = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => MergeCoursesInput.parse(input))
+  .handler(async ({ data, context }) => {
+    if (data.sourceCourseId === data.targetCourseId) {
+      throw new Error("같은 강의끼리는 합칠 수 없어요.");
+    }
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const isAdmin = (await getRole(context.userId)) === "admin";
+
+    const [source] = await db
+      .select({ created_by: tables.courses.created_by })
+      .from(tables.courses)
+      .where(eq(tables.courses.id, data.sourceCourseId))
+      .limit(1);
+    const [target] = await db
+      .select({ id: tables.courses.id })
+      .from(tables.courses)
+      .where(eq(tables.courses.id, data.targetCourseId))
+      .limit(1);
+    if (!source || !target) throw new Error("강의를 찾을 수 없습니다.");
+    if (!isAdmin && source.created_by !== context.userId) {
+      throw new Error("본인이 만든 강의만 합칠 수 있어요.");
+    }
+
+    const lessons = await db
+      .select({
+        id: tables.lessons.id,
+        course_id: tables.lessons.course_id,
+        order_index: tables.lessons.order_index,
+      })
+      .from(tables.lessons)
+      .where(eq(tables.lessons.course_id, data.sourceCourseId));
+
+    const moved = await db.transaction(async (tx) => {
+      const r = await moveLessonRows(tx, lessons, data.targetCourseId);
+      await tx
+        .delete(tables.courses)
+        .where(eq(tables.courses.id, data.sourceCourseId));
+      return r;
+    });
+    return { ok: true as const, moved: moved.movedCount };
+  });
+
+const SplitCourseInput = z.object({
+  sourceCourseId: z.string().uuid(),
+  lessonIds: z.array(z.string().uuid()).min(1).max(100),
+  title: z.string().min(1, "새 강의 제목은 필수입니다"),
+  description: z.string().optional().default(""),
+});
+
+/** 강의 분리: 선택한 세부 강의들로 새 강의를 만들어 옮김. */
+export const splitCourse = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => SplitCourseInput.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const isAdmin = (await getRole(context.userId)) === "admin";
+
+    const [source] = await db
+      .select({
+        created_by: tables.courses.created_by,
+        level: tables.courses.level,
+      })
+      .from(tables.courses)
+      .where(eq(tables.courses.id, data.sourceCourseId))
+      .limit(1);
+    if (!source) throw new Error("강의를 찾을 수 없습니다.");
+    if (!isAdmin && source.created_by !== context.userId) {
+      throw new Error("본인이 만든 강의만 분리할 수 있어요.");
+    }
+
+    const lessons = await db
+      .select({
+        id: tables.lessons.id,
+        course_id: tables.lessons.course_id,
+        order_index: tables.lessons.order_index,
+      })
+      .from(tables.lessons)
+      .where(inArray(tables.lessons.id, data.lessonIds));
+    if (lessons.length !== data.lessonIds.length) {
+      throw new Error("일부 세부 강의를 찾을 수 없습니다.");
+    }
+    if (lessons.some((l) => l.course_id !== data.sourceCourseId)) {
+      throw new Error("선택한 세부 강의가 이 강의에 속해 있지 않아요.");
+    }
+
+    const newCourseId = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(tables.courses)
+        .values({
+          title: data.title,
+          description: data.description || null,
+          level: source.level,
+          weeks: data.lessonIds.length,
+          created_by: context.userId,
+        })
+        .returning({ id: tables.courses.id });
+      await moveLessonRows(tx, lessons, row.id);
+      return row.id;
+    });
+    return { ok: true as const, courseId: newCourseId };
   });

@@ -184,6 +184,35 @@ export const createVideoSchedule = createServerFn({ method: "POST" })
     return { id: row.id };
   });
 
+const UpdateScheduleInput = ScheduleInput.extend({ id: z.string().uuid() });
+
+export const updateVideoSchedule = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => UpdateScheduleInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    if (data.frequency === "weekly" && data.weekdays.length === 0) {
+      throw new Error("매주 반복은 요일을 1개 이상 선택하세요.");
+    }
+    const { db, tables } = await import("@/db");
+    const [row] = await db
+      .update(tables.video_schedules)
+      .set({
+        name: data.name,
+        keywords: data.keywords,
+        frequency: data.frequency,
+        weekdays: data.weekdays,
+        time_kst: data.time_kst,
+        config: data.config as unknown as Json,
+        // Keyword list may have changed — restart the rotation.
+        next_keyword_index: 0,
+      })
+      .where(eq(tables.video_schedules.id, data.id))
+      .returning({ id: tables.video_schedules.id });
+    if (!row) throw new Error("예약을 찾을 수 없습니다.");
+    return { ok: true as const };
+  });
+
 export const listVideoSchedules = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }) => {
