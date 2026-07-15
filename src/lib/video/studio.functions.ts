@@ -28,7 +28,7 @@ const ConfigInput = z.object({
 
 const CreateInput = z.object({
   config: ConfigInput,
-  count: z.number().int().min(1).max(3).default(1),
+  count: z.number().int().min(1).max(20).default(1),
 });
 
 export const createVideoJobs = createServerFn({ method: "POST" })

@@ -301,11 +301,17 @@ function CreateWizard() {
           <Select value={String(count)} onValueChange={(v) => setCount(Number(v))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {[1, 2, 3].map((n) => (
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
                 <SelectItem key={n} value={String(n)}>{n}개</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {count >= 6 && (
+            <p className="text-xs text-muted-foreground">
+              YouTube 업로드는 하루 약 6개 한도가 있어요. 초과분은 업로드 단계에서
+              실패할 수 있으니 [승인 후 업로드]를 권장해요.
+            </p>
+          )}
         </div>
       </div>
 
