@@ -86,8 +86,8 @@ async function tick() {
   }
 }
 
-/** Creates one job from the schedule (rotating keywords). Exported for the
- *  "지금 실행" button. */
+/** Creates the schedule's jobs (countPerRun, rotating keywords — one keyword
+ *  per job). Exported for the "지금 실행" button; returns the first job id. */
 export async function runScheduleOnce(scheduleId: string): Promise<string> {
   const rows = await db
     .select()
@@ -99,36 +99,44 @@ export async function runScheduleOnce(scheduleId: string): Promise<string> {
   const keywords = s.keywords ?? [];
   if (keywords.length === 0) throw new Error("키워드가 비어 있습니다.");
 
+  // countPerRun lives in the schedule's config but is not part of the job
+  // config — strip it before building jobs.
+  const { countPerRun, ...base } = (s.config ?? {}) as Record<string, unknown>;
+  const count = Math.min(10, Math.max(1, Number(countPerRun) || 1));
   const idx = s.next_keyword_index % keywords.length;
-  const keyword = keywords[idx];
-  const base = (s.config ?? {}) as Record<string, unknown>;
 
-  const config = {
-    ...base,
-    keyword,
-    topic: "", // empty → the script generator picks a topic from the keyword
-  };
-
-  const [job] = await db
-    .insert(tables.video_jobs)
-    .values({
-      created_by: s.created_by,
-      config: config as unknown as Json,
-    })
-    .returning({ id: tables.video_jobs.id });
+  const jobIds: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const keyword = keywords[(idx + i) % keywords.length];
+    const config = {
+      ...base,
+      keyword,
+      topic: "", // empty → the script generator picks a topic from the keyword
+    };
+    const [job] = await db
+      .insert(tables.video_jobs)
+      .values({
+        created_by: s.created_by,
+        config: config as unknown as Json,
+      })
+      .returning({ id: tables.video_jobs.id });
+    jobIds.push(job.id);
+  }
 
   await db
     .update(tables.video_schedules)
     .set({
-      next_keyword_index: (idx + 1) % keywords.length,
+      next_keyword_index: (idx + count) % keywords.length,
       last_run_at: new Date().toISOString(),
     })
     .where(eq(tables.video_schedules.id, scheduleId));
 
   const { kickVideoWorker } = await import("./pipeline.server");
   kickVideoWorker();
-  console.log(`[scheduler] "${s.name}" → job ${job.id} (키워드: ${keyword})`);
-  return job.id;
+  console.log(
+    `[scheduler] "${s.name}" → ${jobIds.length}개 작업 (키워드: ${keywords[idx]}${count > 1 ? " 외" : ""})`,
+  );
+  return jobIds[0];
 }
 
 export async function listSchedulesFor(userIds?: string[]): Promise<

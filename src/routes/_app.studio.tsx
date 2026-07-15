@@ -722,6 +722,7 @@ function SchedulePanel() {
   const [privacy, setPrivacy] = useState<VideoJobConfig["privacy"]>("unlisted");
   const [courseLink, setCourseLink] = useState("none");
   const [newCourseTitle, setNewCourseTitle] = useState("");
+  const [countPerRun, setCountPerRun] = useState(1);
 
   function resetForm() {
     setEditingId(null);
@@ -737,6 +738,7 @@ function SchedulePanel() {
     setPrivacy("unlisted");
     setCourseLink("none");
     setNewCourseTitle("");
+    setCountPerRun(1);
   }
 
   function startEdit(s: VideoSchedule) {
@@ -758,6 +760,8 @@ function SchedulePanel() {
     );
     setCourseLink(cfg.courseId ?? "none");
     setNewCourseTitle("");
+    const cpr = Number((s.config as Record<string, unknown> | null)?.countPerRun);
+    setCountPerRun(Number.isFinite(cpr) && cpr >= 1 ? Math.min(10, cpr) : 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -787,6 +791,7 @@ function SchedulePanel() {
           courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
         newCourseTitle:
           courseLink === "__new__" ? newCourseTitle.trim() : undefined,
+        countPerRun,
       },
     };
   }
@@ -889,6 +894,22 @@ function SchedulePanel() {
         </div>
 
         <div className="grid md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label>회당 영상 개수</Label>
+            <Select value={String(countPerRun)} onValueChange={(v) => setCountPerRun(Number(v))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n}개</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {countPerRun >= 6 && (
+              <p className="text-[11px] text-muted-foreground">
+                YouTube 업로드는 하루 약 6개 한도가 있어요 — [승인] 모드 권장.
+              </p>
+            )}
+          </div>
           <div className="space-y-2">
             <Label>영상 길이</Label>
             <Select value={String(lengthSeconds)} onValueChange={(v) => setLengthSeconds(Number(v))}>
@@ -997,6 +1018,8 @@ function SchedulePanel() {
                     ? "매일"
                     : `매주 ${(s.weekdays ?? []).map((d) => WEEKDAY_LABELS[d]).join("·")}`}{" "}
                   {s.time_kst} · 키워드 {s.keywords.length}개 순환
+                  {Number((s.config as Record<string, unknown> | null)?.countPerRun ?? 1) > 1 &&
+                    ` · 회당 ${Number((s.config as Record<string, unknown>)?.countPerRun)}개`}
                   {s.last_run_at &&
                     ` · 마지막 실행 ${new Date(s.last_run_at).toLocaleDateString("ko-KR")}`}
                 </div>

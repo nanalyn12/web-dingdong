@@ -146,7 +146,10 @@ export const getYouTubeStatus = createServerFn({ method: "GET" })
 
 // ── 예약·반복 ────────────────────────────────────────────────────────────────
 
-const ScheduleConfigInput = ConfigInput.omit({ keyword: true, topic: true });
+const ScheduleConfigInput = ConfigInput.omit({ keyword: true, topic: true }).extend({
+  // 실행 1회당 생성할 영상 수 (키워드를 순서대로 하나씩 소비).
+  countPerRun: z.number().int().min(1).max(10).default(1),
+});
 
 const ScheduleInput = z.object({
   name: z.string().trim().min(1, "예약 이름을 입력하세요").max(60),
