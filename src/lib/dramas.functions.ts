@@ -35,8 +35,9 @@ export type DramaRow = {
   title_zh: string | null;
   description: string | null;
   level: "beginner" | "intermediate" | "advanced";
-  youtube_url: string;
-  youtube_video_id: string;
+  youtube_url: string | null;
+  youtube_video_id: string | null;
+  media_url: string | null; // self-hosted playback (/media/dramas/...)
   thumbnail_url: string | null;
   duration_seconds: number | null;
   genre: string | null;
@@ -81,7 +82,11 @@ export const deleteDrama = createServerFn({ method: "POST" })
     const { db, tables } = await import("@/db");
     const isAdmin = (await getRole(context.userId)) === "admin";
     const rows = await db
-      .select({ created_by: tables.dramas.created_by })
+      .select({
+        created_by: tables.dramas.created_by,
+        media_url: tables.dramas.media_url,
+        thumbnail_url: tables.dramas.thumbnail_url,
+      })
       .from(tables.dramas)
       .where(eq(tables.dramas.id, data.id))
       .limit(1);
@@ -90,6 +95,17 @@ export const deleteDrama = createServerFn({ method: "POST" })
       throw new Error("본인이 만든 드라마만 삭제할 수 있어요.");
     }
     await db.delete(tables.dramas).where(eq(tables.dramas.id, data.id));
+    // Web-only dramas own their files on the volume — remove them too.
+    const { rm } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const { getMediaDir } = await import("@/lib/suno.server");
+    for (const u of [rows[0].media_url, rows[0].thumbnail_url]) {
+      if (u?.startsWith("/media/dramas/")) {
+        await rm(join(getMediaDir(), u.slice("/media/".length)), { force: true }).catch(
+          () => {},
+        );
+      }
+    }
     return { ok: true as const };
   });
 

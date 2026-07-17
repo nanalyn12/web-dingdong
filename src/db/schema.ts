@@ -193,8 +193,11 @@ export const dramas = pgTable("dramas", {
   description: text("description"),
   genre: text("genre"),
   level: text("level").notNull().default("beginner"),
-  youtube_url: text("youtube_url").notNull(),
-  youtube_video_id: text("youtube_video_id").notNull(),
+  // Playback source: YouTube embed (youtube_*) or self-hosted file on the
+  // volume (media_url, site-relative /media/...). At least one is set.
+  youtube_url: text("youtube_url"),
+  youtube_video_id: text("youtube_video_id"),
+  media_url: text("media_url"),
   thumbnail_url: text("thumbnail_url"),
   duration_seconds: integer("duration_seconds"),
   has_captions: boolean("has_captions").notNull().default(false),

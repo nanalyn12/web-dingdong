@@ -59,13 +59,15 @@ function lineTimes(scene: DramaScene): { time: number; isExact: boolean }[] {
   });
 }
 
-// Minimal YouTube IFrame API loader
+// Minimal YouTube IFrame API loader (no-op when videoId is empty —
+// self-hosted dramas never load the YouTube API).
 function useYoutubePlayer(videoId: string) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<unknown>(null);
   const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
+    if (!videoId) return;
     let cancelled = false;
     const ensureApi = () =>
       new Promise<void>((resolve) => {
@@ -120,6 +122,21 @@ function useYoutubePlayer(videoId: string) {
   return { containerRef, currentTime, seek };
 }
 
+// Self-hosted playback (web-only dramas): same {currentTime, seek} contract
+// as the YouTube hook, driven by a plain <video> element.
+function useHtml5Player() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const onTimeUpdate = () => setCurrentTime(videoRef.current?.currentTime ?? 0);
+  const seek = (seconds: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = seconds;
+    void v.play().catch(() => {});
+  };
+  return { videoRef, currentTime, seek, onTimeUpdate };
+}
+
 function DramaDetail() {
   const { id } = Route.useParams();
   const { data: drama, isLoading } = useQuery({
@@ -127,9 +144,13 @@ function DramaDetail() {
     queryFn: () => getDrama({ data: { id } }),
   });
 
-  const { containerRef, currentTime, seek } = useYoutubePlayer(
-    drama?.youtube_video_id ?? "",
-  );
+  // Self-hosted file wins when both sources exist.
+  const isSelfHosted = !!drama?.media_url;
+  const yt = useYoutubePlayer(isSelfHosted ? "" : (drama?.youtube_video_id ?? ""));
+  const html5 = useHtml5Player();
+  const containerRef = yt.containerRef;
+  const currentTime = isSelfHosted ? html5.currentTime : yt.currentTime;
+  const seek = isSelfHosted ? html5.seek : yt.seek;
 
   const scenes = useMemo<DramaScene[]>(
     () => (drama?.scenes ?? []).slice().sort((a, b) => a.start_seconds - b.start_seconds),
@@ -258,7 +279,20 @@ function DramaDetail() {
       {/* Player */}
       <div className="glass rounded-3xl p-3 sticky top-2 z-10">
         <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
-          <div ref={containerRef} className="w-full h-full" />
+          {isSelfHosted ? (
+            <video
+              ref={html5.videoRef}
+              src={drama.media_url ?? undefined}
+              poster={drama.thumbnail_url ?? undefined}
+              controls
+              playsInline
+              preload="metadata"
+              className="w-full h-full"
+              onTimeUpdate={html5.onTimeUpdate}
+            />
+          ) : (
+            <div ref={containerRef} className="w-full h-full" />
+          )}
         </div>
         {!!progress?.last_seconds &&
           progress.last_seconds > 15 &&

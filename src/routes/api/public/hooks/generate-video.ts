@@ -55,7 +55,9 @@ export const Route = createFileRoute("/api/public/hooks/generate-video")({
           clipCount: Math.min(20, Math.max(3, Number(body.clipCount ?? 6))),
           voice: String(body.voice ?? "ko-KR-Neural2-A"),
           burnSubtitles: body.burnSubtitles !== false,
-          uploadMode: String(body.uploadMode) === "auto" ? "auto" : "approval",
+          uploadMode: ["auto", "web"].includes(String(body.uploadMode))
+            ? body.uploadMode
+            : "approval",
           privacy: ["private", "unlisted", "public"].includes(String(body.privacy))
             ? body.privacy
             : "private",

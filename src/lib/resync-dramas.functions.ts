@@ -50,6 +50,9 @@ export const resyncDramaCaptions = createServerFn({ method: "POST" })
       .limit(1);
     const row = rows[0];
     if (!row) throw new Error("드라마를 찾을 수 없습니다.");
+    if (!row.youtube_url) {
+      throw new Error("유튜브 기반 드라마가 아니에요 (웹 전용 영상은 자막 재동기화 대상이 아닙니다).");
+    }
 
     const result = await generateSceneData({
       youtubeUrl: row.youtube_url,
@@ -111,7 +114,7 @@ export const resyncAllDramasWithoutCaptions = createServerFn({ method: "POST" })
           continue;
         }
         const gen = await generateSceneData({
-          youtubeUrl: r.youtube_url,
+          youtubeUrl: r.youtube_url ?? `https://www.youtube.com/watch?v=${videoId}`,
           level: r.level as "beginner" | "intermediate" | "advanced",
           genre: r.genre ?? "",
           title,

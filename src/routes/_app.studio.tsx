@@ -500,25 +500,28 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
           >
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="web">웹 전용 (딩동에서 바로 재생 — 유튜브 안 감)</SelectItem>
               <SelectItem value="approval">미리보기 후 승인 업로드</SelectItem>
               <SelectItem value="auto">완전 자동 업로드</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label>공개 설정</Label>
-          <Select
-            value={privacy}
-            onValueChange={(v) => setPrivacy(v as VideoJobConfig["privacy"])}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unlisted">일부 공개 (권장 — 학습 페이지 재생 가능)</SelectItem>
-              <SelectItem value="private">비공개 (본인만 재생 가능)</SelectItem>
-              <SelectItem value="public">공개</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {uploadMode !== "web" && (
+          <div className="space-y-2">
+            <Label>공개 설정</Label>
+            <Select
+              value={privacy}
+              onValueChange={(v) => setPrivacy(v as VideoJobConfig["privacy"])}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unlisted">일부 공개 (권장 — 학습 페이지 재생 가능)</SelectItem>
+                <SelectItem value="private">비공개 (본인만 재생 가능)</SelectItem>
+                <SelectItem value="public">공개</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <CourseLinkSelect
@@ -529,8 +532,9 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
       />
 
       <p className="text-xs text-muted-foreground">
-        💡 비공개(private) 영상은 YouTube 정책상 학습 페이지에서 다른 사람이 재생할 수
-        없어요. 학습 콘텐츠용은 <b>일부 공개(unlisted)</b>를 권장합니다.
+        {uploadMode === "web"
+          ? "💡 웹 전용: 렌더가 끝나면 승인 없이 바로 [영상 학습] 콘텐츠가 생성되고, 딩동 자체 플레이어로 재생돼요. 유튜브 업로드 한도와 무관해요."
+          : "💡 비공개(private) 영상은 YouTube 정책상 학습 페이지에서 다른 사람이 재생할 수 없어요. 학습 콘텐츠용은 일부 공개(unlisted)를 권장합니다."}
       </p>
 
       <Button
@@ -965,6 +969,7 @@ function SchedulePanel() {
               <Select value={uploadMode} onValueChange={(v) => setUploadMode(v as VideoJobConfig["uploadMode"])}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="web">웹 전용</SelectItem>
                   <SelectItem value="auto">자동</SelectItem>
                   <SelectItem value="approval">승인</SelectItem>
                 </SelectContent>

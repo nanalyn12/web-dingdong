@@ -2,7 +2,7 @@
 
 export type VideoLanguage = "ko" | "zh";
 export type VideoFocus = "culture" | "grammar" | "entertainment" | "daily";
-export type UploadMode = "auto" | "approval";
+export type UploadMode = "auto" | "approval" | "web";
 
 export type VideoJobConfig = {
   keyword: string;

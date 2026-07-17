@@ -123,7 +123,7 @@ type LessonRow = {
   comic_panels: ComicPanel[];
   cultural_note: CulturalCard | null;
   cultural_snippet: CulturalCard | null;
-  video?: { youtube_video_id?: string; drama_id?: string } | null;
+  video?: { youtube_video_id?: string; media_url?: string; drama_id?: string } | null;
 };
 
 const HAN_RE = /[\u3400-\u9fff]/;
@@ -289,7 +289,7 @@ function LessonPage() {
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex flex-wrap gap-1 h-auto bg-white/60 backdrop-blur-xl rounded-2xl border border-white/70 shadow-sm p-1">
-          {lessonVideo?.youtube_video_id && (
+          {(lessonVideo?.youtube_video_id || lessonVideo?.media_url) && (
             <TabsTrigger value="video" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">🎬 영상</TabsTrigger>
           )}
           <TabsTrigger value="key" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">핵심표현</TabsTrigger>
@@ -299,17 +299,27 @@ function LessonPage() {
           <TabsTrigger value="quiz" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">퀴즈</TabsTrigger>
         </TabsList>
 
-        {lessonVideo?.youtube_video_id && (
+        {(lessonVideo?.youtube_video_id || lessonVideo?.media_url) && (
           <TabsContent value="video" className="mt-4 space-y-3">
             <div className="glass rounded-3xl p-3">
               <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
-                <iframe
-                  className="w-full h-full"
-                  src={`https://www.youtube.com/embed/${lessonVideo.youtube_video_id}?rel=0`}
-                  title={lesson.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+                {lessonVideo.media_url ? (
+                  <video
+                    className="w-full h-full"
+                    src={lessonVideo.media_url}
+                    controls
+                    playsInline
+                    preload="metadata"
+                  />
+                ) : (
+                  <iframe
+                    className="w-full h-full"
+                    src={`https://www.youtube.com/embed/${lessonVideo.youtube_video_id}?rel=0`}
+                    title={lesson.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                )}
               </div>
             </div>
             {lessonVideo.drama_id && (

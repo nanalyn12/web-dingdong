@@ -18,7 +18,7 @@ const ConfigInput = z.object({
   clipCount: z.number().int().min(3).max(20),
   voice: z.string().min(1),
   burnSubtitles: z.boolean().default(true),
-  uploadMode: z.enum(["auto", "approval"]),
+  uploadMode: z.enum(["auto", "approval", "web"]),
   privacy: z.enum(["private", "unlisted", "public"]).default("private"),
   courseId: z.string().uuid().nullable().optional(),
   newCourseTitle: z.string().trim().max(80).optional(),
@@ -125,13 +125,16 @@ export const deleteVideoJob = createServerFn({ method: "POST" })
       .where(eq(tables.video_jobs.id, data.id))
       .limit(1);
     await db.delete(tables.video_jobs).where(eq(tables.video_jobs.id, data.id));
-    // Clean media files
+    // Clean media files. Files under dramas/ are owned by the published
+    // drama (web-only mode) — deleting the job entry must not break it.
     if (rows[0]) {
       const { rm } = await import("node:fs/promises");
       const { join } = await import("node:path");
       const { getMediaDir } = await import("@/lib/suno.server");
       for (const p of [rows[0].video_path, rows[0].thumbnail_path]) {
-        if (p) await rm(join(getMediaDir(), p), { force: true }).catch(() => {});
+        if (p && !p.startsWith("dramas/")) {
+          await rm(join(getMediaDir(), p), { force: true }).catch(() => {});
+        }
       }
     }
     return { ok: true };

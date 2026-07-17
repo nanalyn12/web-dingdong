@@ -598,6 +598,8 @@ export async function runVideoJob(jobId: string): Promise<void> {
 
     if (cfg.uploadMode === "auto") {
       await uploadAndFinalize(jobId);
+    } else if (cfg.uploadMode === "web") {
+      await finalizeWebOnly(jobId);
     } else {
       await setJob(jobId, { status: "awaiting_approval", step: "업로드 승인 대기", progress: 100 });
     }
@@ -645,7 +647,7 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
       job.created_by,
       cfg,
       script,
-      videoId,
+      { youtubeVideoId: videoId },
       job.srt ?? "",
       job.thumbnail_path ? `/media/${job.thumbnail_path}` : null,
     );
@@ -675,7 +677,7 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
           job.created_by,
           cfg,
           script,
-          videoId,
+          { youtubeVideoId: videoId },
           dramaId,
         );
       } catch (e) {
@@ -703,6 +705,87 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
   }
 }
 
+// Web-only mode: no YouTube — the rendered mp4 stays on the volume and the
+// drama/lesson play it through /media/*. Files move under dramas/<dramaId>
+// so deleting the studio job entry can never break published content.
+export async function finalizeWebOnly(jobId: string): Promise<void> {
+  const rows = await db
+    .select()
+    .from(tables.video_jobs)
+    .where(eq(tables.video_jobs.id, jobId))
+    .limit(1);
+  const job = rows[0];
+  if (!job?.video_path) throw new Error("완성된 영상이 없습니다.");
+  const cfg = job.config as unknown as VideoJobConfig;
+  const script = job.script as unknown as VideoScript;
+
+  try {
+    await setJob(jobId, { step: "학습 콘텐츠 생성 중", progress: 100 });
+
+    const dramaId = await createDramaFromScript(
+      job.created_by,
+      cfg,
+      script,
+      { mediaUrl: `/media/${job.video_path}` },
+      job.srt ?? "",
+      job.thumbnail_path ? `/media/${job.thumbnail_path}` : null,
+    );
+
+    // Move the files under dramas/<dramaId> (drama owns them from here on).
+    const { mkdir, rename } = await import("node:fs/promises");
+    await mkdir(join(getMediaDir(), "dramas"), { recursive: true });
+    const newVideo = `dramas/${dramaId}.mp4`;
+    await rename(join(getMediaDir(), job.video_path), join(getMediaDir(), newVideo));
+    let newThumb: string | null = null;
+    if (job.thumbnail_path) {
+      newThumb = `dramas/${dramaId}-thumb.jpg`;
+      await rename(
+        join(getMediaDir(), job.thumbnail_path),
+        join(getMediaDir(), newThumb),
+      ).catch(() => {
+        newThumb = null;
+      });
+    }
+    await db
+      .update(tables.dramas)
+      .set({
+        media_url: `/media/${newVideo}`,
+        ...(newThumb ? { thumbnail_url: `/media/${newThumb}` } : {}),
+      })
+      .where(eq(tables.dramas.id, dramaId));
+
+    let lessonId: string | null = null;
+    if (cfg.courseId || cfg.newCourseTitle?.trim()) {
+      try {
+        lessonId = await createLessonFromScript(
+          job.created_by,
+          cfg,
+          script,
+          { mediaUrl: `/media/${newVideo}` },
+          dramaId,
+        );
+      } catch (e) {
+        console.warn("[video] 강의 연동 실패 (비치명):", e);
+      }
+    }
+
+    await setJob(jobId, {
+      drama_id: dramaId,
+      lesson_id: lessonId,
+      status: "done",
+      step: "완료 (웹 전용)",
+      video_path: newVideo,
+      thumbnail_path: newThumb,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    await setJob(jobId, { status: "failed", error: `웹 콘텐츠 생성 실패: ${msg}` });
+    const { notifyAdmins } = await import("@/lib/notify.server");
+    await notifyAdmins("🎬 웹 콘텐츠 생성 실패", msg);
+    throw e;
+  }
+}
+
 // Parse SRT back into (start,end) pairs — fallback for jobs generated before
 // sentence segments existed.
 function parseSrtTimes(srt: string): { start: number; end: number }[] {
@@ -726,7 +809,7 @@ async function createLessonFromScript(
   userId: string,
   cfg: VideoJobConfig,
   script: VideoScript,
-  youtubeVideoId: string,
+  videoRef: { youtubeVideoId?: string | null; mediaUrl?: string | null },
   dramaId: string,
 ): Promise<string> {
   const { asc, eq } = await import("drizzle-orm");
@@ -777,7 +860,8 @@ async function createLessonFromScript(
       content_md: contentMd,
       key_expressions: keyExpressions as unknown as Json,
       video: {
-        youtube_video_id: youtubeVideoId,
+        youtube_video_id: videoRef.youtubeVideoId ?? undefined,
+        media_url: videoRef.mediaUrl ?? undefined,
         drama_id: dramaId,
       } as unknown as Json,
     })
@@ -794,11 +878,15 @@ async function createLessonFromScript(
   return lesson.id;
 }
 
+// Playback source for created content: a YouTube upload or a self-hosted
+// file on the volume ("web-only" mode).
+type VideoRef = { youtubeVideoId?: string | null; mediaUrl?: string | null };
+
 async function createDramaFromScript(
   userId: string,
   cfg: VideoJobConfig,
   script: VideoScript,
-  youtubeVideoId: string,
+  videoRef: VideoRef,
   srt: string,
   thumbnailUrl: string | null,
 ): Promise<string> {
@@ -854,10 +942,16 @@ async function createDramaFromScript(
       description: script.description?.slice(0, 300) ?? null,
       level: "beginner",
       genre: "AI 생성 영상",
-      youtube_url: `https://www.youtube.com/watch?v=${youtubeVideoId}`,
-      youtube_video_id: youtubeVideoId,
+      youtube_url: videoRef.youtubeVideoId
+        ? `https://www.youtube.com/watch?v=${videoRef.youtubeVideoId}`
+        : null,
+      youtube_video_id: videoRef.youtubeVideoId ?? null,
+      media_url: videoRef.mediaUrl ?? null,
       thumbnail_url:
-        thumbnailUrl ?? `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`,
+        thumbnailUrl ??
+        (videoRef.youtubeVideoId
+          ? `https://img.youtube.com/vi/${videoRef.youtubeVideoId}/hqdefault.jpg`
+          : null),
       duration_seconds: Math.ceil((times.at(-1)?.end ?? cfg.lengthSeconds) + intro),
       has_captions: true,
       scenes: scenes as unknown as Json,
