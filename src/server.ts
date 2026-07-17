@@ -49,7 +49,7 @@ export default {
       }
       if (!globalThis.__supabaseMediaMigrationStarted) {
         import("@/lib/media-migration.server")
-          .then((m) => m.migrateSupabaseMedia())
+          .then((m) => m.migrateSupabaseMedia().then(() => m.cleanupOrphanVideoFiles()))
           .catch((e) => console.error("[media-migration] failed:", e));
       }
       const handler = await getServerEntry();

@@ -119,3 +119,38 @@ export async function migrateSupabaseMedia(): Promise<void> {
     );
   }
 }
+
+/** Delete rendered video files whose video_jobs row no longer exists
+ * (jobs removed outside deleteVideoJob, crash leftovers). Runs once per
+ * server start, Railway-only — the volume lives there. */
+export async function cleanupOrphanVideoFiles(): Promise<void> {
+  if (!process.env.RAILWAY_ENVIRONMENT && !process.env.RAILWAY_PROJECT_ID) return;
+
+  const { readdir, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { getMediaDir } = await import("@/lib/suno.server");
+
+  const dir = join(getMediaDir(), "videos");
+  let files: string[];
+  try {
+    files = await readdir(dir);
+  } catch {
+    return; // no videos dir yet
+  }
+  if (files.length === 0) return;
+
+  const { db, tables } = await import("@/db");
+  const rows = await db.select({ id: tables.video_jobs.id }).from(tables.video_jobs);
+  const live = new Set(rows.map((r) => r.id));
+
+  let removed = 0;
+  for (const f of files) {
+    const m = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(-thumb\.jpg|\.mp4)$/i.exec(f);
+    if (!m || live.has(m[1].toLowerCase())) continue;
+    await rm(join(dir, f), { force: true }).catch(() => {});
+    removed++;
+  }
+  if (removed) {
+    console.log(`[media-cleanup] removed ${removed} orphaned video file(s)`);
+  }
+}
