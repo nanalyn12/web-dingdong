@@ -49,10 +49,23 @@ npm run start   # node .output/server/index.mjs (PORT 환경변수 사용)
 
 설정 전까지 Google 버튼은 오류 토스트만 띄우고, 아이디/비밀번호 로그인은 정상 동작합니다.
 
+## DB 백업 / 복원
+
+- 서버가 매일 04:30 KST(+ 배포 직후 오늘 파일이 없으면 즉시)에 전체 테이블을
+  `/data/backups/dingdong-YYYY-MM-DD.jsonl.gz`로 백업합니다 (7일 보관, 순수 Node — pg_dump 불필요).
+- 마지막 백업 상태는 `app_credentials`의 `backup_status` 키에 기록됩니다.
+- 복원 (대상 DB에 스키마 적용 후):
+
+```bash
+npm run db:migrate
+node scripts/restore-backup.mjs <백업파일.jsonl.gz> --yes  # 전 테이블 TRUNCATE 후 복원
+```
+
 ## 히스토리
 
 - Lovable에서 export → 자체 호스팅 전환 (2026-07)
 - Supabase(DB·Auth·Storage) → Railway Postgres + better-auth + 볼륨 저장으로 전면 이전.
   기존 콘텐츠(코스·레슨·드라마·노래)는 이전 완료, 계정은 재가입 방식.
-  기존에 생성된 노래의 미디어 URL은 Supabase Storage를 가리키므로 Supabase 프로젝트를
-  삭제하면 해당 음원 링크가 깨집니다 (새로 생성되는 미디어는 Railway 볼륨에 저장됨).
+  Supabase Storage에 있던 미디어(노래 음원·커버, 레슨 이미지)도 2026-07-14에
+  Railway 볼륨으로 복사 완료 — Supabase 프로젝트를 삭제해도 앱은 깨지지 않습니다
+  (단, curriculum_plans 데이터만 Supabase에 남아 있음).

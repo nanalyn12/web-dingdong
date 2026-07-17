@@ -52,6 +52,11 @@ export default {
           .then((m) => m.migrateSupabaseMedia().then(() => m.cleanupOrphanVideoFiles()))
           .catch((e) => console.error("[media-migration] failed:", e));
       }
+      if (!globalThis.__dailyBackupBootChecked) {
+        import("@/lib/backup.server")
+          .then((m) => m.initBackupOnBoot())
+          .catch((e) => console.error("[backup] boot check failed:", e));
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

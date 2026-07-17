@@ -62,6 +62,16 @@ function nowKst(): { hhmm: string; weekday: number; dateKey: string } {
 
 async function tick() {
   const { hhmm, weekday, dateKey } = nowKst();
+
+  // Nightly DB backup piggybacks on the minute ticker (skips if today's
+  // file already exists, so double-fires within the minute are harmless).
+  const { isBackupTime, maybeRunDailyBackup } = await import("@/lib/backup.server");
+  if (isBackupTime(hhmm)) {
+    void maybeRunDailyBackup(dateKey).catch((e) =>
+      console.error("[backup] failed:", e),
+    );
+  }
+
   const schedules = await db
     .select()
     .from(tables.video_schedules)
