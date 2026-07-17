@@ -548,6 +548,30 @@ export async function runVideoJob(jobId: string): Promise<void> {
     muxArgs.push("-c:a", "aac", "-b:a", "160k", "-shortest", finalPath);
     await run(ff, muxArgs);
 
+    // 8.5) Background music — focus-matched track mixed quietly under the
+    // narration. Video stream is stream-copied, so this pass is fast (~1s).
+    // Any failure keeps the BGM-less output (non-fatal).
+    const { bgmEnabled, ensureBgmFile } = await import("./bgm.server");
+    if (bgmEnabled(cfg)) {
+      const bgmPath = await ensureBgmFile(cfg.focus);
+      if (bgmPath) {
+        try {
+          const mixed = join(work, "final-bgm.mp4");
+          await run(ff, [
+            "-y", "-i", finalPath, "-stream_loop", "-1", "-i", bgmPath,
+            "-filter_complex",
+            "[0:a]aformat=channel_layouts=stereo[nar];[1:a]aformat=channel_layouts=stereo,volume=0.15[bg];[nar][bg]amix=inputs=2:duration=first:normalize=0[aout]",
+            "-map", "0:v", "-map", "[aout]",
+            "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-shortest", mixed,
+          ]);
+          const { copyFile } = await import("node:fs/promises");
+          await copyFile(mixed, finalPath);
+        } catch (e) {
+          console.warn("[video] BGM 믹싱 실패 — BGM 없이 유지:", e);
+        }
+      }
+    }
+
     // 9) Thumbnail — frame from the pre-subtitle video (no burned captions),
     //    title wrapped to two lines on a translucent box.
     await step(jobId, "썸네일 생성 중", 92);
@@ -609,7 +633,7 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
         ? join(getMediaDir(), job.thumbnail_path)
         : undefined,
       title: script.title,
-      description: script.description,
+      description: script.description + (await import("./bgm.server")).bgmAttribution(cfg),
       tags: script.tags ?? [],
       privacy: cfg.privacy,
     });
@@ -632,10 +656,11 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
       const { updateVideoDescription, addToDingdongPlaylist, appBaseUrl } =
         await import("./youtube.server");
       const learnUrl = `${appBaseUrl()}/dramas/${dramaId}`;
+      const { bgmAttribution } = await import("./bgm.server");
       await updateVideoDescription(
         videoId,
         script.title,
-        `${script.description}\n\n📚 딩동에서 이 영상으로 학습하기 (전체 대사·단어장·퀴즈):\n${learnUrl}`,
+        `${script.description}\n\n📚 딩동에서 이 영상으로 학습하기 (전체 대사·단어장·퀴즈):\n${learnUrl}${bgmAttribution(cfg)}`,
       );
       await addToDingdongPlaylist(videoId);
     } catch (e) {

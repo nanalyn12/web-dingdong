@@ -24,6 +24,7 @@ const ConfigInput = z.object({
   newCourseTitle: z.string().trim().max(80).optional(),
   speakingRate: z.number().min(0.7).max(1.3).optional(),
   repeatZh: z.boolean().optional(),
+  bgm: z.boolean().default(true),
 });
 
 const CreateInput = z.object({

@@ -246,6 +246,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
   const [clipCount, setClipCount] = useState(6);
   const [voice, setVoice] = useState(VOICES.ko[0].value);
   const [burnSubtitles, setBurnSubtitles] = useState(true);
+  const [bgm, setBgm] = useState(true);
   const [uploadMode, setUploadMode] =
     useState<VideoJobConfig["uploadMode"]>("approval");
   const [privacy, setPrivacy] = useState<VideoJobConfig["privacy"]>("unlisted");
@@ -276,6 +277,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
             clipCount,
             voice,
             burnSubtitles,
+            bgm,
             uploadMode,
             privacy,
             courseId:
@@ -482,6 +484,12 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
           <Switch checked={burnSubtitles} onCheckedChange={setBurnSubtitles} id="burn" />
           <Label htmlFor="burn" className="cursor-pointer">
             ⑧ 자막 영상에 새기기
+          </Label>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl bg-white/50 border border-border px-4 py-3">
+          <Switch checked={bgm} onCheckedChange={setBgm} id="bgm" />
+          <Label htmlFor="bgm" className="cursor-pointer">
+            배경음악 (중점별 자동 선곡)
           </Label>
         </div>
         <div className="space-y-2">

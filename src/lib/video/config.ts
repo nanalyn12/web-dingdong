@@ -23,6 +23,8 @@ export type VideoJobConfig = {
   // Voice options
   speakingRate?: number; // 0.8 ~ 1.2 (default 1.0)
   repeatZh?: boolean; // speak Chinese runs twice for learners
+  // Background music (focus-matched track, mixed at low volume). Default on.
+  bgm?: boolean;
 };
 
 export const SPEAKING_RATES = [
