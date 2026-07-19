@@ -117,6 +117,8 @@ export const profiles = pgTable("profiles", {
   teacher_school: text("teacher_school"),
   teacher_department: text("teacher_department"),
   last_active_at: ts("last_active_at"),
+  // Personal widget panel layout — ordered widget ids (null = default set).
+  widget_layout: jsonb("widget_layout").$type<Json>(),
   created_at: ts("created_at").notNull().defaultNow(),
   updated_at: ts("updated_at").notNull().defaultNow(),
 });

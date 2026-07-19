@@ -64,6 +64,13 @@
       "when": 1784448797262,
       "tag": "0008_robust_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784450157204,
+      "tag": "0009_aspiring_cassandra_nova",
+      "breakpoints": true
     }
   ]
 }

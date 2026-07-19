@@ -17,6 +17,7 @@ import { landingTourSteps } from "@/lib/tour-steps";
 
 import heroDingdong from "@/assets/hero-dingdong.png";
 import { listCoursesWithCounts } from "@/lib/courses.functions";
+import { WidgetPanel } from "@/components/widget-panel";
 
 export const Route = createFileRoute("/_app/")({
   head: () => ({
@@ -64,6 +65,11 @@ function Landing() {
 
   return (
     <div className="flex flex-col gap-8">
+      {/* 위젯 패널 — 사이드바가 없는 모바일에서만 홈 상단에 표시 */}
+      <div className="md:hidden">
+        <WidgetPanel />
+      </div>
+
       {/* HERO */}
       <section data-tour="hero" className="glass rounded-4xl p-8 md:p-12 relative overflow-hidden">
 

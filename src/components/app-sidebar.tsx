@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { listCoursesWithLessons } from "@/lib/courses.functions";
 import { useIsEditor, useMyProfile } from "@/lib/auth-client";
+import { WidgetPanel } from "@/components/widget-panel";
 
 const items = [
   { title: "홈", url: "/", icon: Home },
@@ -106,6 +107,8 @@ export function AppSidebar() {
           </Link>
         )}
       </nav>
+
+      <WidgetPanel />
 
       <LessonList pathname={pathname} />
     </aside>
