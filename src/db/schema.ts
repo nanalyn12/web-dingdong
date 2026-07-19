@@ -232,6 +232,9 @@ export const songs = pgTable("songs", {
   grammar_notes: jsonb("grammar_notes").$type<Json>().notNull().default([]),
   quiz: jsonb("quiz").$type<Json>().notNull().default([]),
   cultural_note: jsonb("cultural_note").$type<Json>(),
+  // AI-computed links to related lessons (연계 학습) — generated once on
+  // first view, cached here. See content-links.functions.ts.
+  related_content: jsonb("related_content").$type<Json>(),
   created_by: text("created_by"),
   created_at: ts("created_at").notNull().defaultNow(),
   updated_at: ts("updated_at").notNull().defaultNow(),

@@ -29,6 +29,11 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyProfile } from "@/lib/auth-client";
 import { useSongProgress } from "@/lib/song-progress";
+import {
+  getSongRelatedContent,
+  regenerateSongRelatedContent,
+  type SongRelatedContent,
+} from "@/lib/content-links.functions";
 
 const POLL_INTERVAL_MS = 8000;
 const EST_AUDIO_SEC = 150;
@@ -146,11 +151,115 @@ function SongPlayerPage() {
 
   if (!song) return null;
   return (
-    <SongPlayer
-      song={song}
-      pollError={pollError}
-      retryAt={retryAt}
-    />
+    <div className="space-y-4">
+      <SongPlayer
+        song={song}
+        pollError={pollError}
+        retryAt={retryAt}
+      />
+      <RelatedLessonsCard songId={song.id} isEditor={isEditor} />
+    </div>
+  );
+}
+
+/** 🔗 연계 학습 — AI가 노래와 이어지는 레슨을 골라 연계성·차이점을 설명. */
+function RelatedLessonsCard({
+  songId,
+  isEditor,
+}: {
+  songId: string;
+  isEditor: boolean;
+}) {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["song-related", songId],
+    queryFn: () => getSongRelatedContent({ data: { songId } }),
+    staleTime: Infinity,
+  });
+  const regen = useMutation({
+    mutationFn: () => regenerateSongRelatedContent({ data: { songId } }),
+    onSuccess: (d: SongRelatedContent | null) => {
+      qc.setQueryData(["song-related", songId], d);
+      toast.success("연계 학습을 다시 분석했어요.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "분석 실패"),
+  });
+
+  if (isLoading) {
+    return (
+      <section className="glass rounded-3xl p-5 flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        叮叮이 이 노래와 이어지는 강의를 분석하는 중…
+      </section>
+    );
+  }
+  if (!data?.links?.length) {
+    if (!isEditor) return null;
+    return (
+      <section className="glass rounded-3xl p-5 flex items-center justify-between gap-3 text-sm text-muted-foreground">
+        <span>연계 학습 데이터가 아직 없어요.</span>
+        <Button size="sm" variant="outline" disabled={regen.isPending} onClick={() => regen.mutate()}>
+          {regen.isPending && <Loader2 className="size-3.5 mr-1 animate-spin" />}
+          분석하기
+        </Button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="glass rounded-3xl p-5 space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h2 className="font-bold text-lg">🔗 연계 학습 — 이 노래와 이어지는 강의</h2>
+        {isEditor && (
+          <Button size="sm" variant="ghost" className="text-xs" disabled={regen.isPending} onClick={() => regen.mutate()}>
+            {regen.isPending ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : null}
+            다시 분석
+          </Button>
+        )}
+      </div>
+      {data.summary && (
+        <p className="text-sm text-muted-foreground">{data.summary}</p>
+      )}
+      <div className="grid gap-3 md:grid-cols-2">
+        {data.links.map((l) => (
+          <div
+            key={l.lesson_id}
+            className="rounded-2xl bg-white/50 border border-white/60 p-4 space-y-2"
+          >
+            <Link
+              to="/lessons/$id"
+              params={{ id: l.lesson_id }}
+              className="font-semibold text-primary hover:underline leading-snug block"
+            >
+              📚 {l.lesson_title} →
+            </Link>
+            <p className="text-sm">{l.reason}</p>
+            {l.shared.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {l.shared.map((s, i) => (
+                  <span
+                    key={i}
+                    title={s.note}
+                    className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
+                  >
+                    {s.zh}
+                    {s.note ? ` · ${s.note}` : ""}
+                  </span>
+                ))}
+              </div>
+            )}
+            {l.difference && (
+              <p className="text-xs text-muted-foreground">↔ {l.difference}</p>
+            )}
+            {l.order_tip && (
+              <p className="text-xs text-emerald-700 bg-emerald-500/10 rounded-xl px-2.5 py-1.5">
+                💡 {l.order_tip}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

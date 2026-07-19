@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { getLesson } from "@/lib/courses.functions";
+import { getLessonRelatedSongs } from "@/lib/content-links.functions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -443,7 +444,46 @@ function LessonPage() {
           />
         </TabsContent>
       </Tabs>
+
+      <RelatedSongsCard lessonId={id} />
     </section>
+  );
+}
+
+/** 🎵 이 레슨과 연계된 학습송 (노래 쪽에서 AI가 계산해 캐시한 링크의 역방향). */
+function RelatedSongsCard({ lessonId }: { lessonId: string }) {
+  const { data } = useQuery({
+    queryKey: ["lesson-related-songs", lessonId],
+    queryFn: () => getLessonRelatedSongs({ data: { lessonId } }),
+    staleTime: Infinity,
+  });
+  if (!data?.length) return null;
+  return (
+    <div className="mt-4 glass rounded-3xl p-5 space-y-3">
+      <h2 className="font-bold">🎵 이 레슨과 이어지는 학습송</h2>
+      <div className="grid gap-3 md:grid-cols-2">
+        {data.map((s) => (
+          <div
+            key={s.song_id}
+            className="rounded-2xl bg-white/50 border border-white/60 p-4 space-y-1.5"
+          >
+            <Link
+              to="/songs/$id"
+              params={{ id: s.song_id }}
+              className="font-semibold text-primary hover:underline"
+            >
+              🎶 {s.song_title} →
+            </Link>
+            <p className="text-sm">{s.reason}</p>
+            {s.order_tip && (
+              <p className="text-xs text-emerald-700 bg-emerald-500/10 rounded-xl px-2.5 py-1.5">
+                💡 {s.order_tip}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
