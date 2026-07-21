@@ -8,6 +8,10 @@ import type { Json } from "@/db/schema";
 
 const SCOPE = "https://www.googleapis.com/auth/youtube.upload";
 
+/** Raised when the stored refresh token is revoked/expired (invalid_grant).
+ * Callers can catch this to fall back to web-only publishing. */
+export class YouTubeAuthError extends Error {}
+
 function clientCreds() {
   const id = process.env.GOOGLE_CLIENT_ID;
   const secret = process.env.GOOGLE_CLIENT_SECRET;
@@ -98,6 +102,19 @@ async function accessToken(): Promise<string> {
   });
   const data = (await res.json()) as { access_token?: string; error?: string };
   if (!res.ok || !data.access_token) {
+    if (data.error === "invalid_grant") {
+      // Refresh token revoked/expired. The OAuth consent screen in "Testing"
+      // publishing status expires refresh tokens after 7 days, so this recurs
+      // until the app is published/verified. Clear the dead token so the UI
+      // shows the reconnect prompt instead of retrying forever.
+      await db
+        .delete(tables.app_credentials)
+        .where(eq(tables.app_credentials.key, "youtube"))
+        .catch(() => {});
+      throw new YouTubeAuthError(
+        "YouTube 연결이 만료됐어요 (invalid_grant). 스튜디오에서 다시 연결해주세요.",
+      );
+    }
     throw new Error(`YouTube 토큰 갱신 실패: ${data.error ?? res.status} — 재연결이 필요할 수 있어요.`);
   }
   return data.access_token;

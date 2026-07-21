@@ -628,17 +628,35 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
 
   try {
     await setJob(jobId, { status: "uploading", step: "YouTube 업로드 중", progress: 100 });
-    const { uploadToYouTube } = await import("./youtube.server");
-    const videoId = await uploadToYouTube({
-      filePath: join(getMediaDir(), job.video_path),
-      thumbnailPath: job.thumbnail_path
-        ? join(getMediaDir(), job.thumbnail_path)
-        : undefined,
-      title: script.title,
-      description: script.description + (await import("./bgm.server")).bgmAttribution(cfg),
-      tags: script.tags ?? [],
-      privacy: cfg.privacy,
-    });
+    const { uploadToYouTube, YouTubeAuthError } = await import("./youtube.server");
+    let videoId: string;
+    try {
+      videoId = await uploadToYouTube({
+        filePath: join(getMediaDir(), job.video_path),
+        thumbnailPath: job.thumbnail_path
+          ? join(getMediaDir(), job.thumbnail_path)
+          : undefined,
+        title: script.title,
+        description: script.description + (await import("./bgm.server")).bgmAttribution(cfg),
+        tags: script.tags ?? [],
+        privacy: cfg.privacy,
+      });
+    } catch (e) {
+      // Web-first fallback: if YouTube auth is the problem, don't discard the
+      // already-rendered video — publish it web-only so the site still gets
+      // the content. (Aligns with the web-is-main direction.)
+      if (e instanceof YouTubeAuthError) {
+        console.warn(`[video ${jobId.slice(0, 8)}] YouTube auth 만료 → 웹 전용 게시`);
+        const { notifyAdmins } = await import("@/lib/notify.server");
+        await notifyAdmins(
+          "🎬 YouTube 연결 만료 — 웹 전용으로 게시했어요",
+          "렌더된 영상을 딩동 웹에 바로 게시했어요. YouTube 업로드를 원하면 스튜디오에서 다시 연결해주세요.",
+        );
+        await finalizeWebOnly(jobId);
+        return;
+      }
+      throw e;
+    }
     await setJob(jobId, { youtube_video_id: videoId, step: "학습 콘텐츠 생성 중" });
 
     // Learning content: build drama scenes directly from our own script timings.

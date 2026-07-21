@@ -8,18 +8,21 @@ import { useZhTts } from "@/lib/use-zh-tts";
 import {
   DEFAULT_LAYOUT,
   WIDGET_IDS,
+  getContinueWatching,
   getDailyQuote,
+  getDailySong,
   getWidgetLayout,
   getWidgetStats,
   saveWidgetLayout,
   type WidgetId,
-  type WidgetStats,
 } from "@/lib/widgets.functions";
 
 const WIDGET_META: Record<WidgetId, { title: string; emoji: string }> = {
   quote: { title: "오늘의 명언", emoji: "💬" },
   stats: { title: "학습 현황", emoji: "📊" },
   calendar: { title: "학습 캘린더", emoji: "📅" },
+  continue: { title: "이어보기", emoji: "▶️" },
+  song: { title: "오늘의 학습송", emoji: "🎵" },
 };
 
 const GUEST_KEY = "dd-widget-layout";
@@ -139,6 +142,8 @@ export function WidgetPanel() {
               {id === "quote" && <QuoteWidget />}
               {id === "stats" && <StatsWidget signedIn={!!session} />}
               {id === "calendar" && <CalendarWidget signedIn={!!session} />}
+              {id === "continue" && <ContinueWidget signedIn={!!session} />}
+              {id === "song" && <DailySongWidget />}
             </div>
           </div>
         ))}
@@ -304,5 +309,91 @@ function CalendarWidget({ signedIn }: { signedIn: boolean }) {
         <p className="text-[10px] text-muted-foreground">로그인하면 학습한 날이 표시돼요.</p>
       )}
     </div>
+  );
+}
+
+/* ── ▶️ 이어보기 ────────────────────────────────────────────────────────── */
+
+function ContinueWidget({ signedIn }: { signedIn: boolean }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["widget-continue"],
+    queryFn: () => getContinueWatching({}),
+    enabled: signedIn,
+    staleTime: 30_000,
+  });
+  if (!signedIn)
+    return <p className="text-xs text-muted-foreground">로그인하면 보던 영상이 이어져요.</p>;
+  if (isLoading) return <p className="text-xs text-muted-foreground">불러오는 중…</p>;
+  if (!data)
+    return (
+      <p className="text-xs text-muted-foreground">
+        아직 시청 기록이 없어요.{" "}
+        <Link to="/dramas" className="text-primary hover:underline">영상 학습 →</Link>
+      </p>
+    );
+  const m = Math.floor(data.last_seconds / 60);
+  const s = Math.floor(data.last_seconds % 60);
+  return (
+    <Link to="/dramas/$id" params={{ id: data.drama_id }} className="block group">
+      {data.thumbnail_url && (
+        <div className="aspect-video w-full rounded-xl overflow-hidden bg-black/10 mb-1.5">
+          <img
+            src={data.thumbnail_url}
+            alt=""
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition"
+          />
+        </div>
+      )}
+      <p className="text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition">
+        {data.title}
+      </p>
+      <div className="mt-1 h-1 rounded-full bg-white/60 overflow-hidden">
+        <div className="h-full gradient-primary" style={{ width: `${data.percent}%` }} />
+      </div>
+      <p className="text-[10px] text-muted-foreground mt-0.5">
+        {String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}부터 이어보기 · {data.percent}%
+      </p>
+    </Link>
+  );
+}
+
+/* ── 🎵 오늘의 학습송 ───────────────────────────────────────────────────── */
+
+const SONG_LEVEL_LABEL: Record<string, string> = {
+  beginner: "입문",
+  intermediate: "중급",
+  advanced: "고급",
+};
+
+function DailySongWidget() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["widget-daily-song"],
+    queryFn: () => getDailySong({}),
+    staleTime: Infinity,
+  });
+  if (isLoading) return <p className="text-xs text-muted-foreground">불러오는 중…</p>;
+  if (!data)
+    return <p className="text-xs text-muted-foreground">아직 학습송이 없어요.</p>;
+  return (
+    <Link to="/songs/$id" params={{ id: data.id }} className="flex items-center gap-3 group">
+      <div className="size-12 rounded-xl overflow-hidden bg-primary/10 shrink-0 grid place-items-center">
+        {data.cover_url ? (
+          <img src={data.cover_url} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-xl">🎵</span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold leading-snug line-clamp-1 group-hover:text-primary transition">
+          {data.title}
+        </p>
+        {data.title_zh && (
+          <p className="text-[11px] text-muted-foreground line-clamp-1">{data.title_zh}</p>
+        )}
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+          {SONG_LEVEL_LABEL[data.level] ?? data.level}
+        </span>
+      </div>
+    </Link>
   );
 }

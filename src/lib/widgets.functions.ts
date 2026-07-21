@@ -7,7 +7,7 @@ import type { Json } from "@/db/schema";
 
 // ── 위젯 패널 ────────────────────────────────────────────────────────────────
 // Widget ids are validated against this list; the client registry mirrors it.
-export const WIDGET_IDS = ["quote", "stats", "calendar"] as const;
+export const WIDGET_IDS = ["quote", "stats", "calendar", "continue", "song"] as const;
 export type WidgetId = (typeof WIDGET_IDS)[number];
 export const DEFAULT_LAYOUT: WidgetId[] = ["quote", "stats", "calendar"];
 
@@ -168,3 +168,83 @@ export const getWidgetStats = createServerFn({ method: "GET" })
 
     return { dueCount, streak, activityDates: [...dates].sort() };
   });
+
+// ── ▶️ 이어보기 (영상 학습) ──────────────────────────────────────────────────
+
+export type ContinueWatching = {
+  drama_id: string;
+  title: string;
+  thumbnail_url: string | null;
+  last_seconds: number;
+  duration_seconds: number | null;
+  percent: number;
+} | null;
+
+export const getContinueWatching = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }): Promise<ContinueWatching> => {
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({
+        drama_id: tables.drama_progress.drama_id,
+        last_seconds: tables.drama_progress.last_seconds,
+        title: tables.dramas.title,
+        thumbnail_url: tables.dramas.thumbnail_url,
+        duration_seconds: tables.dramas.duration_seconds,
+      })
+      .from(tables.drama_progress)
+      .innerJoin(tables.dramas, eq(tables.drama_progress.drama_id, tables.dramas.id))
+      .where(
+        and(
+          eq(tables.drama_progress.user_id, context.userId),
+          sql`${tables.drama_progress.last_seconds} > 5`,
+        ),
+      )
+      .orderBy(sql`${tables.drama_progress.updated_at} DESC`)
+      .limit(1);
+    const r = rows[0];
+    if (!r) return null;
+    const percent = r.duration_seconds
+      ? Math.min(100, Math.round((r.last_seconds / r.duration_seconds) * 100))
+      : 0;
+    return {
+      drama_id: r.drama_id,
+      title: r.title,
+      thumbnail_url: r.thumbnail_url,
+      last_seconds: r.last_seconds,
+      duration_seconds: r.duration_seconds,
+      percent,
+    };
+  });
+
+// ── 🎵 오늘의 학습송 ─────────────────────────────────────────────────────────
+
+export type DailySong = {
+  id: string;
+  title: string;
+  title_zh: string | null;
+  level: string;
+  cover_url: string | null;
+} | null;
+
+export const getDailySong = createServerFn({ method: "GET" }).handler(
+  async (): Promise<DailySong> => {
+    const { db, tables } = await import("@/db");
+    // Only songs ready to study (have audio). Rotate by KST date so the
+    // "song of the day" is stable for everyone within a day.
+    const rows = await db
+      .select({
+        id: tables.songs.id,
+        title: tables.songs.title,
+        title_zh: tables.songs.title_zh,
+        level: tables.songs.level,
+        cover_url: tables.songs.cover_url,
+      })
+      .from(tables.songs)
+      .where(sql`${tables.songs.media_url} IS NOT NULL`)
+      .orderBy(tables.songs.created_at);
+    if (rows.length === 0) return null;
+    const kstDay = Math.floor((Date.now() + 9 * 3600_000) / 86_400_000);
+    return rows[kstDay % rows.length] ?? null;
+  },
+);
