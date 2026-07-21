@@ -234,6 +234,9 @@ export const songs = pgTable("songs", {
   grammar_notes: jsonb("grammar_notes").$type<Json>().notNull().default([]),
   quiz: jsonb("quiz").$type<Json>().notNull().default([]),
   cultural_note: jsonb("cultural_note").$type<Json>(),
+  // Why the last generation failed (Suno sensitive-word rejection, quota, …)
+  // so the editor can fix the lyrics and retry instead of guessing.
+  error: text("error"),
   // AI-computed links to related lessons (연계 학습) — generated once on
   // first view, cached here. See content-links.functions.ts.
   related_content: jsonb("related_content").$type<Json>(),

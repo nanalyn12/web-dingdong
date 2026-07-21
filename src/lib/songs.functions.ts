@@ -55,6 +55,7 @@ export type SongRow = {
   vocab: VocabItem[];
   grammar_notes: GrammarNote[];
   status: string;
+  error: string | null; // 마지막 생성 실패 사유 (Suno 민감 단어 거부 등)
   style: string | null;
   topic: string | null;
   suno_audio_task_id: string | null;
@@ -257,10 +258,12 @@ export async function advanceSongAudio(row: SongRow): Promise<SongRow> {
       rec.status === "SENSITIVE_WORD_ERROR" ||
       rec.status === "CALLBACK_EXCEPTION"
     ) {
-      await updateSong(row.id, { status: "failed_audio" });
       const hint = AUDIO_FAIL_HINT[rec.status];
       const detail = rec.errorMessage ? ` — ${rec.errorMessage}` : "";
-      throw new Error(`${hint ?? `Suno 생성 실패: ${rec.status}`}${detail}`);
+      const message = `${hint ?? `Suno 생성 실패: ${rec.status}`}${detail}`;
+      // Persist the reason so the editor can see why and fix the lyrics.
+      await updateSong(row.id, { status: "failed_audio", error: message });
+      throw new Error(message);
     }
 
     if (rec.status !== "SUCCESS" && rec.status !== "FIRST_SUCCESS") {
@@ -637,7 +640,7 @@ export async function submitSongToSuno(args: {
   userId: string;
   vocalGender?: "m" | "f";
   model?: "V4" | "V4_5" | "V4_5PLUS" | "V4_5ALL" | "V5" | "V5_5";
-}): Promise<{ songId: string; taskId: string }> {
+}): Promise<{ songId: string; ok: boolean; error?: string }> {
   const { sunoCreateMusic } = await import("@/lib/suno.server");
   const { db, tables } = await import("@/db");
 
@@ -651,14 +654,9 @@ export async function submitSongToSuno(args: {
     ko: args.draft.translation[i] ?? "",
   }));
 
-  const { taskId } = await sunoCreateMusic({
-    title: args.draft.title_zh || args.draft.title,
-    style: args.style,
-    prompt: args.draft.lyrics,
-    model: args.model ?? "V4_5",
-    vocalGender: args.vocalGender,
-  });
-
+  // Create the row BEFORE calling Suno. If Suno rejects the lyrics (sensitive
+  // words are a common cause), the drafted lyrics survive on a failed row so
+  // an editor can fix the wording and retry instead of losing the whole run.
   const [row] = await db
     .insert(tables.songs)
     .values({
@@ -669,12 +667,94 @@ export async function submitSongToSuno(args: {
       topic: args.topic || null,
       lyrics: parsedLyrics as unknown as Json,
       status: "generating_audio",
-      suno_audio_task_id: taskId,
       created_by: args.userId,
     })
     .returning({ id: tables.songs.id });
-  return { songId: row.id, taskId };
+
+  try {
+    const { taskId } = await sunoCreateMusic({
+      title: args.draft.title_zh || args.draft.title,
+      style: args.style,
+      prompt: args.draft.lyrics,
+      model: args.model ?? "V4_5",
+      vocalGender: args.vocalGender,
+    });
+    await updateSong(row.id, { suno_audio_task_id: taskId, error: null });
+    return { songId: row.id, ok: true };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : "Suno 요청 실패";
+    await updateSong(row.id, { status: "failed_audio", error });
+    return { songId: row.id, ok: false, error };
+  }
 }
+
+/** 실패한 곡의 가사를 고쳐서 다시 생성. Suno가 민감 단어로 거부한 경우
+ * 해당 표현만 바꿔 재시도하는 것이 주 용도. */
+export const retrySongGeneration = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        songId: z.string().uuid(),
+        // 편집된 중국어 가사 전문 (줄바꿈 구분). 생략하면 기존 가사 그대로 재시도.
+        lyrics: z.string().trim().min(10).optional(),
+        style: z.string().trim().min(1).max(80).optional(),
+        vocalGender: z.enum(["m", "f"]).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }): Promise<SongRow> => {
+    await assertEditor(context.userId);
+    const { sunoCreateMusic } = await import("@/lib/suno.server");
+    const row = await fetchSong(data.songId);
+
+    // 편집된 가사가 오면 병음·번역을 다시 붙인다.
+    let lyricsForSuno: string;
+    let parsedLyrics = row.lyrics ?? [];
+    if (data.lyrics) {
+      const zhLines = data.lyrics
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+      const ann = await annotateLyricsInternal(zhLines);
+      parsedLyrics = zhLines.map((zh, i) => ({
+        zh,
+        pinyin: ann.pinyin[i] ?? "",
+        ko: ann.ko[i] ?? "",
+      }));
+      lyricsForSuno = zhLines.join("\n");
+    } else {
+      lyricsForSuno = (parsedLyrics as LyricLine[]).map((l) => l.zh).join("\n");
+    }
+    if (!lyricsForSuno.trim()) throw new Error("가사가 비어 있습니다.");
+
+    const style = data.style?.trim() || row.style || "cute mandarin pop";
+    try {
+      const { taskId } = await sunoCreateMusic({
+        title: row.title_zh || row.title,
+        style,
+        prompt: lyricsForSuno,
+        model: "V4_5",
+        vocalGender: data.vocalGender,
+      });
+      return updateSong(row.id, {
+        lyrics: parsedLyrics as unknown as Json,
+        style,
+        status: "generating_audio",
+        suno_audio_task_id: taskId,
+        suno_audio_id: null,
+        error: null,
+      });
+    } catch (e) {
+      const error = e instanceof Error ? e.message : "Suno 요청 실패";
+      return updateSong(row.id, {
+        lyrics: parsedLyrics as unknown as Json,
+        style,
+        status: "failed_audio",
+        error,
+      });
+    }
+  });
 
 /** AI lyrics draft from a keyword. No auth — shared by the client FN and the
  * background song scheduler. */

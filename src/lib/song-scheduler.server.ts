@@ -87,7 +87,7 @@ export async function runSongScheduleOnce(scheduleId: string): Promise<string> {
     "@/lib/songs.functions"
   );
   const draft = await draftSongInternal({ keyword, level, style: s.style });
-  const { songId } = await submitSongToSuno({
+  const { songId, ok, error } = await submitSongToSuno({
     draft,
     level,
     style: s.style,
@@ -97,6 +97,9 @@ export async function runSongScheduleOnce(scheduleId: string): Promise<string> {
       s.vocal_gender === "m" || s.vocal_gender === "f" ? s.vocal_gender : undefined,
   });
 
+  // The run happened either way — advance the rotation and stamp it so the
+  // schedule doesn't retry this minute. A Suno rejection leaves a visible
+  // failed song (with its lyrics) that an editor can fix and retry.
   await db
     .update(tables.song_schedules)
     .set({
@@ -104,6 +107,16 @@ export async function runSongScheduleOnce(scheduleId: string): Promise<string> {
       last_run_at: new Date().toISOString(),
     })
     .where(eq(tables.song_schedules.id, scheduleId));
+
+  if (!ok) {
+    console.warn(`[song-sched] "${s.name}" 곡 ${songId} 생성 거부: ${error}`);
+    const { notifyAdmins } = await import("@/lib/notify.server");
+    await notifyAdmins(
+      "🎵 학습송 생성 실패",
+      `"${draft.title}" — ${error ?? "Suno 거부"}. 학습송 목록에서 가사를 고쳐 재시도할 수 있어요.`,
+    ).catch(() => {});
+    throw new Error(error ?? "Suno 생성 실패");
+  }
 
   console.log(`[song-sched] "${s.name}" → song ${songId} (키워드: ${keyword})`);
   return songId;

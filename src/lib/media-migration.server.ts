@@ -120,37 +120,49 @@ export async function migrateSupabaseMedia(): Promise<void> {
   }
 }
 
-/** Delete rendered video files whose video_jobs row no longer exists
- * (jobs removed outside deleteVideoJob, crash leftovers). Runs once per
- * server start, Railway-only — the volume lives there. */
+/** Delete media files whose owning DB row no longer exists:
+ *  - videos/<jobId>.(mp4|-thumb.jpg)   → owned by video_jobs
+ *  - dramas/<dramaId>.(mp4|-thumb.jpg) → owned by dramas (web-only playback)
+ * Without this, rows removed outside the app's own delete paths (direct DB
+ * edits, crash leftovers) leak files onto the volume forever.
+ * Runs once per server start, Railway-only — the volume lives there. */
 export async function cleanupOrphanVideoFiles(): Promise<void> {
   if (!process.env.RAILWAY_ENVIRONMENT && !process.env.RAILWAY_PROJECT_ID) return;
 
   const { readdir, rm } = await import("node:fs/promises");
   const { join } = await import("node:path");
   const { getMediaDir } = await import("@/lib/suno.server");
-
-  const dir = join(getMediaDir(), "videos");
-  let files: string[];
-  try {
-    files = await readdir(dir);
-  } catch {
-    return; // no videos dir yet
-  }
-  if (files.length === 0) return;
-
   const { db, tables } = await import("@/db");
-  const rows = await db.select({ id: tables.video_jobs.id }).from(tables.video_jobs);
-  const live = new Set(rows.map((r) => r.id));
 
-  let removed = 0;
-  for (const f of files) {
-    const m = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(-thumb\.jpg|\.mp4)$/i.exec(f);
-    if (!m || live.has(m[1].toLowerCase())) continue;
-    await rm(join(dir, f), { force: true }).catch(() => {});
-    removed++;
+  const UUID_FILE =
+    /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(-thumb\.jpg|\.mp4)$/i;
+
+  async function sweep(subdir: string, liveIds: Set<string>): Promise<number> {
+    const dir = join(getMediaDir(), subdir);
+    let files: string[];
+    try {
+      files = await readdir(dir);
+    } catch {
+      return 0; // dir not created yet
+    }
+    let removed = 0;
+    for (const f of files) {
+      const m = UUID_FILE.exec(f);
+      if (!m || liveIds.has(m[1].toLowerCase())) continue;
+      await rm(join(dir, f), { force: true }).catch(() => {});
+      removed++;
+    }
+    return removed;
   }
+
+  const jobs = await db.select({ id: tables.video_jobs.id }).from(tables.video_jobs);
+  const dramas = await db.select({ id: tables.dramas.id }).from(tables.dramas);
+
+  const removed =
+    (await sweep("videos", new Set(jobs.map((r) => r.id.toLowerCase())))) +
+    (await sweep("dramas", new Set(dramas.map((r) => r.id.toLowerCase()))));
+
   if (removed) {
-    console.log(`[media-cleanup] removed ${removed} orphaned video file(s)`);
+    console.log(`[media-cleanup] removed ${removed} orphaned media file(s)`);
   }
 }

@@ -33,6 +33,7 @@ import {
   listSongs,
   pollSongGeneration,
   pollSongMp4,
+  retrySongGeneration,
   type LyricLine,
   type SongRow,
 } from "@/lib/songs.functions";
@@ -268,6 +269,8 @@ function SongsPage() {
         <CuratedSongForm onDone={() => setCreating(null)} />
       )}
       {creating === "schedule" && isEditor && <SongSchedulePanel />}
+
+      {isEditor && <FailedSongsPanel songs={songs ?? []} />}
 
       {generatingSongs.length > 0 && (
         <div className="glass rounded-3xl p-5 space-y-4 border border-primary/40 bg-primary/5">
@@ -1060,6 +1063,127 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
           노래 등록
         </Button>
       </div>
+    </div>
+  );
+}
+
+/* ── 생성 실패한 곡: 가사 수정 후 재생성 ─────────────────────────────────── */
+
+function FailedSongsPanel({ songs }: { songs: SongRow[] }) {
+  const failed = songs.filter((s) => s.status === "failed_audio");
+  if (failed.length === 0) return null;
+  return (
+    <div className="glass rounded-3xl p-5 space-y-3 border border-destructive/40 bg-destructive/5">
+      <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+        <AlertCircle className="size-4" />
+        생성에 실패한 곡 {failed.length}개
+        <span className="ml-auto text-[11px] font-normal text-muted-foreground">
+          가사를 고쳐서 다시 생성할 수 있어요
+        </span>
+      </div>
+      <div className="space-y-3">
+        {failed.map((s) => (
+          <FailedSongCard key={s.id} song={s} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FailedSongCard({ song }: { song: SongRow }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [lyrics, setLyrics] = useState(() =>
+    (song.lyrics ?? []).map((l) => l.zh).join("\n"),
+  );
+  const [style, setStyle] = useState(song.style ?? STYLE_PRESETS[0].value);
+
+  const retry = useMutation({
+    mutationFn: () =>
+      retrySongGeneration({
+        data: { songId: song.id, lyrics: lyrics.trim(), style },
+      }),
+    onSuccess: (row: SongRow) => {
+      qc.invalidateQueries({ queryKey: ["songs"] });
+      if (row.status === "failed_audio") {
+        toast.error(row.error ?? "다시 실패했어요. 가사를 더 손봐주세요.");
+      } else {
+        toast.success("재생성을 시작했어요. 완료되면 목록에 반영돼요.");
+        setOpen(false);
+      }
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "재생성 실패"),
+  });
+
+  const isSensitive = /민감|sensitive/i.test(song.error ?? "");
+
+  return (
+    <div className="glass-soft rounded-2xl p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-sm font-medium truncate">
+            {song.title}
+            {song.title_zh && (
+              <span className="text-muted-foreground"> · {song.title_zh}</span>
+            )}
+          </div>
+          {song.error && (
+            <p className="text-[11px] text-destructive mt-0.5">{song.error}</p>
+          )}
+          {isSensitive && (
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              💡 Suno가 거부한 표현을 비슷한 뜻의 다른 단어로 바꾼 뒤 재생성해보세요.
+            </p>
+          )}
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-xs shrink-0"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <Pencil className="size-3.5 mr-1" />
+          {open ? "닫기" : "가사 수정"}
+        </Button>
+      </div>
+
+      {open && (
+        <div className="space-y-2 pt-1">
+          <div className="space-y-1.5">
+            <Label className="text-xs">가사 (한 줄에 한 소절, [Verse] 같은 구분자 유지)</Label>
+            <Textarea
+              value={lyrics}
+              onChange={(e) => setLyrics(e.target.value)}
+              rows={10}
+              className="font-mono text-xs"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">음악 스타일</Label>
+            <Select value={style} onValueChange={setStyle}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {STYLE_PRESETS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              disabled={retry.isPending || lyrics.trim().length < 10}
+              onClick={() => retry.mutate()}
+            >
+              {retry.isPending && <Loader2 className="size-3.5 mr-1 animate-spin" />}
+              수정 후 재생성
+            </Button>
+            <span className="text-[11px] text-muted-foreground">
+              병음·번역은 자동으로 다시 붙어요
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
