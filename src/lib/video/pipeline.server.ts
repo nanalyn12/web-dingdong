@@ -135,6 +135,26 @@ function escapeDrawtext(t: string): string {
 
 // ─── script generation ───────────────────────────────────────────────────────
 
+// Parse the model's JSON, tolerating the most common malformations Gemini
+// emits in free-form mode (code fences, trailing commas, a stray unescaped
+// newline inside a string). Returns null so the caller can retry.
+function tryParseScript(text: string): VideoScript | null {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  const s = cleaned.indexOf("{");
+  const e = cleaned.lastIndexOf("}");
+  if (s < 0 || e <= s) return null;
+  const slice = cleaned.slice(s, e + 1);
+  for (const candidate of [slice, slice.replace(/,\s*([}\]])/g, "$1")]) {
+    try {
+      const parsed = JSON.parse(candidate) as VideoScript;
+      if (Array.isArray(parsed.scenes) && parsed.scenes.length > 0) return parsed;
+    } catch {
+      /* try next candidate */
+    }
+  }
+  return null;
+}
+
 async function generateScript(cfg: VideoJobConfig): Promise<VideoScript> {
   const { createTextProvider } = await import("@/lib/ai-gateway.server");
   const { generateText } = await import("ai");
@@ -177,19 +197,25 @@ ${topicLine}
 반드시 아래 JSON만 출력 (코드펜스 금지):
 {"title":"유튜브 제목(한국어, 40자 이내, 키워드 포함)","description":"유튜브 설명 2~3문장 + 해시태그 3개","tags":["태그1","태그2","태그3","태그4","태그5"],"scenes":[{"index":1,"narration":"...","zh":"...","pinyin":"...","ko":"...","pexels_query":"...","vocab":[{"zh":"...","pinyin":"...","ko":"...","hsk":1}],"quiz":[{"type":"choice","question":"...","options":["..."],"answer":"...","explanation":"..."}]}]}`;
 
-  const { text } = await generateText({
-    model: gateway("google/gemini-2.5-flash"),
-    prompt,
-    temperature: 0.6,
-    maxOutputTokens: 16000,
-  });
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-  const s = cleaned.indexOf("{");
-  const e = cleaned.lastIndexOf("}");
-  if (s < 0 || e <= s) throw new Error(`대본 JSON 파싱 실패: ${cleaned.slice(0, 200)}`);
-  const parsed = JSON.parse(cleaned.slice(s, e + 1)) as VideoScript;
-  if (!Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
-    throw new Error("대본 장면이 비어 있습니다.");
+  // Gemini occasionally emits malformed JSON in free-form mode; regenerate
+  // once (a fresh sample almost always parses) before giving up.
+  let parsed: VideoScript | null = null;
+  let lastText = "";
+  for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+    const { text } = await generateText({
+      model: gateway("google/gemini-2.5-flash"),
+      prompt,
+      temperature: attempt === 0 ? 0.6 : 0.3,
+      maxOutputTokens: 16000,
+    });
+    lastText = text;
+    parsed = tryParseScript(text);
+    if (!parsed && attempt === 0) {
+      console.warn("[video] 대본 JSON 파싱 실패 — 재생성 시도");
+    }
+  }
+  if (!parsed) {
+    throw new Error(`대본 JSON 파싱 실패: ${lastText.slice(0, 200)}`);
   }
   parsed.scenes = parsed.scenes.slice(0, cfg.clipCount).map((sc, i) => ({
     ...sc,
