@@ -1,9 +1,10 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { HelpCircle, LogIn, LogOut, Search, UserRound } from "lucide-react";
+import { HelpCircle, LogIn, LogOut, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppSidebar } from "./app-sidebar";
+import { HeaderSearch } from "./header-search";
 import { authClient, useMyProfile, useSession } from "@/lib/auth-client";
 import {
   Popover,
@@ -56,13 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link to="/" className="md:hidden font-bold text-lg">
             DingDong
           </Link>
-          <div className="flex-1 flex items-center gap-2 rounded-2xl bg-white/40 px-3 py-2 max-w-md">
-            <Search className="size-4 text-muted-foreground" />
-            <input
-              placeholder="레슨, 단어 검색…"
-              className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
-            />
-          </div>
+          <HeaderSearch />
 
           <Popover>
             <PopoverTrigger asChild>
