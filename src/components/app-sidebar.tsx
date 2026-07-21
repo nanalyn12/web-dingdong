@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarClock, ChevronRight, Clapperboard, Film, GraduationCap, Home, LayoutDashboard, Music, ShieldCheck, Sparkles } from "lucide-react";
+import { BookOpen, CalendarClock, ChevronRight, Clapperboard, Film, GraduationCap, Home, LayoutDashboard, Music, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { useState } from "react";
 
 import { listCoursesWithLessons } from "@/lib/courses.functions";
@@ -64,6 +64,20 @@ export function AppSidebar() {
             </Link>
           );
         })}
+        {isEditor && (
+          <Link
+            to="/students"
+            className={[
+              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
+              pathname.startsWith("/students")
+                ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
+                : "text-foreground/80 hover:bg-white/40",
+            ].join(" ")}
+          >
+            <Users className="size-4" />
+            <span>학생 현황</span>
+          </Link>
+        )}
         {isEditor && (
           <Link
             to="/curriculum"
