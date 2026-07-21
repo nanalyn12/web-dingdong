@@ -17,6 +17,7 @@ import { Route as AppVocabularyRouteImport } from './routes/_app.vocabulary'
 import { Route as AppStudioRouteImport } from './routes/_app.studio'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
+import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCurriculumRouteImport } from './routes/_app.curriculum'
 import { Route as AppCoursesRouteImport } from './routes/_app.courses'
@@ -72,6 +73,11 @@ const AppStudentsRoute = AppStudentsRouteImport.update({
 const AppOnboardingRoute = AppOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/courses': typeof AppCoursesRouteWithChildren
   '/curriculum': typeof AppCurriculumRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/integrations': typeof AppIntegrationsRoute
   '/onboarding': typeof AppOnboardingRoute
   '/students': typeof AppStudentsRoute
   '/studio': typeof AppStudioRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/courses': typeof AppCoursesRouteWithChildren
   '/curriculum': typeof AppCurriculumRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/integrations': typeof AppIntegrationsRoute
   '/onboarding': typeof AppOnboardingRoute
   '/students': typeof AppStudentsRoute
   '/studio': typeof AppStudioRoute
@@ -222,6 +230,7 @@ export interface FileRoutesById {
   '/_app/courses': typeof AppCoursesRouteWithChildren
   '/_app/curriculum': typeof AppCurriculumRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/students': typeof AppStudentsRoute
   '/_app/studio': typeof AppStudioRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/curriculum'
     | '/dashboard'
+    | '/integrations'
     | '/onboarding'
     | '/students'
     | '/studio'
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/curriculum'
     | '/dashboard'
+    | '/integrations'
     | '/onboarding'
     | '/students'
     | '/studio'
@@ -303,6 +314,7 @@ export interface FileRouteTypes {
     | '/_app/courses'
     | '/_app/curriculum'
     | '/_app/dashboard'
+    | '/_app/integrations'
     | '/_app/onboarding'
     | '/_app/students'
     | '/_app/studio'
@@ -391,6 +403,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/integrations': {
+      id: '/_app/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AppIntegrationsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -556,6 +575,7 @@ interface AppRouteChildren {
   AppCoursesRoute: typeof AppCoursesRouteWithChildren
   AppCurriculumRoute: typeof AppCurriculumRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
+  AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
   AppStudentsRoute: typeof AppStudentsRoute
   AppStudioRoute: typeof AppStudioRoute
@@ -573,6 +593,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCoursesRoute: AppCoursesRouteWithChildren,
   AppCurriculumRoute: AppCurriculumRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
+  AppIntegrationsRoute: AppIntegrationsRoute,
   AppOnboardingRoute: AppOnboardingRoute,
   AppStudentsRoute: AppStudentsRoute,
   AppStudioRoute: AppStudioRoute,

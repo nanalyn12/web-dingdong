@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, CalendarClock, ChevronRight, Clapperboard, Film, GraduationCap, Home, LayoutDashboard, Music, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { BookOpen, CalendarClock, ChevronRight, Clapperboard, Film, GraduationCap, Home, LayoutDashboard, Music, Plug, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { useState } from "react";
 
 import { listCoursesWithLessons } from "@/lib/courses.functions";
@@ -104,6 +104,20 @@ export function AppSidebar() {
           >
             <Clapperboard className="size-4" />
             <span>영상 스튜디오</span>
+          </Link>
+        )}
+        {isEditor && (
+          <Link
+            to="/integrations"
+            className={[
+              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
+              pathname.startsWith("/integrations")
+                ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
+                : "text-foreground/80 hover:bg-white/40",
+            ].join(" ")}
+          >
+            <Plug className="size-4" />
+            <span>연동 상태</span>
           </Link>
         )}
         {isAdmin && (
