@@ -87,7 +87,11 @@ async function accessToken(): Promise<string> {
   const refresh = (rows[0]?.value as { refresh_token?: string } | undefined)
     ?.refresh_token;
   if (!refresh) {
-    throw new Error("YouTube 계정이 연결되지 않았습니다. 스튜디오에서 먼저 연결해주세요.");
+    // Not connected (or token was cleared after a prior invalid_grant).
+    // Same class as an expired token so upload jobs fall back to web-only.
+    throw new YouTubeAuthError(
+      "YouTube 계정이 연결되지 않았습니다. 스튜디오에서 연결하면 이후 영상이 업로드됩니다.",
+    );
   }
   const { id, secret } = clientCreds();
   const res = await fetch("https://oauth2.googleapis.com/token", {
