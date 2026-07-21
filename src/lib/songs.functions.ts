@@ -227,9 +227,15 @@ export const pollSongGeneration = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
-    const { sunoGetMusic, downloadAndStore } = await import("@/lib/suno.server");
-
     const row = await fetchSong(data.songId);
+    return advanceSongAudio(row);
+  });
+
+/** Advance a song whose audio is still generating (Suno poll → complete).
+ * No auth — used by both the client poller and the background scheduler.
+ * Returns the (possibly updated) row; throws on a hard Suno failure. */
+export async function advanceSongAudio(row: SongRow): Promise<SongRow> {
+    const { sunoGetMusic, downloadAndStore } = await import("@/lib/suno.server");
 
     // Already finished — return as-is.
     if (row.status === "ready" || row.status === "failed_audio") return row;
@@ -339,7 +345,7 @@ export const pollSongGeneration = createServerFn({ method: "POST" })
       ...lessonPatch,
       ...mp4Patch,
     });
-  });
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Lesson content (vocab + grammar notes) — AI-generated per song
@@ -480,9 +486,15 @@ export const pollSongMp4 = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
+    const row = await fetchSong(data.songId);
+    return advanceSongMp4(row);
+  });
+
+/** Advance a song whose MP4 is still generating. No auth — shared by the
+ * client poller and the background scheduler. */
+export async function advanceSongMp4(row: SongRow): Promise<SongRow> {
     const { sunoGetMp4, downloadAndStore } = await import("@/lib/suno.server");
 
-    const row = await fetchSong(data.songId);
     if (row.video_url) return row; // already done
     if (!row.suno_mp4_task_id) throw new Error("MP4 taskId가 없습니다.");
 
@@ -513,7 +525,7 @@ export const pollSongMp4 = createServerFn({ method: "POST" })
     );
 
     return updateSong(row.id, { video_url: video.url, status: "ready" });
-  });
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Gemini: draft title + lyrics from a keyword
@@ -611,7 +623,66 @@ export const draftSongFromKeyword = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => DraftSongInput.parse(input))
   .handler(async ({ data, context }): Promise<DraftedSong> => {
     await assertEditor(context.userId);
+    return draftSongInternal(data);
+  });
 
+/** Submit a drafted song to Suno and create the song row (status
+ * generating_audio). No auth — for the background scheduler. Returns songId
+ * + taskId; the background poller finishes it. Throws on Suno failure. */
+export async function submitSongToSuno(args: {
+  draft: DraftedSong;
+  level: "beginner" | "intermediate" | "advanced";
+  style: string;
+  topic: string;
+  userId: string;
+  vocalGender?: "m" | "f";
+  model?: "V4" | "V4_5" | "V4_5PLUS" | "V4_5ALL" | "V5" | "V5_5";
+}): Promise<{ songId: string; taskId: string }> {
+  const { sunoCreateMusic } = await import("@/lib/suno.server");
+  const { db, tables } = await import("@/db");
+
+  const zhLines = args.draft.lyrics
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const parsedLyrics = zhLines.map((zh, i) => ({
+    zh,
+    pinyin: args.draft.pinyin[i] ?? "",
+    ko: args.draft.translation[i] ?? "",
+  }));
+
+  const { taskId } = await sunoCreateMusic({
+    title: args.draft.title_zh || args.draft.title,
+    style: args.style,
+    prompt: args.draft.lyrics,
+    model: args.model ?? "V4_5",
+    vocalGender: args.vocalGender,
+  });
+
+  const [row] = await db
+    .insert(tables.songs)
+    .values({
+      title: args.draft.title,
+      title_zh: args.draft.title_zh || null,
+      level: args.level,
+      style: args.style,
+      topic: args.topic || null,
+      lyrics: parsedLyrics as unknown as Json,
+      status: "generating_audio",
+      suno_audio_task_id: taskId,
+      created_by: args.userId,
+    })
+    .returning({ id: tables.songs.id });
+  return { songId: row.id, taskId };
+}
+
+/** AI lyrics draft from a keyword. No auth — shared by the client FN and the
+ * background song scheduler. */
+export async function draftSongInternal(data: {
+  keyword: string;
+  level: "beginner" | "intermediate" | "advanced";
+  style: string;
+}): Promise<DraftedSong> {
     const gateway = createTextProvider();
     const levelHint =
       data.level === "beginner"
@@ -690,7 +761,7 @@ export const draftSongFromKeyword = createServerFn({ method: "POST" })
       pinyin: ann.pinyin,
       translation: ann.ko,
     };
-  });
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Re-annotate an existing song: regenerate pinyin + Korean for all lyric lines.

@@ -329,6 +329,29 @@ export const video_schedules = pgTable("video_schedules", {
   created_at: ts("created_at").notNull().defaultNow(),
 });
 
+// Recurring AI song generation schedules. The in-process ticker creates a
+// song (draft lyrics → Suno) when due; a background poller finishes it.
+export const song_schedules = pgTable("song_schedules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  created_by: text("created_by")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  // Keywords rotate — one song per run using the next keyword.
+  keywords: text("keywords").array().notNull(),
+  next_keyword_index: integer("next_keyword_index").notNull().default(0),
+  frequency: text("frequency").notNull().default("weekly"), // daily | weekly
+  weekdays: integer("weekdays").array().notNull().default([]), // 0=일 … 6=토
+  time_kst: text("time_kst").notNull(), // "HH:MM"
+  enabled: boolean("enabled").notNull().default(true),
+  // Song generation settings.
+  level: text("level").notNull().default("beginner"),
+  style: text("style").notNull().default("cute mandarin pop"),
+  vocal_gender: text("vocal_gender"), // "m" | "f" | null(자동)
+  last_run_at: ts("last_run_at"),
+  created_at: ts("created_at").notNull().defaultNow(),
+});
+
 // Per-user learning progress for 영상 학습 (dramas).
 export const drama_progress = pgTable(
   "drama_progress",

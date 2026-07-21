@@ -22,6 +22,11 @@ export function initVideoScheduler() {
     void tick().catch((e) => console.error("[scheduler] tick failed:", e));
   }, TICK_MS);
   console.log("[scheduler] video scheduler started");
+
+  // Song scheduler + Suno poller share this lifecycle.
+  import("@/lib/song-scheduler.server")
+    .then((m) => m.initSongScheduler())
+    .catch((e) => console.error("[song-sched] init failed:", e));
 }
 
 // Crash recovery: a server restart orphans running jobs; queued jobs need a

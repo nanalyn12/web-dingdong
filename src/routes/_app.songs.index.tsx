@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Loader2, Music, Plus, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { AlertCircle, CalendarClock, Loader2, Music, Pencil, Play, Plus, Search, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -12,7 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useMyProfile } from "@/lib/auth-client";
+import {
+  createSongSchedule,
+  deleteSongSchedule,
+  listSongSchedules,
+  runSongScheduleNow,
+  toggleSongSchedule,
+  updateSongSchedule,
+} from "@/lib/song-schedules.functions";
 import {
   cancelSongGeneration,
   createCuratedSong,
@@ -118,7 +128,9 @@ function SongsPage() {
       return pending ? 6000 : false;
     },
   });
-  const [creating, setCreating] = useState<null | "manual" | "ai" | "curated">(null);
+  const [creating, setCreating] = useState<
+    null | "manual" | "ai" | "curated" | "schedule"
+  >(null);
 
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/songs" });
@@ -193,6 +205,14 @@ function SongsPage() {
               <Plus className="size-4" />
               {creating === "manual" ? "닫기" : "수동 추가"}
             </Button>
+            <Button
+              variant={creating === "schedule" ? "secondary" : "outline"}
+              onClick={() => setCreating((v) => (v === "schedule" ? null : "schedule"))}
+              className="gap-1"
+            >
+              <CalendarClock className="size-4" />
+              {creating === "schedule" ? "닫기" : "예약·반복"}
+            </Button>
           </div>
         )}
       </div>
@@ -247,6 +267,7 @@ function SongsPage() {
       {creating === "curated" && isEditor && (
         <CuratedSongForm onDone={() => setCreating(null)} />
       )}
+      {creating === "schedule" && isEditor && <SongSchedulePanel />}
 
       {generatingSongs.length > 0 && (
         <div className="glass rounded-3xl p-5 space-y-4 border border-primary/40 bg-primary/5">
@@ -1038,6 +1059,280 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
           {m.isPending && <Loader2 className="size-4 mr-1 animate-spin" />}
           노래 등록
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ── 예약·반복 (학습송 자동 생성) ─────────────────────────────────────────── */
+
+const SONG_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+type SongSchedule = Awaited<ReturnType<typeof listSongSchedules>>[number];
+
+function SongSchedulePanel() {
+  const qc = useQueryClient();
+  const schedules = useQuery({
+    queryKey: ["song-schedules"],
+    queryFn: () => listSongSchedules({}),
+  });
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [keywordsRaw, setKeywordsRaw] = useState("");
+  const [frequency, setFrequency] = useState<"daily" | "weekly">("weekly");
+  const [weekdays, setWeekdays] = useState<number[]>([2, 5]);
+  const [timeKst, setTimeKst] = useState("09:00");
+  const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner");
+  const [style, setStyle] = useState(STYLE_PRESETS[0].value);
+  const [vocalGender, setVocalGender] = useState<"" | "m" | "f">("");
+
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setKeywordsRaw("");
+    setFrequency("weekly");
+    setWeekdays([2, 5]);
+    setTimeKst("09:00");
+    setLevel("beginner");
+    setStyle(STYLE_PRESETS[0].value);
+    setVocalGender("");
+  }
+
+  function startEdit(s: SongSchedule) {
+    setEditingId(s.id);
+    setName(s.name);
+    setKeywordsRaw((s.keywords ?? []).join("\n"));
+    setFrequency(s.frequency === "daily" ? "daily" : "weekly");
+    setWeekdays(s.weekdays?.length ? s.weekdays : [2, 5]);
+    setTimeKst(s.time_kst);
+    setLevel(
+      (["beginner", "intermediate", "advanced"].includes(s.level)
+        ? s.level
+        : "beginner") as typeof level,
+    );
+    setStyle(s.style);
+    setVocalGender(s.vocal_gender === "m" || s.vocal_gender === "f" ? s.vocal_gender : "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function buildPayload() {
+    return {
+      name: name.trim(),
+      keywords: keywordsRaw.split(/\r?\n|,/).map((s) => s.trim()).filter(Boolean),
+      frequency,
+      weekdays: frequency === "weekly" ? weekdays : [],
+      time_kst: timeKst,
+      level,
+      style,
+      vocal_gender: vocalGender === "" ? null : vocalGender,
+    };
+  }
+
+  const saveMut = useMutation({
+    mutationFn: async () => {
+      if (editingId) await updateSongSchedule({ data: { id: editingId, ...buildPayload() } });
+      else await createSongSchedule({ data: buildPayload() });
+    },
+    onSuccess: () => {
+      toast.success(editingId ? "예약을 수정했어요." : "예약을 등록했어요.");
+      resetForm();
+      qc.invalidateQueries({ queryKey: ["song-schedules"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "저장 실패"),
+  });
+
+  const toggleWeekday = (d: number) =>
+    setWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
+
+  return (
+    <div className="space-y-5">
+      <div className="glass rounded-3xl p-6 space-y-4">
+        <h3 className="font-semibold flex items-center gap-2">
+          <CalendarClock className="size-4" />
+          {editingId ? "예약 수정" : "새 예약 만들기"}
+          <span className="text-xs font-normal text-muted-foreground">
+            — 예약 시간에 키워드로 AI가 작사하고 Suno로 노래를 자동 생성해요
+          </span>
+        </h3>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>예약 이름 *</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 주 2회 동요풍" maxLength={60} />
+          </div>
+          <div className="space-y-2">
+            <Label>실행 시간 (한국 시간) *</Label>
+            <Input type="time" value={timeKst} onChange={(e) => setTimeKst(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>키워드 목록 * (줄바꿈/쉼표 구분 — 실행마다 하나씩 순환)</Label>
+          <Textarea
+            value={keywordsRaw}
+            onChange={(e) => setKeywordsRaw(e.target.value)}
+            placeholder={"봄날 산책\n카페에서\n친구와 여행"}
+            rows={3}
+          />
+        </div>
+
+        <div className="grid md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label>반복 주기</Label>
+            <Select value={frequency} onValueChange={(v) => setFrequency(v as "daily" | "weekly")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">매일</SelectItem>
+                <SelectItem value="weekly">매주 (요일 선택)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2 md:col-span-3">
+            <Label>요일 {frequency === "daily" && "(매일 실행 — 선택 불필요)"}</Label>
+            <div className="flex gap-1.5">
+              {SONG_WEEKDAYS.map((w, d) => (
+                <button
+                  key={d}
+                  type="button"
+                  disabled={frequency === "daily"}
+                  onClick={() => toggleWeekday(d)}
+                  className={[
+                    "size-9 rounded-xl text-sm font-medium border transition disabled:opacity-40",
+                    frequency === "weekly" && weekdays.includes(d)
+                      ? "gradient-primary text-primary-foreground border-transparent"
+                      : "bg-white/60 border-border hover:bg-white",
+                  ].join(" ")}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label>난이도</Label>
+            <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">입문 (HSK 1~2)</SelectItem>
+                <SelectItem value="intermediate">중급 (HSK 3~4)</SelectItem>
+                <SelectItem value="advanced">고급 (HSK 5+)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>음악 스타일</Label>
+            <Select value={style} onValueChange={setStyle}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {STYLE_PRESETS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>보컬 성별</Label>
+            <Select value={vocalGender || "auto"} onValueChange={(v) => setVocalGender(v === "auto" ? "" : (v as "m" | "f"))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">자동</SelectItem>
+                <SelectItem value="f">여성</SelectItem>
+                <SelectItem value="m">남성</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            disabled={saveMut.isPending}
+            onClick={() => {
+              if (!name.trim()) return toast.error("예약 이름을 입력하세요.");
+              if (!keywordsRaw.trim()) return toast.error("키워드를 입력하세요.");
+              if (frequency === "weekly" && weekdays.length === 0)
+                return toast.error("요일을 선택하세요.");
+              saveMut.mutate();
+            }}
+          >
+            {saveMut.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {editingId ? "수정 저장" : "예약 등록"}
+          </Button>
+          {editingId && (
+            <Button variant="outline" onClick={resetForm}>
+              <X className="size-4 mr-1" /> 취소
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {(schedules.data ?? []).length === 0 && (
+          <p className="text-sm text-muted-foreground">등록된 예약이 없어요.</p>
+        )}
+        <ul className="space-y-2">
+          {(schedules.data ?? []).map((s: SongSchedule) => (
+            <li key={s.id} className="glass rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
+              <Switch
+                checked={s.enabled}
+                onCheckedChange={(v) =>
+                  toggleSongSchedule({ data: { id: s.id, enabled: v } })
+                    .then(() => qc.invalidateQueries({ queryKey: ["song-schedules"] }))
+                    .catch((e) => toast.error(e instanceof Error ? e.message : "오류"))
+                }
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{s.name}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {s.frequency === "daily"
+                    ? "매일"
+                    : `매주 ${(s.weekdays ?? []).map((d) => SONG_WEEKDAYS[d]).join("·")}`}{" "}
+                  {s.time_kst} · 키워드 {s.keywords.length}개 순환
+                  {s.last_run_at &&
+                    ` · 마지막 실행 ${new Date(s.last_run_at).toLocaleDateString("ko-KR")}`}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() => startEdit(s)}
+              >
+                <Pencil className="size-3.5 mr-1" /> 수정
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() =>
+                  runSongScheduleNow({ data: { id: s.id } })
+                    .then(() => {
+                      toast.success("지금 실행했어요 — 목록에서 생성 상태를 확인하세요.");
+                      qc.invalidateQueries({ queryKey: ["songs"] });
+                      qc.invalidateQueries({ queryKey: ["song-schedules"] });
+                    })
+                    .catch((e) => toast.error(e instanceof Error ? e.message : "실행 실패"))
+                }
+              >
+                <Play className="size-3.5 mr-1" /> 지금 실행
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs text-muted-foreground"
+                onClick={() =>
+                  deleteSongSchedule({ data: { id: s.id } })
+                    .then(() => qc.invalidateQueries({ queryKey: ["song-schedules"] }))
+                    .catch((e) => toast.error(e instanceof Error ? e.message : "삭제 실패"))
+                }
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
