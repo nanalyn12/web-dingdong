@@ -42,7 +42,8 @@ import {
   getMyLessonProgress,
   saveMyLessonProgress,
 } from "@/lib/lesson-progress.functions";
-import { useSession } from "@/lib/auth-client";
+import { useMyProfile, useSession } from "@/lib/auth-client";
+import { generateLessonCulturalCards } from "@/lib/cultural-cards.functions";
 import { useZhTts } from "@/lib/use-zh-tts";
 import { generateLessonComicImages } from "@/lib/lesson-images.functions";
 import { KeyExpressionCard } from "@/components/key-expression-card";
@@ -170,6 +171,9 @@ function LessonPage() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const callGenImages = useServerFn(generateLessonComicImages);
+  const callGenCultural = useServerFn(generateLessonCulturalCards);
+  const { data: profile } = useMyProfile();
+  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
 
   const callGetLesson = useServerFn(getLesson);
   const { data: lesson, isLoading, error } = useQuery({
@@ -235,6 +239,11 @@ function LessonPage() {
 
   const genImagesMut = useMutation({
     mutationFn: () => callGenImages({ data: { lessonId: id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["lesson", id] }),
+  });
+
+  const genCulturalMut = useMutation({
+    mutationFn: () => callGenCultural({ data: { lessonId: id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lesson", id] }),
   });
 
@@ -382,6 +391,30 @@ function LessonPage() {
           )}
 
           {/* Cultural cards */}
+          {/* Editors can fill in or replace the cultural cards for one lesson.
+              Hidden from learners: it spends a model call and changes what
+              everyone sees. */}
+          {isEditor && (
+            <div className="flex items-center justify-end gap-2">
+              {genCulturalMut.error && (
+                <span className="text-xs text-destructive">
+                  {genCulturalMut.error instanceof Error
+                    ? genCulturalMut.error.message
+                    : "생성 실패"}
+                </span>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={genCulturalMut.isPending}
+                onClick={() => genCulturalMut.mutate()}
+                title="이 강의의 문화 노트·문화 팁을 AI로 다시 만들어요."
+              >
+                {genCulturalMut.isPending ? "생성 중…" : "🏮 문화 카드 생성"}
+              </Button>
+            </div>
+          )}
+
           {(hasCulturalContent(lesson.cultural_note) ||
             hasCulturalContent(lesson.cultural_snippet)) && (
             <div className="grid gap-3 md:grid-cols-2">
