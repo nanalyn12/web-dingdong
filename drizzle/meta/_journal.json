@@ -85,6 +85,13 @@
       "when": 1784630119800,
       "tag": "0011_eminent_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784732374520,
+      "tag": "0012_burly_blue_blade",
+      "breakpoints": true
     }
   ]
 }

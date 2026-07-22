@@ -209,6 +209,19 @@ export const dramas = pgTable("dramas", {
   updated_at: ts("updated_at").notNull().defaultNow(),
 });
 
+// AI vocabulary study material, cached per word. The generation prompt takes
+// nothing user-specific, so the result is identical for every learner —
+// caching it globally means one Gemini call per word ever instead of one per
+// open. Regeneration is restricted to teachers/admins so a student cannot
+// swap out content everyone else sees.
+export const vocab_practice_cache = pgTable("vocab_practice_cache", {
+  zh: text("zh").primaryKey(),
+  practice: jsonb("practice").$type<Json>().notNull(),
+  generated_by: text("generated_by"),
+  created_at: ts("created_at").notNull().defaultNow(),
+  updated_at: ts("updated_at").notNull().defaultNow(),
+});
+
 export const songs = pgTable("songs", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),

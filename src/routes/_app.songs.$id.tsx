@@ -443,12 +443,19 @@ function SongPlayer({
 
   // Auto-scroll active line into view
   const listRef = useRef<HTMLDivElement>(null);
+  // scrollIntoView walks every scrollable ancestor, so it dragged the whole
+  // page around on each line change while the song played. Scroll the lyric
+  // list's own box instead and leave the window where the reader put it.
   const scrollLineIntoView = useCallback((idx: number) => {
-    if (idx < 0 || !listRef.current) return;
-    const el = listRef.current.querySelector<HTMLElement>(
-      `[data-line="${idx}"]`,
-    );
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const list = listRef.current;
+    if (idx < 0 || !list) return;
+    const el = list.querySelector<HTMLElement>(`[data-line="${idx}"]`);
+    if (!el) return;
+    const target = el.offsetTop - list.clientHeight / 2 + el.clientHeight / 2;
+    list.scrollTo({
+      top: Math.max(0, target),
+      behavior: "smooth",
+    });
   }, []);
   useEffect(() => {
     scrollLineIntoView(activeIdx);

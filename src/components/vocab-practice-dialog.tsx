@@ -27,9 +27,11 @@ import { useZhTts } from "@/lib/use-zh-tts";
 import { scorePronunciation } from "@/lib/vocab";
 import {
   generateVocabPractice,
+  regenerateVocabPractice,
   type VocabExample,
   type VocabPractice,
 } from "@/lib/vocab-practice.functions";
+import { useMyProfile } from "@/lib/auth-client";
 
 type SR = {
   lang: string;
@@ -72,17 +74,35 @@ export function VocabPracticeDialog({
   onOpenChange: (o: boolean) => void;
 }) {
   const callGen = useServerFn(generateVocabPractice);
+  const callRegen = useServerFn(regenerateVocabPractice);
   const { speak, speakingId } = useZhTts();
   const [tab, setTab] = useState("examples");
+  const { data: profile } = useMyProfile();
+  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
 
   const gen = useMutation({
     mutationFn: (w: Word) =>
       callGen({ data: { zh: w.zh, pinyin: w.pinyin ?? null, ko: w.ko ?? null } }),
   });
 
+  // Freshly regenerated material, shown in place of the cached copy without a
+  // second round-trip. Cleared whenever the dialog opens on a new word.
+  const [override, setOverride] = useState<VocabPractice | null>(null);
+
+  // Editors can replace the shared entry when the generated material is poor.
+  const regen = useMutation({
+    mutationFn: (w: Word) =>
+      callRegen({ data: { zh: w.zh, pinyin: w.pinyin ?? null, ko: w.ko ?? null } }),
+    onSuccess: (fresh) => {
+      setTab("examples");
+      setOverride(fresh);
+    },
+  });
+
   useEffect(() => {
     if (open && word) {
       setTab("examples");
+      setOverride(null);
       gen.reset();
       gen.mutate(word);
     }
@@ -90,7 +110,8 @@ export function VocabPracticeDialog({
   }, [open, word?.zh]);
 
   if (!word) return null;
-  const data = gen.data;
+  const data = override ?? gen.data;
+  const busy = gen.isPending || regen.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,8 +138,21 @@ export function VocabPracticeDialog({
               <Volume2 className="size-3.5" /> 듣기
             </button>
           </DialogTitle>
-          <DialogDescription className="text-slate-600">
-            {word.ko || "AI가 학습 자료를 만들어드려요."}
+          <DialogDescription className="text-slate-600 flex items-center justify-between gap-3 flex-wrap">
+            <span>{word.ko || "AI가 학습 자료를 만들어드려요."}</span>
+            {isEditor && data && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs shrink-0"
+                disabled={busy}
+                onClick={() => regen.mutate(word)}
+                title="이 단어의 학습 자료를 새로 만들어 모든 학습자에게 반영해요."
+              >
+                <RotateCcw className={cn("size-3.5 mr-1", regen.isPending && "animate-spin")} />
+                {regen.isPending ? "생성 중…" : "새 AI 학습 콘텐츠 생성"}
+              </Button>
+            )}
           </DialogDescription>
         </DialogHeader>
 

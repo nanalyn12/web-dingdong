@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { createTextProvider } from "./ai-gateway.server";
+import { requireAuth } from "@/lib/auth-middleware";
+import { assertEditor } from "@/lib/courses.functions";
+import type { Json } from "@/db/schema";
 
 const Input = z.object({
   zh: z.string().min(1),
@@ -44,9 +49,7 @@ function extractJson(text: string) {
   return JSON.parse(t.slice(s, e + 1));
 }
 
-export const generateVocabPractice = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => Input.parse(d))
-  .handler(async ({ data }): Promise<VocabPractice> => {
+async function buildVocabPractice(data: z.infer<typeof Input>): Promise<VocabPractice> {
     const gateway = createTextProvider();
 
     const system = [
@@ -112,4 +115,75 @@ export const generateVocabPractice = createServerFn({ method: "POST" })
       },
       quiz: Array.isArray(parsed.quiz) ? parsed.quiz.slice(0, 4) : [],
     };
+}
+
+// ─── Cache ──────────────────────────────────────────────────────────────────
+// The prompt above uses nothing user-specific, so a word's material is the
+// same for everybody. Generating it once and sharing it turns "one Gemini call
+// per dialog open" into "one per word, ever" — which is the whole point, since
+// every open otherwise cost a call and a multi-second wait.
+
+async function readCache(zh: string): Promise<VocabPractice | null> {
+  const { db, tables } = await import("@/db");
+  const rows = await db
+    .select()
+    .from(tables.vocab_practice_cache)
+    .where(eq(tables.vocab_practice_cache.zh, zh))
+    .limit(1);
+  return (rows[0]?.practice as VocabPractice | undefined) ?? null;
+}
+
+async function writeCache(
+  zh: string,
+  practice: VocabPractice,
+  userId: string | null,
+): Promise<void> {
+  const { db, tables } = await import("@/db");
+  await db
+    .insert(tables.vocab_practice_cache)
+    .values({
+      zh,
+      practice: practice as unknown as Json,
+      generated_by: userId,
+    })
+    .onConflictDoUpdate({
+      target: tables.vocab_practice_cache.zh,
+      set: {
+        practice: practice as unknown as Json,
+        generated_by: userId,
+        updated_at: new Date().toISOString(),
+      },
+    });
+}
+
+/** Serve a word's study material, generating it only on a cache miss.
+ * Public: a learner opening a brand-new word populates the shared entry. */
+export const generateVocabPractice = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => Input.parse(d))
+  .handler(async ({ data }): Promise<VocabPractice> => {
+    const cached = await readCache(data.zh).catch((e) => {
+      console.warn("[vocab-practice] cache read failed:", e);
+      return null;
+    });
+    if (cached) return cached;
+
+    const practice = await buildVocabPractice(data);
+    // A failed write only costs a regeneration next time, so never fail the
+    // request over it.
+    await writeCache(data.zh, practice, null).catch((e) =>
+      console.warn("[vocab-practice] cache write failed:", e),
+    );
+    return practice;
+  });
+
+/** Force a fresh generation, replacing the shared entry. Editors only — the
+ * cache is shared, so a student regenerating would change what everyone sees. */
+export const regenerateVocabPractice = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((d: unknown) => Input.parse(d))
+  .handler(async ({ data, context }): Promise<VocabPractice> => {
+    await assertEditor(context.userId);
+    const practice = await buildVocabPractice(data);
+    await writeCache(data.zh, practice, context.userId);
+    return practice;
   });

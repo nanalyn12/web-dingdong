@@ -16,6 +16,7 @@ import {
   type DramaScene,
 } from "@/lib/dramas.functions";
 import { useZhTts } from "@/lib/use-zh-tts";
+import { useVideoViewPrefs, VIDEO_SIZES, VIDEO_SIZE_CLASS } from "@/lib/video-view-prefs";
 import { saveVocabulary } from "@/lib/vocab.functions";
 import { addGuestVocab, guessEmoji } from "@/lib/vocab";
 
@@ -193,6 +194,8 @@ function DramaDetail() {
     staleTime: Infinity,
   });
   const [resumeDismissed, setResumeDismissed] = useState(false);
+  const { size: videoSize, setSize: setVideoSize, pinned, setPinned } =
+    useVideoViewPrefs();
   const completedRef = useRef<Set<number>>(new Set());
   useEffect(() => {
     if (progress?.completed_scenes) {
@@ -276,9 +279,56 @@ function DramaDetail() {
       </div>
 
 
-      {/* Player */}
-      <div className="glass rounded-3xl p-3 sticky top-2 z-10">
-        <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
+      {/* Player — size and pinning are reader preferences. The card used to be
+          permanently sticky at full width, which meant a large video followed
+          you down the page while reading the script below it. */}
+      <div
+        className={[
+          "glass rounded-3xl p-3",
+          pinned ? "sticky top-2 z-10" : "",
+        ].join(" ")}
+      >
+        <div className="flex items-center justify-end gap-1.5 pb-2">
+          <div className="glass-soft rounded-full flex text-[11px] font-semibold overflow-hidden">
+            {VIDEO_SIZES.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setVideoSize(s.key)}
+                className={[
+                  "px-2.5 py-1 transition-colors",
+                  videoSize === s.key
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                ].join(" ")}
+                title={`영상 크기: ${s.label}`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setPinned(!pinned)}
+            className={[
+              "rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors",
+              pinned
+                ? "bg-primary/20 text-primary"
+                : "glass-soft text-muted-foreground hover:text-foreground",
+            ].join(" ")}
+            title={
+              pinned
+                ? "스크롤해도 영상이 따라옵니다. 끄면 함께 스크롤돼요."
+                : "영상을 화면 위에 고정합니다."
+            }
+          >
+            📌 고정 {pinned ? "ON" : "OFF"}
+          </button>
+        </div>
+        <div
+          className={[
+            "aspect-video rounded-2xl overflow-hidden bg-black mx-auto w-full",
+            VIDEO_SIZE_CLASS[videoSize],
+          ].join(" ")}
+        >
           {isSelfHosted ? (
             <video
               ref={html5.videoRef}
