@@ -29,6 +29,9 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyProfile } from "@/lib/auth-client";
 import { useSongProgress } from "@/lib/song-progress";
+import type { PlayerAPI } from "@/lib/player-api";
+import { YouTubeMediaSurface } from "@/components/youtube-media-surface";
+import { TapSyncPanel } from "@/components/tap-sync-panel";
 import {
   getSongRelatedContent,
   regenerateSongRelatedContent,
@@ -64,6 +67,7 @@ import {
   pollSongMp4,
   reannotateSong,
   resyncSongLyrics,
+  setSongLyricTimes,
   type GrammarNote,
   type LyricLine,
   type SongRow,
@@ -264,16 +268,6 @@ function RelatedLessonsCard({
   );
 }
 
-// ─── Player imperative API ─────────────────────────────────────────────────
-type PlayerAPI = {
-  play: () => void;
-  pause: () => void;
-  toggle: () => void;
-  seek: (t: number) => void;
-  setRate: (r: number) => void;
-  setMuted: (m: boolean) => void;
-};
-
 function SongPlayer({
   song,
   pollError,
@@ -291,7 +285,22 @@ function SongPlayer({
   const [loopActiveLine, setLoopActiveLine] = useState(false);
   const [showPinyinPref, setShowPinyinPref] = useState<boolean | null>(null);
   const [showKoPref, setShowKoPref] = useState(true);
+  const [tapSyncOpen, setTapSyncOpen] = useState(false);
   const apiRef = useRef<PlayerAPI | null>(null);
+  const qc = useQueryClient();
+  const { data: profile } = useMyProfile();
+  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+
+  const saveTimes = useMutation({
+    mutationFn: (times: (number | null)[]) =>
+      setSongLyricTimes({ data: { songId: song.id, times } }),
+    onSuccess: () => {
+      toast.success("가사 싱크를 저장했어요 🎤");
+      qc.invalidateQueries({ queryKey: ["song", song.id] });
+      setTapSyncOpen(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "싱크 저장 실패"),
+  });
 
   const rawLyrics = useMemo(
     () => (Array.isArray(song.lyrics) ? song.lyrics : []),
@@ -622,6 +631,16 @@ function SongPlayer({
                     </a>
                   </Button>
                 )}
+                {isEditor && lyrics.length > 0 && !tapSyncOpen && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setTapSyncOpen(true)}
+                    title="노래를 들으며 줄마다 키를 눌러 싱크를 직접 기록해요."
+                  >
+                    🎤 탭 싱크
+                  </Button>
+                )}
                 <ResyncLyricsButton song={song} />
                 <RetryMp4Button song={song} />
                 <MakeLessonContentButton song={song} />
@@ -632,15 +651,17 @@ function SongPlayer({
 
           {/* Media surface (video / iframe / audio placeholder) */}
           {isCurated && song.youtube_id ? (
-            <div className="rounded-2xl overflow-hidden bg-black aspect-video shadow-[var(--shadow-soft)]">
-              <iframe
-                title={song.title}
-                src={`https://www.youtube.com/embed/${song.youtube_id}`}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
+            <YouTubeMediaSurface
+              key={song.youtube_id}
+              videoId={song.youtube_id}
+              title={song.title}
+              onTime={setCurrentTime}
+              onDuration={setDuration}
+              onPlayingChange={setIsPlaying}
+              apiRef={apiRef}
+              playbackRate={playbackRate}
+              muted={muted}
+            />
           ) : activeUrl ? (
             <NativeMediaSurface
               key={`${mediaMode}-${activeUrl}`}
@@ -661,8 +682,9 @@ function SongPlayer({
             </div>
           )}
 
-          {/* Custom player controls (only when we control the native element) */}
-          {!isCurated && activeUrl && (
+          {/* Custom player controls — curated songs now run through the
+              YouTube IFrame API, so they get a real clock and seek too. */}
+          {(isCurated ? Boolean(song.youtube_id) : Boolean(activeUrl)) && (
             <PlayerControls
               currentTime={currentTime}
               duration={duration}
@@ -691,6 +713,19 @@ function SongPlayer({
           )}
         </div>
       </div>
+
+      {tapSyncOpen && (
+        <TapSyncPanel
+          lyrics={rawLyrics}
+          currentTime={currentTime}
+          isPlaying={isPlaying}
+          onSeek={seekTo}
+          onPlayPause={() => apiRef.current?.toggle()}
+          onSave={(times) => saveTimes.mutate(times)}
+          onClose={() => setTapSyncOpen(false)}
+          saving={saveTimes.isPending}
+        />
+      )}
 
       {(song.status === "generating_audio" ||
         song.status === "generating_video") && (

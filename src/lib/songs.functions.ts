@@ -340,6 +340,39 @@ async function syncLyricTimesFromSuno(row: SongRow): Promise<LyricLine[] | null>
   return lyrics;
 }
 
+/** Persist manually tapped lyric times. The only sync path available to
+ * curated (YouTube) songs, which have no Suno task to force-align against.
+ * `times` is index-aligned to the song's lyrics; null clears a line. */
+export const setSongLyricTimes = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        songId: z.string().uuid(),
+        times: z.array(z.number().nonnegative().nullable()),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }): Promise<SongRow> => {
+    await assertEditor(context.userId);
+    const row = await fetchSong(data.songId);
+    const lines = Array.isArray(row.lyrics) ? row.lyrics : [];
+    if (data.times.length !== lines.length) {
+      throw new Error(
+        `가사 줄 수가 맞지 않아요 (가사 ${lines.length}줄 / 받은 시간 ${data.times.length}개).`,
+      );
+    }
+    const next: LyricLine[] = lines.map((l, i) => {
+      const t = data.times[i];
+      if (typeof t !== "number") {
+        const { time: _drop, ...rest } = l;
+        return rest;
+      }
+      return { ...l, time: Number(t.toFixed(2)) };
+    });
+    return updateSong(row.id, { lyrics: next as unknown as Json });
+  });
+
 /** Re-run karaoke sync on an existing song. Covers songs generated before
  * sync existed, and the case where Suno's alignment wasn't ready yet when the
  * audio first landed. */
