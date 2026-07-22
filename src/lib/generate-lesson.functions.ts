@@ -145,7 +145,7 @@ ${titleBlock}
 - 최소 500자
 
 [key_expressions] 6-9개. 각 항목 zh(한자)/pinyin/ko/hsk(1-9) 필수. emoji(단어 의미를 직관적으로 표현하는 이모지 1개) 필수.
-[cultural_note] 위 스펙대로 풍부하게.
+[cultural_note] 반드시 {"title":"한국어 소제목","description":"한국어 본문 300자 이상"} 형태의 객체. 주제와 관련된 중국 문화 배경을 깊이 있게. description 키 이름을 바꾸지 말 것. 빈 객체 금지.
 [dialogue_scene] 영어 한 문단 (실전 대화 장면 묘사 + "No text, no characters").
 [comic_panels] 정확히 4개. 캐릭터는 지수(한국인 학습자) + 叮叮(중국인 친구). 각 패널 narration(한국어)/lines(zh/pinyin/ko/speaker)/image_prompt(영어, "No text, no characters") 필수.
 [dialogues] 8-10개. content의 "## 실전 대화"와 동일한 내용을 구조화. speaker/zh(한자)/pinyin/ko.
@@ -154,7 +154,7 @@ ${titleBlock}
 [quiz] 정확히 6개. choice 2 + fill 2 + order 2.
 [storybook_pages] 정확히 6페이지. 캐릭터 지수 중심. image_prompt는 영어 + "No text, no characters" + watercolor storybook 스타일.
 [vocab_comparison] 2-3개.
-[cultural_snippet] 1개.`;
+[cultural_snippet] 반드시 {"title":"한국어 소제목","description":"한국어 본문 150자 이상"} 형태의 객체 1개. cultural_note와 겹치지 않는 실용적인 팁으로. description 키 이름을 바꾸지 말 것. 빈 객체 금지.`;
 }
 
 // ---------- Server Function ----------

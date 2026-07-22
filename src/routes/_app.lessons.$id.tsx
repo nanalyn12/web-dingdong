@@ -382,19 +382,20 @@ function LessonPage() {
           )}
 
           {/* Cultural cards */}
-          {(lesson.cultural_note || lesson.cultural_snippet) && (
+          {(hasCulturalContent(lesson.cultural_note) ||
+            hasCulturalContent(lesson.cultural_snippet)) && (
             <div className="grid gap-3 md:grid-cols-2">
-              {lesson.cultural_note && (
+              {hasCulturalContent(lesson.cultural_note) && (
                 <CulturalCardView
-                  card={lesson.cultural_note}
+                  card={lesson.cultural_note!}
                   tone="lavender"
                   icon={<BookOpen className="size-4" />}
                   badge="문화 노트"
                 />
               )}
-              {lesson.cultural_snippet && (
+              {hasCulturalContent(lesson.cultural_snippet) && (
                 <CulturalCardView
-                  card={lesson.cultural_snippet}
+                  card={lesson.cultural_snippet!}
                   tone="mint"
                   icon={<Lightbulb className="size-4" />}
                   badge="문화 팁"
@@ -550,6 +551,23 @@ function ContentMarkdown({
 
 /* ---------------- Cultural Card ---------------- */
 
+/** The lesson generator never pinned down a field name for the cultural cards,
+ * so stored rows use `description` on some lessons and `content` on others —
+ * reading only `description` left real material invisible. Accept every shape
+ * that has been written, and treat "no body text" as "no card". */
+function culturalBody(card: CulturalCard | null | undefined): string {
+  if (!card) return "";
+  for (const key of ["description", "content", "text", "body"] as const) {
+    const v = card[key];
+    if (typeof v === "string" && v.trim()) return v;
+  }
+  return "";
+}
+
+function hasCulturalContent(card: CulturalCard | null | undefined): boolean {
+  return culturalBody(card).trim().length > 0;
+}
+
 function CulturalCardView({
   card,
   tone,
@@ -561,10 +579,7 @@ function CulturalCardView({
   icon: ReactNode;
   badge: string;
 }) {
-  const desc =
-    (typeof card.description === "string" && card.description) ||
-    (typeof card.text === "string" && (card.text as string)) ||
-    "";
+  const desc = culturalBody(card);
   const title = (typeof card.title === "string" && card.title) || badge;
   const toneCls =
     tone === "lavender"
