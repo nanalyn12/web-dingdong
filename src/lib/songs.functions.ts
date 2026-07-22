@@ -4,6 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
+import type { SunoAlignedWord } from "@/lib/suno.server";
 import { createTextProvider } from "@/lib/ai-gateway.server";
 import { assertEditor } from "@/lib/courses.functions";
 import type { Json } from "@/db/schema";
@@ -221,6 +222,149 @@ export const generateSongWithSuno = createServerFn({ method: "POST" })
 
 // Poll Suno music task. Once SUCCESS, copy audio + cover onto the media disk
 // and update the row with permanent URLs. Idempotent.
+// ──────────────────────────────────────────────────────────────────────────
+// Karaoke sync — map Suno's per-word alignment onto our lyric lines
+// ──────────────────────────────────────────────────────────────────────────
+
+/** `[Verse 1]` / `[Chorus]` markers are never sung, so they carry no timing. */
+function isSectionHeaderLine(text: string | null | undefined): boolean {
+  return !!text && /^\s*\[[^\]]+\]\s*$/.test(text);
+}
+
+/** Characters that carry sung sound. Punctuation and spaces are dropped on
+ * both sides so "你好，世界" and "你好 世界" align the same way. */
+function significantChars(text: string): string[] {
+  return [...text].filter((c) => /[\p{Script=Han}\p{L}\p{N}]/u.test(c));
+}
+
+/** Flatten aligned words into one char-per-entry stream. Suno returns whole
+ * words (and sometimes whole lines) per entry, so a multi-char entry gets its
+ * duration split evenly across its characters. */
+function flattenAlignedChars(
+  words: SunoAlignedWord[],
+): { ch: string; t: number }[] {
+  const out: { ch: string; t: number }[] = [];
+  for (const w of words) {
+    if (w.success === false) continue;
+    const chars = significantChars(w.word ?? "");
+    if (chars.length === 0) continue;
+    const start = Number(w.startS);
+    const end = Number(w.endS);
+    if (!Number.isFinite(start)) continue;
+    const span = Number.isFinite(end) && end > start ? end - start : 0;
+    chars.forEach((ch, i) => {
+      out.push({ ch, t: start + (span * i) / chars.length });
+    });
+  }
+  return out;
+}
+
+/** Assign a real start time to each lyric line from Suno's word alignment.
+ *
+ * Both sides are reduced to a stream of sung characters and walked together.
+ * The vocal rarely matches the submitted lyrics perfectly (dropped particles,
+ * repeated hooks), so a mismatch scans a small window ahead before giving up
+ * on that character. A line that never matches keeps `time: undefined` and
+ * falls back to the client's character-weighted estimate. */
+export function alignLyricTimes(
+  lines: LyricLine[],
+  words: SunoAlignedWord[],
+): { lyrics: LyricLine[]; matched: number; total: number } {
+  const src = flattenAlignedChars(words);
+  const RESYNC_WINDOW = 8;
+  let p = 0;
+  let matched = 0;
+  let total = 0;
+
+  const lyrics = lines.map((line) => {
+    if (isSectionHeaderLine(line.zh)) return { ...line, time: undefined };
+    const target = significantChars(line.zh ?? "");
+    if (target.length === 0) return { ...line, time: undefined };
+    total++;
+
+    let lineStart: number | undefined;
+    for (const ch of target) {
+      if (p >= src.length) break;
+      let hit = -1;
+      for (let k = p; k < Math.min(src.length, p + RESYNC_WINDOW); k++) {
+        if (src[k].ch === ch) {
+          hit = k;
+          break;
+        }
+      }
+      if (hit === -1) continue; // vocal dropped this char — keep the target pointer moving
+      if (lineStart === undefined) lineStart = src[hit].t;
+      p = hit + 1;
+    }
+    if (lineStart === undefined) return { ...line, time: undefined };
+    matched++;
+    return { ...line, time: Math.max(0, Number(lineStart.toFixed(2))) };
+  });
+
+  // Times must be non-decreasing — a bad local match must not send the
+  // karaoke highlight backwards.
+  let prev = -Infinity;
+  for (const l of lyrics) {
+    if (typeof l.time !== "number") continue;
+    if (l.time < prev) l.time = prev;
+    else prev = l.time;
+  }
+
+  return { lyrics, matched, total };
+}
+
+/** Fetch Suno's alignment and write real line times onto the song.
+ * Non-fatal by design: sync is an enhancement, never a reason to fail a song. */
+async function syncLyricTimesFromSuno(row: SongRow): Promise<LyricLine[] | null> {
+  if (!row.suno_audio_task_id || !row.suno_audio_id) return null;
+  const lines = Array.isArray(row.lyrics) ? row.lyrics : [];
+  if (lines.length === 0) return null;
+
+  const { sunoGetTimestampedLyrics } = await import("@/lib/suno.server");
+  const res = await sunoGetTimestampedLyrics({
+    taskId: row.suno_audio_task_id,
+    audioId: row.suno_audio_id,
+  });
+  const words = res.alignedWords ?? [];
+  if (words.length === 0) return null;
+
+  const { lyrics, matched, total } = alignLyricTimes(lines, words);
+  // A handful of matched lines usually means the alignment landed on a
+  // different take — the estimate is better than a half-wrong sync.
+  if (total > 0 && matched / total < 0.5) {
+    console.warn(
+      `[suno sync] weak alignment for ${row.id}: ${matched}/${total} lines`,
+    );
+    return null;
+  }
+  return lyrics;
+}
+
+/** Re-run karaoke sync on an existing song. Covers songs generated before
+ * sync existed, and the case where Suno's alignment wasn't ready yet when the
+ * audio first landed. */
+export const resyncSongLyrics = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ songId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }): Promise<SongRow> => {
+    await assertEditor(context.userId);
+    const row = await fetchSong(data.songId);
+    if (!row.suno_audio_task_id || !row.suno_audio_id) {
+      throw new Error(
+        "이 노래는 Suno로 생성된 곡이 아니라 자동 싱크를 받을 수 없어요.",
+      );
+    }
+    const synced = await syncLyricTimesFromSuno(row);
+    if (!synced) {
+      throw new Error(
+        "Suno에서 가사 싱크 정보를 받지 못했어요. 잠시 후 다시 시도해주세요.",
+      );
+    }
+    return updateSong(row.id, { lyrics: synced as unknown as Json });
+  });
+
 export const pollSongGeneration = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) =>
@@ -300,6 +444,20 @@ export async function advanceSongAudio(row: SongRow): Promise<SongRow> {
       }
     }
 
+    // Karaoke sync: ask Suno where each word actually lands in the vocal.
+    // Without this the player falls back to guessing line times from character
+    // counts, which drifts badly over a 2-minute song.
+    let lyricsPatch: { lyrics?: Json } = {};
+    try {
+      const synced = await syncLyricTimesFromSuno({
+        ...row,
+        suno_audio_id: track.id,
+      });
+      if (synced) lyricsPatch = { lyrics: synced as unknown as Json };
+    } catch (e) {
+      console.warn("[suno] lyric time sync failed:", e);
+    }
+
     // Auto-generate lesson content (vocab + grammar notes) on first success.
     // Failures are non-fatal; the song still transitions to `ready`.
     let lessonPatch: { vocab?: VocabItem[]; grammar_notes?: GrammarNote[] } = {};
@@ -345,6 +503,7 @@ export async function advanceSongAudio(row: SongRow): Promise<SongRow> {
       media_url: audio.url,
       cover_url: coverUrl,
       suno_audio_id: track.id,
+      ...lyricsPatch,
       ...lessonPatch,
       ...mp4Patch,
     });

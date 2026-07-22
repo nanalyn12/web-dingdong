@@ -63,6 +63,7 @@ import {
   pollSongGeneration,
   pollSongMp4,
   reannotateSong,
+  resyncSongLyrics,
   type GrammarNote,
   type LyricLine,
   type SongRow,
@@ -539,8 +540,16 @@ function SongPlayer({
                     🤖 AI 생성
                   </span>
                 )}
-                <span className="rounded-full glass-soft px-2 py-0.5 text-[11px]">
-                  {lyrics.length}줄 {hasTimes ? "· 싱크" : "· 정적"}
+                <span
+                  className="rounded-full glass-soft px-2 py-0.5 text-[11px]"
+                  title={
+                    hasRealTimes
+                      ? "Suno 정렬 기반의 실제 타이밍이에요."
+                      : "실제 타이밍이 없어 글자 수로 추정한 값이라 조금씩 어긋날 수 있어요."
+                  }
+                >
+                  {lyrics.length}줄{" "}
+                  {hasRealTimes ? "· 싱크" : hasTimes ? "· 추정 싱크" : "· 정적"}
                 </span>
                 {hasVideo && (
                   <span className="rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[11px] font-semibold">
@@ -613,6 +622,7 @@ function SongPlayer({
                     </a>
                   </Button>
                 )}
+                <ResyncLyricsButton song={song} />
                 <RetryMp4Button song={song} />
                 <MakeLessonContentButton song={song} />
                 <ReannotateButton song={song} />
@@ -742,7 +752,14 @@ function SongPlayer({
           <div className="text-xs font-semibold text-muted-foreground mb-2 px-1 flex items-center justify-between">
             <span>전체 가사</span>
             {hasTimes && (
-              <span className="text-[10px] text-primary">싱크 가능</span>
+              <span
+                className={[
+                  "text-[10px]",
+                  hasRealTimes ? "text-primary" : "text-muted-foreground",
+                ].join(" ")}
+              >
+                {hasRealTimes ? "싱크 가능" : "추정 싱크 (오차 있음)"}
+              </span>
             )}
           </div>
           <div
@@ -1047,20 +1064,42 @@ function NativeMediaSurface({
   muted: boolean;
 }) {
   const ref = useRef<HTMLMediaElement | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.playbackRate = playbackRate;
     el.muted = muted;
+    // `timeupdate` only fires ~4×/sec, which makes the karaoke highlight land
+    // up to 250ms late. Drive the clock off rAF while playing instead, and
+    // keep the event as the fallback for seeks/pauses.
+    const stopRaf = () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+    const tick = () => {
+      onTime(el.currentTime);
+      rafRef.current = requestAnimationFrame(tick);
+    };
     const onT = () => onTime(el.currentTime);
     const onD = () => onDuration(el.duration || 0);
-    const onPlay = () => onPlayingChange(true);
-    const onPause = () => onPlayingChange(false);
+    const onPlay = () => {
+      onPlayingChange(true);
+      stopRaf();
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    const onPause = () => {
+      onPlayingChange(false);
+      stopRaf();
+      onTime(el.currentTime);
+    };
     el.addEventListener("timeupdate", onT);
+    el.addEventListener("seeked", onT);
     el.addEventListener("loadedmetadata", onD);
     el.addEventListener("durationchange", onD);
     el.addEventListener("play", onPlay);
+    el.addEventListener("playing", onPlay);
     el.addEventListener("pause", onPause);
     el.addEventListener("ended", onPause);
     apiRef.current = {
@@ -1079,10 +1118,13 @@ function NativeMediaSurface({
       },
     };
     return () => {
+      stopRaf();
       el.removeEventListener("timeupdate", onT);
+      el.removeEventListener("seeked", onT);
       el.removeEventListener("loadedmetadata", onD);
       el.removeEventListener("durationchange", onD);
       el.removeEventListener("play", onPlay);
+      el.removeEventListener("playing", onPlay);
       el.removeEventListener("pause", onPause);
       el.removeEventListener("ended", onPause);
       apiRef.current = null;
@@ -1915,6 +1957,38 @@ function ReannotateButton({ song }: { song: SongRow }) {
   );
 }
 
+
+// Editor-only: re-pull Suno's word alignment when the highlight is off-beat.
+function ResyncLyricsButton({ song }: { song: SongRow }) {
+  const { data: profile } = useMyProfile();
+  const qc = useQueryClient();
+  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const mutation = useMutation({
+    mutationFn: () => resyncSongLyrics({ data: { songId: song.id } }),
+    onSuccess: () => {
+      toast.success("가사 싱크를 다시 맞췄어요 🎯");
+      qc.invalidateQueries({ queryKey: ["song", song.id] });
+    },
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "싱크 재조정 실패"),
+  });
+
+  if (!isEditor) return null;
+  if (!song.suno_audio_id || !song.suno_audio_task_id) return null;
+  if (!song.lyrics || song.lyrics.length === 0) return null;
+  const synced = song.lyrics.some((l) => typeof l.time === "number");
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => mutation.mutate()}
+      disabled={mutation.isPending}
+      title="Suno의 단어별 정렬 정보를 다시 받아 가사 타이밍을 보정해요."
+    >
+      🎯 {mutation.isPending ? "맞추는 중…" : synced ? "싱크 다시 맞추기" : "싱크 맞추기"}
+    </Button>
+  );
+}
 
 // Editor-only: retry MP4 when auto-kickoff failed.
 function RetryMp4Button({ song }: { song: SongRow }) {

@@ -149,6 +149,36 @@ export async function sunoGetMusic(taskId: string): Promise<SunoMusicRecord> {
   });
 }
 
+// ─── Timestamped (aligned) lyrics ───────────────────────────────────────────
+// Suno force-aligns the submitted lyrics against the rendered vocal and returns
+// per-word start/end times. This is the only trustworthy source of karaoke
+// sync — without it the client can only guess line times from character counts.
+
+export type SunoAlignedWord = {
+  word: string;
+  success: boolean;
+  startS: number;
+  endS: number;
+  palign?: number;
+};
+
+export type SunoTimestampedLyrics = {
+  alignedWords?: SunoAlignedWord[];
+  waveformData?: number[];
+  hootCer?: number;
+  isStreamed?: boolean;
+};
+
+export async function sunoGetTimestampedLyrics(args: {
+  taskId: string;
+  audioId: string;
+}): Promise<SunoTimestampedLyrics> {
+  return sunoFetch<SunoTimestampedLyrics>(
+    "/api/v1/generate/get-timestamped-lyrics",
+    { method: "POST", body: { taskId: args.taskId, audioId: args.audioId } },
+  );
+}
+
 // ─── MP4 Video ──────────────────────────────────────────────────────────────
 
 export async function sunoCreateMp4(args: {
