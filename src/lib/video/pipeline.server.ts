@@ -11,6 +11,7 @@ import { pipeline as streamPipeline } from "node:stream/promises";
 import { eq } from "drizzle-orm";
 
 import { db, tables } from "@/db";
+import { splitSentences, wrapSubtitle } from "./subtitles";
 import type { Json } from "@/db/schema";
 import { getMediaDir } from "@/lib/suno.server";
 import type { ScriptScene, VideoJobConfig, VideoScript } from "./config";
@@ -186,7 +187,10 @@ ${topicLine}
       ? `\n- narration 안에 이 장면의 핵심 중국어 표현(zh)을 간체 한자 그대로 자연스럽게 넣어 (예: "이럴 땐 你好라고 인사해요"). 발음을 한글로 옮겨 적지 마 — 한자로 쓰면 중국어 원어민 음성으로 읽어줘.`
       : ""
   }
-- zh: 이 장면에서 가르치는 핵심 중국어 문장/표현 (간체 한자만)
+- narration_ko: 위 narration 전체의 한국어 번역. 요약·의역 축약 금지 — narration의 모든 문장을 빠짐없이 옮길 것. 문장 수도 narration과 동일하게.${
+    cfg.language === "ko" ? " (나레이션이 한국어면 narration을 그대로 복사)" : ""
+  }
+- zh: 이 장면에서 가르치는 핵심 중국어 문장/표현 (간체 한자만). narration 전체가 아니라 짧은 표현 1개.
 - pinyin: zh의 병음 (성조 기호)
 - ko: zh의 한국어 번역
 - pexels_query: 이 장면에 어울리는 스톡 영상 검색어 (영어 2~4단어, 구체적 사물/풍경/행동)
@@ -195,7 +199,7 @@ ${topicLine}
 
 첫 장면은 주제 소개(훅), 마지막 장면은 요약+구독 유도.
 반드시 아래 JSON만 출력 (코드펜스 금지):
-{"title":"유튜브 제목(한국어, 40자 이내, 키워드 포함)","description":"유튜브 설명 2~3문장 + 해시태그 3개","tags":["태그1","태그2","태그3","태그4","태그5"],"scenes":[{"index":1,"narration":"...","zh":"...","pinyin":"...","ko":"...","pexels_query":"...","vocab":[{"zh":"...","pinyin":"...","ko":"...","hsk":1}],"quiz":[{"type":"choice","question":"...","options":["..."],"answer":"...","explanation":"..."}]}]}`;
+{"title":"유튜브 제목(한국어, 40자 이내, 키워드 포함)","description":"유튜브 설명 2~3문장 + 해시태그 3개","tags":["태그1","태그2","태그3","태그4","태그5"],"scenes":[{"index":1,"narration":"...","narration_ko":"...","zh":"...","pinyin":"...","ko":"...","pexels_query":"...","vocab":[{"zh":"...","pinyin":"...","ko":"...","hsk":1}],"quiz":[{"type":"choice","question":"...","options":["..."],"answer":"...","explanation":"..."}]}]}`;
 
   // Gemini occasionally emits malformed JSON in free-form mode; regenerate
   // once (a fresh sample almost always parses) before giving up.
@@ -374,14 +378,6 @@ async function synthesizeMixed(
   return concatWavs(wavs);
 }
 
-// Sentence splitter for narration (ko/zh punctuation).
-function splitSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?。！？…])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 // ─── SRT ─────────────────────────────────────────────────────────────────────
 
 function srtTime(t: number): string {
@@ -400,7 +396,7 @@ function buildSrtFromSegments(
   return segments
     .map(
       (s, i) =>
-        `${i + 1}\n${srtTime(s.start + offset)} --> ${srtTime(s.end + offset)}\n${s.text}\n`,
+        `${i + 1}\n${srtTime(s.start + offset)} --> ${srtTime(s.end + offset)}\n${wrapSubtitle(s.text)}\n`,
     )
     .join("\n");
 }
@@ -685,6 +681,24 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
     }
     await setJob(jobId, { youtube_video_id: videoId, step: "학습 콘텐츠 생성 중" });
 
+    // CC track — the same SRT, but selectable and auto-translatable on YouTube
+    // rather than baked into the pixels. Best-effort: a connection made before
+    // the force-ssl scope existed will 403 here, and that must not fail a
+    // video that already uploaded successfully.
+    if (job.srt) {
+      try {
+        const { uploadCaptionTrack } = await import("./youtube.server");
+        await uploadCaptionTrack({
+          videoId,
+          srt: job.srt,
+          language: cfg.language === "zh" ? "zh-CN" : "ko",
+          name: cfg.language === "zh" ? "中文" : "한국어",
+        });
+      } catch (e) {
+        console.warn("[video] 유튜브 자막 업로드 실패 (비치명):", e);
+      }
+    }
+
     // Learning content: build drama scenes directly from our own script timings.
     // Use OUR thumbnail — YouTube serves a gray placeholder for private videos.
     const dramaId = await createDramaFromScript(
@@ -884,7 +898,13 @@ async function createLessonFromScript(
   const contentMd = script.scenes
     .map((sc, i) => {
       const zhBlock = sc.zh ? `\n\n**${sc.zh}** (${sc.pinyin})\n${sc.ko}` : "";
-      return `## ${i + 1}. ${sc.ko || `장면 ${i + 1}`}\n\n${sc.narration}${zhBlock}`;
+      // Chinese narration is unreadable to a learner without its translation,
+      // and `sc.ko` only covers the short teaching line.
+      const koBlock =
+        sc.narration_ko && sc.narration_ko !== sc.narration
+          ? `\n\n> ${sc.narration_ko}`
+          : "";
+      return `## ${i + 1}. ${sc.ko || `장면 ${i + 1}`}\n\n${sc.narration}${koBlock}${zhBlock}`;
     })
     .join("\n\n");
 
@@ -943,15 +963,24 @@ async function createDramaFromScript(
 
     // One key line per narration sentence (exact timestamps). Chinese-narration
     // videos put the sentence in zh; Korean narration extracts the Han run.
+    // `sc.ko` translates only the short `zh` teaching line. Pairing it with
+    // every narration sentence made a 60-character Chinese scene show a
+    // one-clause Korean gloss, so translate from narration_ko and align it
+    // sentence by sentence.
+    const koSentences = splitSentences(sc.narration_ko ?? "");
     const key_lines = segs.length
-      ? segs.map((seg) => {
+      ? segs.map((seg, si) => {
           const isZhNarration = cfg.language === "zh";
           const containsSceneZh = !!sc.zh && seg.text.includes(sc.zh);
           const han = seg.text.match(HAN_EXTRACT)?.[0]?.trim() ?? "";
+          // Sentence counts should match (the prompt demands it); if the model
+          // merged or split one, fall back to the whole translation.
+          const koForSeg =
+            koSentences[si] ?? sc.narration_ko ?? sc.ko ?? "";
           return {
             zh: isZhNarration ? seg.text : containsSceneZh ? sc.zh : han,
             pinyin: containsSceneZh || isZhNarration ? sc.pinyin ?? "" : "",
-            ko: isZhNarration ? sc.ko ?? "" : seg.text,
+            ko: isZhNarration ? koForSeg : seg.text,
             time_seconds: Math.floor(seg.start + intro),
           };
         })
@@ -971,7 +1000,8 @@ async function createDramaFromScript(
       title: sc.ko ? sc.ko.slice(0, 12) : `장면 ${i + 1}`,
       start_seconds: Math.floor(sceneStart + intro),
       end_seconds: Math.ceil(sceneEnd + intro),
-      summary_ko: sc.narration.slice(0, 120),
+      // Must be Korean — on Chinese-narration videos `narration` is Chinese.
+      summary_ko: (sc.narration_ko || sc.narration).slice(0, 120),
       key_lines,
       vocab: (sc.vocab ?? []).filter((v) => v?.zh),
       quiz: (sc.quiz ?? []).filter((q) => q?.question && q?.answer),

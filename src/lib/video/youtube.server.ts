@@ -6,7 +6,14 @@ import { eq } from "drizzle-orm";
 import { db, tables } from "@/db";
 import type { Json } from "@/db/schema";
 
-const SCOPE = "https://www.googleapis.com/auth/youtube.upload";
+// youtube.upload alone cannot write caption tracks — captions.insert requires
+// force-ssl. A token issued before this scope was added still uploads video
+// fine; only the caption step fails, and it is best-effort. Reconnecting the
+// YouTube account grants the wider scope.
+const SCOPE = [
+  "https://www.googleapis.com/auth/youtube.upload",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
+].join(" ");
 
 /** Raised when the stored refresh token is revoked/expired (invalid_grant).
  * Callers can catch this to fall back to web-only publishing. */
@@ -131,6 +138,65 @@ export function appBaseUrl(): string {
       ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
       : "http://localhost:8080")
   );
+}
+
+/** Attach an SRT track to a video so viewers get the CC button.
+ *
+ * Burned-in subtitles cannot be turned off, resized, or auto-translated by
+ * YouTube; a real caption track can. Requires the force-ssl scope, so a
+ * YouTube connection made before that scope was added fails here with 403 —
+ * callers treat this as best-effort and tell the user to reconnect. */
+export async function uploadCaptionTrack(args: {
+  videoId: string;
+  srt: string;
+  language: string; // BCP-47, e.g. "zh-CN" / "ko"
+  name?: string;
+}): Promise<void> {
+  const token = await accessToken();
+  const meta = {
+    snippet: {
+      videoId: args.videoId,
+      language: args.language,
+      name: args.name ?? "",
+      isDraft: false,
+    },
+  };
+
+  // multipart/related: JSON metadata part, then the SRT body.
+  const boundary = `dingdong-${Date.now()}`;
+  const body = [
+    `--${boundary}`,
+    "Content-Type: application/json; charset=UTF-8",
+    "",
+    JSON.stringify(meta),
+    `--${boundary}`,
+    "Content-Type: application/octet-stream",
+    "",
+    args.srt,
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+
+  const res = await fetch(
+    "https://www.googleapis.com/upload/youtube/v3/captions?part=snippet&uploadType=multipart",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    },
+  );
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    if (res.status === 403) {
+      throw new YouTubeAuthError(
+        `자막 업로드 권한이 없습니다 — YouTube 계정을 다시 연결해 자막 권한(force-ssl)을 허용해주세요. (${t.slice(0, 160)})`,
+      );
+    }
+    throw new Error(`자막 업로드 실패 [${res.status}] ${t.slice(0, 200)}`);
+  }
 }
 
 /** Append the DingDong learning link to the video description (funnel). */

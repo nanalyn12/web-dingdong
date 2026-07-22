@@ -99,9 +99,13 @@ export type SceneQuiz = {
 export type ScriptScene = {
   index: number;
   narration: string; // narration text in target language
+  // Full Korean rendering of `narration`. On Chinese-narration videos `ko`
+  // below only covers the short `zh` teaching line, so using it as "the
+  // translation" left most of what was actually said untranslated.
+  narration_ko?: string;
   zh: string; // Chinese learning line featured in this scene
   pinyin: string;
-  ko: string; // Korean translation
+  ko: string; // Korean translation of `zh` (the teaching line, not the narration)
   pexels_query: string; // English search query for stock footage
   vocab?: SceneVocab[]; // 3-5 words per scene → 단어장 저장 UI
   quiz?: SceneQuiz[]; // 2 questions per scene → 기존 MiniQuiz UI
