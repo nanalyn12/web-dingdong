@@ -140,6 +140,44 @@ export function appBaseUrl(): string {
   );
 }
 
+/** Existing caption tracks on a video. Used to avoid stacking a duplicate
+ * track when a repair run is repeated, and as a cheap probe (50 quota units
+ * vs 400 for an insert) for whether the token carries the force-ssl scope. */
+export async function listCaptionTracks(
+  videoId: string,
+): Promise<{ id: string; language: string; name: string; trackKind: string }[]> {
+  const token = await accessToken();
+  const res = await fetch(
+    `https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    if (res.status === 403) {
+      throw new YouTubeAuthError(
+        `자막 권한이 없습니다 — YouTube 계정을 다시 연결해주세요. (${t.slice(0, 160)})`,
+      );
+    }
+    throw new Error(`자막 목록 조회 실패 [${res.status}] ${t.slice(0, 200)}`);
+  }
+  const json = (await res.json()) as {
+    items?: {
+      id: string;
+      snippet?: { language?: string; name?: string; trackKind?: string };
+    }[];
+  };
+  // trackKind distinguishes our uploads ("standard") from YouTube's
+  // speech-recognition captions ("ASR"). Treating an ASR track as "already
+  // captioned" would leave the machine transcript in place of our exact
+  // script text.
+  return (json.items ?? []).map((i) => ({
+    id: i.id,
+    language: i.snippet?.language ?? "",
+    name: i.snippet?.name ?? "",
+    trackKind: i.snippet?.trackKind ?? "standard",
+  }));
+}
+
 /** Attach an SRT track to a video so viewers get the CC button.
  *
  * Burned-in subtitles cannot be turned off, resized, or auto-translated by
