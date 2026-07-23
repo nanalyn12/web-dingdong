@@ -7,6 +7,7 @@ import {
   Film,
   GraduationCap,
   Loader2,
+  Music,
   RefreshCw,
   Trash2,
 } from "lucide-react";
@@ -336,7 +337,7 @@ function LinkedContentSection({ id }: { id: string }) {
         <div>
           <h2 className="text-xl font-bold">🔗 이 수업에 쓸 콘텐츠</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            지도안에 맞는 앱 안의 강의 · 영상 학습을 AI가 골라줍니다.
+            지도안에 맞는 앱 안의 강의 · 영상 학습 · 학습송을 AI가 골라줍니다.
           </p>
         </div>
         <Button
@@ -358,7 +359,8 @@ function LinkedContentSection({ id }: { id: string }) {
 
       {!isLoading && !data && (
         <p className="text-sm text-muted-foreground py-2">
-          아직 연결할 만한 강의 · 영상이 없어요. 콘텐츠를 추가한 뒤 «다시 찾기»를 눌러보세요.
+          아직 연결할 만한 강의 · 영상 · 학습송이 없어요. 콘텐츠를 추가한 뒤 «다시 찾기»를
+          눌러보세요.
         </p>
       )}
 
@@ -367,37 +369,44 @@ function LinkedContentSection({ id }: { id: string }) {
           {data.summary && (
             <p className="text-sm bg-white/60 rounded-2xl p-3">{data.summary}</p>
           )}
-          {data.lessons.length > 0 && (
-            <div>
-              <div className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                <GraduationCap className="size-4" /> 강의
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {data.lessons.map((l) => (
-                  <LinkCard key={l.id} link={l} to="lesson" />
-                ))}
-              </div>
-            </div>
-          )}
-          {data.dramas.length > 0 && (
-            <div>
-              <div className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                <Film className="size-4" /> 영상 학습
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {data.dramas.map((d) => (
-                  <LinkCard key={d.id} link={d} to="drama" />
-                ))}
-              </div>
-            </div>
-          )}
+          <LinkGroup label="강의" icon={GraduationCap} links={data.lessons} to="lesson" />
+          <LinkGroup label="영상 학습" icon={Film} links={data.dramas} to="drama" />
+          <LinkGroup label="학습송" icon={Music} links={data.songs} to="song" />
         </div>
       )}
     </section>
   );
 }
 
-function LinkCard({ link, to }: { link: CurriculumLink; to: "lesson" | "drama" }) {
+type LinkTarget = "lesson" | "drama" | "song";
+
+function LinkGroup({
+  label,
+  icon: Icon,
+  links,
+  to,
+}: {
+  label: string;
+  icon: typeof GraduationCap;
+  links: CurriculumLink[] | undefined;
+  to: LinkTarget;
+}) {
+  if (!links?.length) return null;
+  return (
+    <div>
+      <div className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+        <Icon className="size-4" /> {label}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {links.map((l) => (
+          <LinkCard key={l.id} link={l} to={to} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LinkCard({ link, to }: { link: CurriculumLink; to: LinkTarget }) {
   const inner = (
     <>
       <div className="font-bold">{link.title}</div>
@@ -414,12 +423,22 @@ function LinkCard({ link, to }: { link: CurriculumLink; to: "lesson" | "drama" }
   );
   const cls =
     "block rounded-2xl bg-white/60 p-4 border border-white/40 hover:bg-white/80 transition-colors";
-  return to === "lesson" ? (
-    <Link to="/lessons/$id" params={{ id: link.id }} className={cls}>
-      {inner}
-    </Link>
-  ) : (
-    <Link to="/dramas/$id" params={{ id: link.id }} className={cls}>
+  if (to === "lesson") {
+    return (
+      <Link to="/lessons/$id" params={{ id: link.id }} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+  if (to === "drama") {
+    return (
+      <Link to="/dramas/$id" params={{ id: link.id }} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <Link to="/songs/$id" params={{ id: link.id }} className={cls}>
       {inner}
     </Link>
   );

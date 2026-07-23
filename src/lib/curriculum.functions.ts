@@ -202,38 +202,33 @@ export const generateCurriculum = createServerFn({ method: "POST" })
     return { id: inserted.id };
   });
 
-// ── 연계 학습 (커리큘럼 ↔ 강의 · 영상 학습) ────────────────────────────────
+// ── 연계 학습 (커리큘럼 ↔ 강의 · 영상 학습 · 학습송) ────────────────────────
 // The generated plan is prose — it names activities, not app content. To make
 // it teachable inside DingDong, the plan is matched once against the real
-// lesson/drama catalog by AI and the picks are cached on the row, same as
+// lesson/drama/song catalog by AI and the picks are cached on the row, same as
 // songs.related_content (content-links.functions.ts).
+
+const AiPickSchema = z
+  .array(
+    z.object({
+      number: z.number().int().min(1),
+      reason: z.string().default(""),
+      block_hint: z.string().default(""),
+    }),
+  )
+  .default([]);
 
 const AiLinkedSchema = z.object({
   summary: z.string().default(""),
-  lessons: z
-    .array(
-      z.object({
-        number: z.number().int().min(1),
-        reason: z.string().default(""),
-        block_hint: z.string().default(""),
-      }),
-    )
-    .default([]),
-  dramas: z
-    .array(
-      z.object({
-        number: z.number().int().min(1),
-        reason: z.string().default(""),
-        block_hint: z.string().default(""),
-      }),
-    )
-    .default([]),
+  lessons: AiPickSchema,
+  dramas: AiPickSchema,
+  songs: AiPickSchema,
 });
 
 export type CurriculumLink = {
   id: string;
   title: string;
-  subtitle: string; // 코스명 (강의) / 장르·길이 (영상)
+  subtitle: string; // 코스명 (강의) / 장르·길이 (영상) / 레벨·주제 (학습송)
   reason: string;
   block_hint: string;
 };
@@ -241,7 +236,14 @@ export type CurriculumLinkedContent = {
   summary: string;
   lessons: CurriculumLink[];
   dramas: CurriculumLink[];
+  songs: CurriculumLink[];
   generated_at: string;
+};
+
+const LEVEL_LABEL: Record<string, string> = {
+  beginner: "입문",
+  intermediate: "중급",
+  advanced: "고급",
 };
 
 function fmtDuration(seconds: number | null) {
@@ -289,7 +291,25 @@ async function generateAndCacheLinks(
     .from(tables.dramas)
     .orderBy(tables.dramas.created_at);
 
-  if (lessonRows.length === 0 && dramaRows.length === 0) return null;
+  // Only 'ready' songs have playable audio — anything else would be a dead link.
+  const songRows = await db
+    .select({
+      id: tables.songs.id,
+      title: tables.songs.title,
+      title_zh: tables.songs.title_zh,
+      artist: tables.songs.artist,
+      level: tables.songs.level,
+      topic: tables.songs.topic,
+      style: tables.songs.style,
+      vocab: tables.songs.vocab,
+    })
+    .from(tables.songs)
+    .where(eq(tables.songs.status, "ready"))
+    .orderBy(tables.songs.created_at);
+
+  if (lessonRows.length === 0 && dramaRows.length === 0 && songRows.length === 0) {
+    return null;
+  }
 
   const lessonCatalog = lessonRows
     .map((l, i) => {
@@ -307,6 +327,17 @@ async function generateAndCacheLinks(
       (d, i) =>
         `${i + 1}. "${d.title}"${d.title_zh ? ` (${d.title_zh})` : ""} — 장르 ${d.genre ?? "?"}, 레벨 ${d.level}, ${fmtDuration(d.duration_seconds) || "길이 미상"} / ${(d.description ?? "").slice(0, 80)}`,
     )
+    .join("\n");
+
+  const songCatalog = songRows
+    .map((s, i) => {
+      const words = (Array.isArray(s.vocab) ? s.vocab : [])
+        .map((v) => (v as { zh?: string })?.zh)
+        .filter(Boolean)
+        .slice(0, 6)
+        .join(" / ");
+      return `${i + 1}. "${s.title}"${s.title_zh ? ` (${s.title_zh})` : ""} — 레벨 ${s.level}, 주제 ${s.topic ?? "?"}, 스타일 ${s.style ?? "?"} 핵심단어: ${words || "(없음)"}`;
+    })
     .join("\n");
 
   const objectives = (Array.isArray(plan.objectives) ? plan.objectives : [])
@@ -338,9 +369,12 @@ async function generateAndCacheLinks(
       "",
       `[영상 학습 목록]\n${dramaCatalog || "(없음)"}`,
       "",
+      `[학습송 목록]\n${songCatalog || "(없음)"}`,
+      "",
       "이 지도안을 실제 수업에서 진행할 때 함께 쓰면 좋은 콘텐츠를 골라주세요.",
       "- lessons: 강의 목록에서 1~3개 (목표·난이도가 맞는 것만. 없으면 빈 배열)",
       "- dramas: 영상 학습 목록에서 1~2개 (없으면 빈 배열)",
+      "- songs: 학습송 목록에서 1~2개 (주제·핵심단어가 이 수업과 겹치는 것. 없으면 빈 배열)",
       "- reason: 이 지도안과 어떻게 연결되는지 한국어 1~2문장",
       "- block_hint: 어느 시간 블록/활동에서 쓰면 좋은지 한 문장 (예: '20~30분 전개 단계에서 핵심표현 도입용')",
       "- summary: 이 지도안을 앱 콘텐츠와 함께 운영하는 방법 2~3문장",
@@ -375,12 +409,32 @@ async function generateAndCacheLinks(
         block_hint: d.block_hint,
       };
     });
-  if (lessons.length === 0 && dramas.length === 0) return null;
+  const songs: CurriculumLink[] = parsed.songs
+    .filter((s) => s.number >= 1 && s.number <= songRows.length)
+    .map((s) => {
+      const row = songRows[s.number - 1];
+      return {
+        id: row.id,
+        title: row.title,
+        // topic is often just the title again — only show it when it adds something.
+        subtitle: [
+          LEVEL_LABEL[row.level] ?? row.level,
+          row.artist,
+          row.topic !== row.title ? row.topic : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        reason: s.reason,
+        block_hint: s.block_hint,
+      };
+    });
+  if (lessons.length === 0 && dramas.length === 0 && songs.length === 0) return null;
 
   const result: CurriculumLinkedContent = {
     summary: parsed.summary,
     lessons,
     dramas,
+    songs,
     generated_at: new Date().toISOString(),
   };
   await db
@@ -490,7 +544,12 @@ export const getCurriculumLinks = createServerFn({ method: "POST" })
       throw new Error("접근 권한이 없습니다.");
     }
     const cached = rows[0].linked_content as CurriculumLinkedContent | null;
-    if (cached?.lessons?.length || cached?.dramas?.length) return cached;
+    // Caches written before 학습송 linking have no `songs` key — refresh those
+    // so the plan gains song picks instead of silently staying song-less.
+    const fresh = cached && Array.isArray(cached.songs);
+    if (fresh && (cached.lessons?.length || cached.dramas?.length || cached.songs.length)) {
+      return cached;
+    }
     try {
       return await generateAndCacheLinks(data.id);
     } catch (e) {
