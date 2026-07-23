@@ -16,6 +16,25 @@ export function splitSentences(text: string): string[] {
     .filter(Boolean);
 }
 
+/** Re-wrap the cue text of an existing SRT without touching its timings.
+ *
+ * Lets already-published videos get readable two-line captions without a
+ * re-render. Timing granularity is whatever the original run produced — this
+ * cannot split a cue that was synthesised as one block. */
+export function rewrapSrt(srt: string): string {
+  return srt
+    .split(/\r?\n\r?\n/)
+    .map((block) => {
+      const lines = block.split(/\r?\n/).filter((l) => l.length > 0);
+      if (lines.length < 3) return block.trim();
+      const [index, timing, ...text] = lines;
+      if (!/-->/.test(timing)) return block.trim();
+      return `${index}\n${timing}\n${wrapSubtitle(text.join(" "))}`;
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 const SUB_MAX_LINES = 2;
 
 function isCjkHeavy(s: string): boolean {

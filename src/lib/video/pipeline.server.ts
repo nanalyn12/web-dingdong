@@ -895,18 +895,7 @@ async function createLessonFromScript(
     .orderBy(asc(tables.lessons.order_index));
   const nextOrder = existing.reduce((m, r) => Math.max(m, r.order_index), 0) + 1;
 
-  const contentMd = script.scenes
-    .map((sc, i) => {
-      const zhBlock = sc.zh ? `\n\n**${sc.zh}** (${sc.pinyin})\n${sc.ko}` : "";
-      // Chinese narration is unreadable to a learner without its translation,
-      // and `sc.ko` only covers the short teaching line.
-      const koBlock =
-        sc.narration_ko && sc.narration_ko !== sc.narration
-          ? `\n\n> ${sc.narration_ko}`
-          : "";
-      return `## ${i + 1}. ${sc.ko || `장면 ${i + 1}`}\n\n${sc.narration}${koBlock}${zhBlock}`;
-    })
-    .join("\n\n");
+  const contentMd = buildLessonMarkdown(script);
 
   const keyExpressions = script.scenes
     .filter((sc) => sc.zh)
@@ -942,18 +931,36 @@ async function createLessonFromScript(
   return lesson.id;
 }
 
+/** Lesson body built from a script. Exported so the backfill that repairs
+ * already-published videos produces identical markdown. */
+export function buildLessonMarkdown(script: VideoScript): string {
+  return script.scenes
+    .map((sc, i) => {
+      const zhBlock = sc.zh ? `\n\n**${sc.zh}** (${sc.pinyin})\n${sc.ko}` : "";
+      // Chinese narration is unreadable to a learner without its translation,
+      // and `sc.ko` only covers the short teaching line.
+      const koBlock =
+        sc.narration_ko && sc.narration_ko !== sc.narration
+          ? `\n\n> ${sc.narration_ko}`
+          : "";
+      return `## ${i + 1}. ${sc.ko || `장면 ${i + 1}`}\n\n${sc.narration}${koBlock}${zhBlock}`;
+    })
+    .join("\n\n");
+}
+
 // Playback source for created content: a YouTube upload or a self-hosted
 // file on the volume ("web-only" mode).
 type VideoRef = { youtubeVideoId?: string | null; mediaUrl?: string | null };
 
-async function createDramaFromScript(
-  userId: string,
+/** Derive drama learning scenes from a finished script.
+ *
+ * Exported so the backfill that repairs already-published videos runs the
+ * exact same derivation as the pipeline — two copies would drift. */
+export function buildDramaScenes(
   cfg: VideoJobConfig,
   script: VideoScript,
-  videoRef: VideoRef,
   srt: string,
-  thumbnailUrl: string | null,
-): Promise<string> {
+): { scenes: unknown[]; durationSeconds: number } {
   const times = parseSrtTimes(srt);
   const intro = 1.5;
   const scenes = script.scenes.map((sc, i) => {
@@ -1008,6 +1015,22 @@ async function createDramaFromScript(
     };
   });
 
+  return {
+    scenes,
+    durationSeconds: Math.ceil((times.at(-1)?.end ?? cfg.lengthSeconds) + intro),
+  };
+}
+
+async function createDramaFromScript(
+  userId: string,
+  cfg: VideoJobConfig,
+  script: VideoScript,
+  videoRef: VideoRef,
+  srt: string,
+  thumbnailUrl: string | null,
+): Promise<string> {
+  const { scenes, durationSeconds } = buildDramaScenes(cfg, script, srt);
+
   const [row] = await db
     .insert(tables.dramas)
     .values({
@@ -1026,7 +1049,7 @@ async function createDramaFromScript(
         (videoRef.youtubeVideoId
           ? `https://img.youtube.com/vi/${videoRef.youtubeVideoId}/hqdefault.jpg`
           : null),
-      duration_seconds: Math.ceil((times.at(-1)?.end ?? cfg.lengthSeconds) + intro),
+      duration_seconds: durationSeconds,
       has_captions: true,
       scenes: scenes as unknown as Json,
       created_by: userId,
