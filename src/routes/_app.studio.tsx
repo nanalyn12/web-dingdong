@@ -192,7 +192,20 @@ function StudioPage() {
         <div className="flex items-center gap-2 text-sm">
           <Youtube className="size-4 text-red-500" />
           {ytStatus.data?.connected ? (
-            <span className="text-green-700 font-medium">연결됨</span>
+            <>
+              <span className="text-green-700 font-medium">연결됨</span>
+              {/* Reconnecting is the only way to widen an existing token's
+                  scopes — captions.insert needs force-ssl, which connections
+                  made before that was requested do not carry. */}
+              <Button asChild size="sm" variant="ghost" className="text-xs h-7">
+                <a
+                  href="/api/youtube/connect"
+                  title="자막(CC) 업로드 권한이 필요하면 다시 연결해 권한을 추가하세요."
+                >
+                  다시 연결
+                </a>
+              </Button>
+            </>
           ) : (
             <Button asChild size="sm" variant="outline">
               <a href="/api/youtube/connect">YouTube 연결</a>
