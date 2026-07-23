@@ -92,6 +92,13 @@
       "when": 1784732374520,
       "tag": "0012_burly_blue_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784819417900,
+      "tag": "0013_early_hydra",
+      "breakpoints": true
     }
   ]
 }

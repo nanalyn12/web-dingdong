@@ -1,0 +1,1 @@
+ALTER TABLE "curriculum_plans" ADD COLUMN "linked_content" jsonb;

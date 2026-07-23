@@ -1,7 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  Film,
+  GraduationCap,
+  Loader2,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +25,10 @@ import { CurriculumPdfButton } from "@/components/curriculum-pdf-button";
 import {
   deleteCurriculum,
   getCurriculum,
+  getCurriculumLinks,
+  regenerateCurriculumLinks,
+  type CurriculumLink,
+  type CurriculumLinkedContent,
   type CurriculumRow,
 } from "@/lib/curriculum.functions";
 
@@ -122,6 +134,27 @@ function CurriculumDetail() {
             {row.interests.length > 0 && <span>관심사: {row.interests.join(", ")}</span>}
             {row.preferred_activities.length > 0 && <span>선호: {row.preferred_activities.join(", ")}</span>}
           </div>
+          {(row.course_title || row.lesson_title) && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {row.course_title && (
+                <Link
+                  to="/courses"
+                  className="inline-flex items-center gap-1 text-xs bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full hover:bg-sky-200"
+                >
+                  <GraduationCap className="size-3.5" /> {row.course_title}
+                </Link>
+              )}
+              {row.lesson_title && row.lesson_id && (
+                <Link
+                  to="/lessons/$id"
+                  params={{ id: row.lesson_id }}
+                  className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full hover:bg-emerald-200"
+                >
+                  <BookOpen className="size-3.5" /> {row.lesson_title}
+                </Link>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <CurriculumPdfButton
@@ -144,6 +177,8 @@ function CurriculumDetail() {
           </Button>
         </div>
       </div>
+
+      <LinkedContentSection id={id} />
 
       <section className="glass rounded-3xl p-6">
         <h2 className="text-xl font-bold mb-3">🎯 수업 목표</h2>
@@ -266,5 +301,126 @@ function CurriculumDetail() {
         </pre>
       </section>
     </div>
+  );
+}
+
+/**
+ * 이 지도안으로 수업할 때 함께 쓸 앱 콘텐츠 — 첫 조회 때 AI가 고르고 캐시된다
+ * (curriculum.functions.ts). 30초 정도 걸릴 수 있어 페이지 본문과 분리해 로드.
+ */
+function LinkedContentSection({ id }: { id: string }) {
+  const qc = useQueryClient();
+  const linksFn = useServerFn(getCurriculumLinks);
+  const regenFn = useServerFn(regenerateCurriculumLinks);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["curriculum-links", id],
+    queryFn: () => linksFn({ data: { id } }),
+    staleTime: Infinity,
+  });
+
+  const regen = useMutation({
+    mutationFn: async () => regenFn({ data: { id } }),
+    onSuccess: (r: CurriculumLinkedContent | null) => {
+      qc.setQueryData(["curriculum-links", id], r);
+      toast.success(r ? "연계 콘텐츠를 다시 골랐어요" : "연결할 만한 콘텐츠가 없어요");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const busy = isLoading || regen.isPending;
+
+  return (
+    <section className="glass rounded-3xl p-6">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 className="text-xl font-bold">🔗 이 수업에 쓸 콘텐츠</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            지도안에 맞는 앱 안의 강의 · 영상 학습을 AI가 골라줍니다.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => regen.mutate()}
+          disabled={busy}
+        >
+          <RefreshCw className={`size-4 ${regen.isPending ? "animate-spin" : ""}`} />
+          다시 찾기
+        </Button>
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+          <Loader2 className="size-4 animate-spin" /> 연계 콘텐츠를 찾는 중… (최대 30초)
+        </div>
+      )}
+
+      {!isLoading && !data && (
+        <p className="text-sm text-muted-foreground py-2">
+          아직 연결할 만한 강의 · 영상이 없어요. 콘텐츠를 추가한 뒤 «다시 찾기»를 눌러보세요.
+        </p>
+      )}
+
+      {data && (
+        <div className="space-y-4">
+          {data.summary && (
+            <p className="text-sm bg-white/60 rounded-2xl p-3">{data.summary}</p>
+          )}
+          {data.lessons.length > 0 && (
+            <div>
+              <div className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                <GraduationCap className="size-4" /> 강의
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {data.lessons.map((l) => (
+                  <LinkCard key={l.id} link={l} to="lesson" />
+                ))}
+              </div>
+            </div>
+          )}
+          {data.dramas.length > 0 && (
+            <div>
+              <div className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                <Film className="size-4" /> 영상 학습
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {data.dramas.map((d) => (
+                  <LinkCard key={d.id} link={d} to="drama" />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LinkCard({ link, to }: { link: CurriculumLink; to: "lesson" | "drama" }) {
+  const inner = (
+    <>
+      <div className="font-bold">{link.title}</div>
+      {link.subtitle && (
+        <div className="text-xs text-muted-foreground">{link.subtitle}</div>
+      )}
+      {link.reason && <p className="text-sm mt-1">{link.reason}</p>}
+      {link.block_hint && (
+        <div className="text-xs text-pink-700 bg-pink-50/70 rounded-lg p-2 mt-2">
+          ⏱️ {link.block_hint}
+        </div>
+      )}
+    </>
+  );
+  const cls =
+    "block rounded-2xl bg-white/60 p-4 border border-white/40 hover:bg-white/80 transition-colors";
+  return to === "lesson" ? (
+    <Link to="/lessons/$id" params={{ id: link.id }} className={cls}>
+      {inner}
+    </Link>
+  ) : (
+    <Link to="/dramas/$id" params={{ id: link.id }} className={cls}>
+      {inner}
+    </Link>
   );
 }

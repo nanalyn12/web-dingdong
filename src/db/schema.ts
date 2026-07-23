@@ -183,6 +183,10 @@ export const curriculum_plans = pgTable("curriculum_plans", {
   assessment: jsonb("assessment").$type<Json>().notNull().default({}),
   time_blocks: jsonb("time_blocks").$type<Json>().notNull().default([]),
   handout_markdown: text("handout_markdown").notNull().default(""),
+  // AI-picked lessons/dramas to teach this plan with (연계 학습 콘텐츠) —
+  // computed once on first view of the plan, cached here.
+  // See curriculum.functions.ts.
+  linked_content: jsonb("linked_content").$type<Json>(),
   created_by: text("created_by").notNull(),
   created_at: ts("created_at").notNull().defaultNow(),
   updated_at: ts("updated_at").notNull().defaultNow(),

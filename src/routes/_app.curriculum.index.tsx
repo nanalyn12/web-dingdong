@@ -24,7 +24,7 @@ import {
   deleteCurriculum,
 } from "@/lib/curriculum.functions";
 
-export const Route = createFileRoute("/_app/curriculum")({
+export const Route = createFileRoute("/_app/curriculum/")({
   head: () => ({
     meta: [
       { title: "수업 커리큘럼 생성기 — DingDong" },
