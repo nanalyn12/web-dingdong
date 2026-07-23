@@ -14,6 +14,7 @@ import { db, tables } from "@/db";
 import { splitSentences, wrapSubtitle } from "./subtitles";
 import type { Json } from "@/db/schema";
 import { getMediaDir } from "@/lib/suno.server";
+import { FOCUS_LABEL, levelFromAudience } from "./config";
 import type { ScriptScene, VideoJobConfig, VideoScript } from "./config";
 
 // ─── job state helpers ───────────────────────────────────────────────────────
@@ -1037,8 +1038,11 @@ async function createDramaFromScript(
       title: script.title.slice(0, 80),
       title_zh: null,
       description: script.description?.slice(0, 300) ?? null,
-      level: "beginner",
-      genre: "AI 생성 영상",
+      // The studio already knows what the video is about and who it is for;
+      // hard-coding one genre and level made every drama identical and left
+      // the library unfilterable.
+      level: levelFromAudience(cfg.audience),
+      genre: FOCUS_LABEL[cfg.focus] ?? "AI 생성 영상",
       youtube_url: videoRef.youtubeVideoId
         ? `https://www.youtube.com/watch?v=${videoRef.youtubeVideoId}`
         : null,

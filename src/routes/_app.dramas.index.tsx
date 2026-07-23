@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Film, Loader2, Plus, RefreshCw, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2, Film, Loader2, Plus, RefreshCw, RotateCcw, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,36 @@ function DramasPage() {
     (progressList ?? []).map((p) => [p.drama_id, p.completed]),
   );
   const [creating, setCreating] = useState(false);
+  const [genreFilter, setGenreFilter] = useState("all");
+  const [levelFilter, setLevelFilter] = useState("all");
+
+  // Options come from the data rather than a fixed list, so the dropdowns stay
+  // in step as the library grows instead of offering categories nothing is in.
+  const genreOptions = useMemo(
+    () =>
+      [...new Set((dramas ?? []).map((d) => d.genre).filter(Boolean))].sort(
+        (a, b) => String(a).localeCompare(String(b), "ko"),
+      ) as string[],
+    [dramas],
+  );
+  const levelOptions = useMemo(() => {
+    const present = new Set((dramas ?? []).map((d) => d.level).filter(Boolean));
+    // Keep pedagogical order, not alphabetical.
+    return (["beginner", "intermediate", "advanced"] as const).filter((l) =>
+      present.has(l),
+    );
+  }, [dramas]);
+
+  const visibleDramas = useMemo(
+    () =>
+      (dramas ?? []).filter(
+        (d) =>
+          (genreFilter === "all" || d.genre === genreFilter) &&
+          (levelFilter === "all" || d.level === levelFilter),
+      ),
+    [dramas, genreFilter, levelFilter],
+  );
+  const filtering = genreFilter !== "all" || levelFilter !== "all";
 
   const del = useMutation({
     mutationFn: (id: string) => deleteDrama({ data: { id } }),
@@ -146,6 +176,60 @@ function DramasPage() {
 
       {creating && isEditor && <CreateDramaForm onDone={() => setCreating(false)} />}
 
+      {/* Filters — only worth showing once there is something to narrow down. */}
+      {(genreOptions.length > 1 || levelOptions.length > 1) && (
+        <div className="glass rounded-3xl p-3 flex items-center gap-2 flex-wrap">
+          <SlidersHorizontal className="size-4 text-muted-foreground ml-1" />
+          {genreOptions.length > 1 && (
+            <Select value={genreFilter} onValueChange={setGenreFilter}>
+              <SelectTrigger className="w-44 h-9 text-sm">
+                <SelectValue placeholder="카테고리" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 카테고리</SelectItem>
+                {genreOptions.map((g) => (
+                  <SelectItem key={g} value={g}>
+                    {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {levelOptions.length > 1 && (
+            <Select value={levelFilter} onValueChange={setLevelFilter}>
+              <SelectTrigger className="w-36 h-9 text-sm">
+                <SelectValue placeholder="난이도" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 난이도</SelectItem>
+                {levelOptions.map((l) => (
+                  <SelectItem key={l} value={l}>
+                    {LEVEL_LABEL[l] ?? l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <span className="text-xs text-muted-foreground ml-auto mr-1">
+            {visibleDramas.length}개
+            {filtering && ` / 전체 ${dramas?.length ?? 0}개`}
+          </span>
+          {filtering && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={() => {
+                setGenreFilter("all");
+                setLevelFilter("all");
+              }}
+            >
+              초기화
+            </Button>
+          )}
+        </div>
+      )}
+
       {isLoading && (
         <div className="glass rounded-3xl p-8 text-center text-muted-foreground">
           불러오는 중…
@@ -163,8 +247,26 @@ function DramasPage() {
         </div>
       )}
 
+      {!isLoading && dramas && dramas.length > 0 && visibleDramas.length === 0 && (
+        <div className="glass rounded-3xl p-10 text-center">
+          <div className="text-4xl mb-2">🔍</div>
+          <p className="font-medium">조건에 맞는 영상이 없어요.</p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            onClick={() => {
+              setGenreFilter("all");
+              setLevelFilter("all");
+            }}
+          >
+            필터 초기화
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {dramas?.map((d) => {
+        {visibleDramas.map((d) => {
           const canDelete = isAdmin || d.created_by === profile?.id;
           return (
             <div

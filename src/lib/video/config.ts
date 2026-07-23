@@ -41,6 +41,18 @@ export const ZH_PAIR_VOICE: Record<string, string> = {
   "ko-KR-Standard-C": "cmn-CN-Standard-B",
 };
 
+/** The studio has no explicit level field — the audience string carries it
+ * ("중국어 입문 성인 학습자"). Derive it so generated dramas and lessons are
+ * filterable by difficulty instead of all landing on "beginner". */
+export function levelFromAudience(
+  audience: string | null | undefined,
+): "beginner" | "intermediate" | "advanced" {
+  const a = audience ?? "";
+  if (/고급|상급|advanced/i.test(a)) return "advanced";
+  if (/중급|intermediate/i.test(a)) return "intermediate";
+  return "beginner";
+}
+
 export const FOCUS_LABEL: Record<VideoFocus, string> = {
   culture: "문화",
   grammar: "어법",
