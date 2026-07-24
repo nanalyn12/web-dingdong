@@ -7,9 +7,21 @@ import { requireAuth } from "@/lib/auth-middleware";
 import type { SunoAlignedWord } from "@/lib/suno.server";
 import { createTextProvider } from "@/lib/ai-gateway.server";
 import { assertEditor } from "@/lib/courses.functions";
+import {
+  SONG_GENRES,
+  SONG_THEMES,
+  genreFromStyle,
+  themeFromKeywords,
+} from "@/lib/song-taxonomy";
 import type { Json } from "@/db/schema";
 
 const LevelEnum = z.enum(["beginner", "intermediate", "advanced"]);
+const GenreEnum = z.enum(
+  SONG_GENRES.map((g) => g.value) as [string, ...string[]],
+);
+const ThemeEnum = z.enum(
+  SONG_THEMES.map((t) => t.value) as [string, ...string[]],
+);
 
 const LyricLineSchema = z.object({
   zh: z.string().min(1),
@@ -22,6 +34,8 @@ const CreateSongInput = z.object({
   title: z.string().min(1),
   title_zh: z.string().optional().default(""),
   level: LevelEnum,
+  genre: GenreEnum.optional(),
+  theme: ThemeEnum.optional(),
   cover_url: z.string().url().optional().or(z.literal("")).default(""),
   media_url: z.string().min(1, "미디어 URL은 필수"),
   lyrics: z.array(LyricLineSchema).default([]),
@@ -58,6 +72,8 @@ export type SongRow = {
   status: string;
   error: string | null; // 마지막 생성 실패 사유 (Suno 민감 단어 거부 등)
   style: string | null;
+  genre: string | null;
+  theme: string | null;
   topic: string | null;
   suno_audio_task_id: string | null;
   suno_audio_id: string | null;
@@ -71,6 +87,17 @@ export type SongRow = {
   created_at: string;
 };
 
+/** 장르·주제 컬럼이 생기기 전에 만들어진 곡은 값이 비어 있다. 스타일 문구와
+ * 작사 키워드에서 유추해 채워 보내면 옛 곡도 필터에 잡히므로 DB 백필이
+ * 필요 없다. */
+function withTaxonomy(row: SongRow): SongRow {
+  return {
+    ...row,
+    genre: row.genre ?? genreFromStyle(row.style),
+    theme: row.theme ?? themeFromKeywords(row.topic, row.title, row.title_zh),
+  };
+}
+
 async function fetchSong(songId: string): Promise<SongRow> {
   const { db, tables } = await import("@/db");
   const rows = await db
@@ -79,7 +106,7 @@ async function fetchSong(songId: string): Promise<SongRow> {
     .where(eq(tables.songs.id, songId))
     .limit(1);
   if (!rows[0]) throw new Error("노래를 찾을 수 없습니다.");
-  return rows[0] as unknown as SongRow;
+  return withTaxonomy(rows[0] as unknown as SongRow);
 }
 
 async function updateSong(
@@ -92,7 +119,7 @@ async function updateSong(
     .set(patch)
     .where(eq(tables.songs.id, songId))
     .returning();
-  return row as unknown as SongRow;
+  return withTaxonomy(row as unknown as SongRow);
 }
 
 export const listSongs = createServerFn({ method: "GET" }).handler(
@@ -102,7 +129,7 @@ export const listSongs = createServerFn({ method: "GET" }).handler(
       .select()
       .from(tables.songs)
       .orderBy(desc(tables.songs.created_at));
-    return rows as unknown as SongRow[];
+    return (rows as unknown as SongRow[]).map(withTaxonomy);
   },
 );
 
@@ -124,6 +151,8 @@ export const createSong = createServerFn({ method: "POST" })
         title: data.title,
         title_zh: data.title_zh || null,
         level: data.level,
+        genre: data.genre ?? null,
+        theme: data.theme ?? null,
         cover_url: data.cover_url || null,
         media_url: data.media_url,
         lyrics: data.lyrics as unknown as Json,
@@ -206,6 +235,8 @@ export const generateSongWithSuno = createServerFn({ method: "POST" })
           title_zh: data.title_zh || null,
           level: data.level,
           style: data.style,
+          genre: genreFromStyle(data.style),
+          theme: themeFromKeywords(data.topic, data.title, data.title_zh),
           topic: data.topic || null,
           lyrics: finalLyrics as unknown as Json,
           status: "generating_audio",
@@ -856,6 +887,12 @@ export async function submitSongToSuno(args: {
       title_zh: args.draft.title_zh || null,
       level: args.level,
       style: args.style,
+      genre: genreFromStyle(args.style),
+      theme: themeFromKeywords(
+        args.topic,
+        args.draft.title,
+        args.draft.title_zh,
+      ),
       topic: args.topic || null,
       lyrics: parsedLyrics as unknown as Json,
       status: "generating_audio",
@@ -932,6 +969,7 @@ export const retrySongGeneration = createServerFn({ method: "POST" })
       return updateSong(row.id, {
         lyrics: parsedLyrics as unknown as Json,
         style,
+        genre: genreFromStyle(style),
         status: "generating_audio",
         suno_audio_task_id: taskId,
         suno_audio_id: null,
@@ -942,6 +980,7 @@ export const retrySongGeneration = createServerFn({ method: "POST" })
       return updateSong(row.id, {
         lyrics: parsedLyrics as unknown as Json,
         style,
+        genre: genreFromStyle(style),
         status: "failed_audio",
         error,
       });
@@ -1082,6 +1121,29 @@ export const cancelSongGeneration = createServerFn({ method: "POST" })
     return { ok: true, status: nextStatus } as const;
   });
 
+/** 장르·주제를 직접 지정/해제한다. 스타일도 키워드도 없는 실제 노래(curated)는
+ * 유추가 불가능하고, AI 곡도 편집자가 다르게 묶고 싶을 수 있어서 열어둔다.
+ * 보내지 않은 축은 건드리지 않는다. */
+export const setSongTaxonomy = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        songId: z.string().uuid(),
+        genre: GenreEnum.nullable().optional(),
+        theme: ThemeEnum.nullable().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }): Promise<SongRow> => {
+    await assertEditor(context.userId);
+    const patch: Record<string, unknown> = {};
+    if (data.genre !== undefined) patch.genre = data.genre;
+    if (data.theme !== undefined) patch.theme = data.theme;
+    if (Object.keys(patch).length === 0) return fetchSong(data.songId);
+    return updateSong(data.songId, patch);
+  });
+
 // Delete a song row (editor only).
 export const deleteSong = createServerFn({ method: "POST" })
   .middleware([requireAuth])
@@ -1110,6 +1172,8 @@ const CuratedSongInput = z.object({
   title_zh: z.string().optional().default(""),
   artist: z.string().optional().default(""),
   level: LevelEnum,
+  genre: GenreEnum.optional(),
+  theme: ThemeEnum.optional(),
   youtube_url: z.string().url(),
   lyrics: z.array(z.string().min(1)).min(1),
   pinyin: z.array(z.string()).default([]),
@@ -1138,6 +1202,8 @@ export const createCuratedSong = createServerFn({ method: "POST" })
         title_zh: data.title_zh || null,
         artist: data.artist || null,
         level: data.level,
+        genre: data.genre ?? null,
+        theme: data.theme ?? null,
         source: "curated",
         external_url: data.youtube_url,
         youtube_id: ytId,

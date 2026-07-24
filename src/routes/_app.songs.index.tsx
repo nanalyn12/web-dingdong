@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, CalendarClock, Loader2, Music, Pencil, Play, Plus, Search, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -15,6 +15,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useMyProfile } from "@/lib/auth-client";
+import {
+  GENRE_LABEL,
+  SONG_GENRES,
+  SONG_THEMES,
+  STYLE_PRESETS,
+  THEME_LABEL,
+  type SongGenre,
+  type SongTheme,
+} from "@/lib/song-taxonomy";
 import {
   createSongSchedule,
   deleteSongSchedule,
@@ -38,19 +47,13 @@ import {
   type SongRow,
 } from "@/lib/songs.functions";
 
-const STYLE_PRESETS: { value: string; label: string }[] = [
-  { value: "cute k-pop, mandarin pop, bright", label: "🎀 큐트 K-POP" },
-  { value: "soft mandarin ballad, warm piano", label: "🌙 만다린 발라드" },
-  { value: "upbeat city pop, mandarin vocals", label: "🌆 시티팝" },
-  { value: "lo-fi hip hop, chill mandarin rap", label: "🎧 로파이 힙합" },
-  { value: "acoustic folk, gentle guitar, mandarin", label: "🌿 어쿠스틱 포크" },
-  { value: "edm dance pop, energetic mandarin", label: "💃 EDM 댄스" },
-  { value: "children song, playful mandarin, simple melody", label: "🧸 동요풍" },
-  { value: "traditional chinese, guzheng, modern fusion", label: "🏮 전통 퓨전" },
-];
-
 const songsSearchSchema = z.object({
   level: fallback(z.enum(["all", "beginner", "intermediate", "advanced"]), "all").default("all"),
+  // 장르·주제는 SONG_GENRES / SONG_THEMES 값 중 하나. 목록이 늘어도 스키마를
+  // 따라 고칠 일이 없도록 문자열로 둔다.
+  genre: fallback(z.string(), "all").default("all"),
+  theme: fallback(z.string(), "all").default("all"),
+  source: fallback(z.enum(["all", "suno", "curated"]), "all").default("all"),
   q: fallback(z.string(), "").default(""),
 });
 
@@ -134,7 +137,9 @@ function SongsPage() {
   >(null);
 
   const search = Route.useSearch();
-  const navigate = useNavigate({ from: "/songs" });
+  // 라우트 id는 "/songs/" — "/songs"로 적으면 검색 파라미터 타입이 never로
+  // 무너져서 search updater가 전부 타입 오류가 난다.
+  const navigate = useNavigate({ from: "/songs/" });
 
   // Drive Suno polling for any song still generating audio.
   // Polling calls an editor-only server fn; skip for students/guests to avoid
@@ -158,16 +163,53 @@ function SongsPage() {
     (s) => s.status === "failed_audio" || s.status === "failed_video",
   );
 
+  // 선택지는 고정 목록이 아니라 실제 등록된 곡에서 뽑는다 — 아직 한 곡도 없는
+  // 장르/주제를 고를 수 있게 두면 늘 빈 목록만 나온다. 순서는 SONG_GENRES /
+  // SONG_THEMES를 따른다 (가나다순이면 K-POP과 동요가 뒤섞인다).
+  const genreOptions = useMemo(() => {
+    const present = new Set((songs ?? []).map((s) => s.genre).filter(Boolean));
+    return SONG_GENRES.filter((g) => present.has(g.value));
+  }, [songs]);
+  const themeOptions = useMemo(() => {
+    const present = new Set((songs ?? []).map((s) => s.theme).filter(Boolean));
+    return SONG_THEMES.filter((t) => present.has(t.value));
+  }, [songs]);
+  // 실제 노래가 한 곡도 없으면 종류 필터는 보여줄 이유가 없다.
+  const hasBothSources = useMemo(() => {
+    const kinds = new Set((songs ?? []).map((s) => s.source));
+    return kinds.size > 1;
+  }, [songs]);
+
   const filteredSongs =
     songs?.filter((s) => {
       const levelMatch = search.level === "all" || s.level === search.level;
+      const genreMatch = search.genre === "all" || s.genre === search.genre;
+      const themeMatch = search.theme === "all" || s.theme === search.theme;
+      const sourceMatch = search.source === "all" || s.source === search.source;
       const q = search.q.trim().toLowerCase();
       const searchMatch =
         !q ||
         s.title.toLowerCase().includes(q) ||
         (s.title_zh && s.title_zh.toLowerCase().includes(q));
-      return levelMatch && searchMatch;
+      return levelMatch && genreMatch && themeMatch && sourceMatch && searchMatch;
     }) ?? [];
+
+  const filtering =
+    search.level !== "all" ||
+    search.genre !== "all" ||
+    search.theme !== "all" ||
+    search.source !== "all" ||
+    !!search.q.trim();
+  const resetFilters = () =>
+    navigate({
+      search: () => ({
+        level: "all" as const,
+        genre: "all",
+        theme: "all",
+        source: "all" as const,
+        q: "",
+      }),
+    });
 
   return (
     <div className="space-y-6">
@@ -238,25 +280,98 @@ function SongsPage() {
             </button>
           )}
         </div>
-        <div className="glass rounded-2xl flex items-center gap-2 px-3 py-2 w-full sm:w-48">
-          <SlidersHorizontal className="size-4 shrink-0 opacity-50" />
+      </div>
+
+      {/* 좁혀 보기 — 난이도·장르·주제·종류. 고를 게 하나뿐인 축은 숨긴다. */}
+      <div className="glass rounded-2xl p-2 flex items-center gap-2 flex-wrap">
+        <SlidersHorizontal className="size-4 shrink-0 opacity-50 ml-1" />
+        <Select
+          value={search.level}
+          onValueChange={(v) =>
+            navigate({ search: (prev: SearchParams) => ({ ...prev, level: v as typeof search.level }) })
+          }
+        >
+          <SelectTrigger className="h-8 w-32 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{LEVEL_LABEL.all}</SelectItem>
+            <SelectItem value="beginner">{LEVEL_LABEL.beginner}</SelectItem>
+            <SelectItem value="intermediate">{LEVEL_LABEL.intermediate}</SelectItem>
+            <SelectItem value="advanced">{LEVEL_LABEL.advanced}</SelectItem>
+          </SelectContent>
+        </Select>
+        {genreOptions.length > 1 && (
           <Select
-            value={search.level}
+            value={search.genre}
             onValueChange={(v) =>
-              navigate({ search: (prev: SearchParams) => ({ ...prev, level: v as typeof search.level }) })
+              navigate({ search: (prev: SearchParams) => ({ ...prev, genre: v }) })
             }
           >
-            <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 h-8 text-sm px-0 w-full">
+            <SelectTrigger className="h-8 w-44 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{LEVEL_LABEL.all}</SelectItem>
-              <SelectItem value="beginner">{LEVEL_LABEL.beginner}</SelectItem>
-              <SelectItem value="intermediate">{LEVEL_LABEL.intermediate}</SelectItem>
-              <SelectItem value="advanced">{LEVEL_LABEL.advanced}</SelectItem>
+              <SelectItem value="all">전체 장르</SelectItem>
+              {genreOptions.map((g) => (
+                <SelectItem key={g.value} value={g.value}>
+                  {g.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-        </div>
+        )}
+        {themeOptions.length > 1 && (
+          <Select
+            value={search.theme}
+            onValueChange={(v) =>
+              navigate({ search: (prev: SearchParams) => ({ ...prev, theme: v }) })
+            }
+          >
+            <SelectTrigger className="h-8 w-44 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 주제</SelectItem>
+              {themeOptions.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {hasBothSources && (
+          <Select
+            value={search.source}
+            onValueChange={(v) =>
+              navigate({ search: (prev: SearchParams) => ({ ...prev, source: v as typeof search.source }) })
+            }
+          >
+            <SelectTrigger className="h-8 w-36 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 종류</SelectItem>
+              <SelectItem value="curated">🎧 실제 노래</SelectItem>
+              <SelectItem value="suno">🤖 AI 생성</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        <span className="text-xs text-muted-foreground ml-auto mr-1">
+          {filteredSongs.length}곡
+          {filtering && ` / 전체 ${songs?.length ?? 0}곡`}
+        </span>
+        {filtering && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 text-xs"
+            onClick={resetFilters}
+          >
+            초기화
+          </Button>
+        )}
       </div>
 
       {creating === "manual" && isEditor && (
@@ -386,9 +501,9 @@ function SongsPage() {
       )}
       {!isLoading && filteredSongs.length === 0 && (
         <div className="glass rounded-3xl p-10 text-center">
-          <div className="text-4xl mb-2">🎶</div>
+          <div className="text-4xl mb-2">{songs && songs.length > 0 ? "🔍" : "🎶"}</div>
           <p className="font-medium">
-            {songs && songs.length > 0 ? "검색 결과가 없어요." : "아직 등록된 노래가 없어요."}
+            {songs && songs.length > 0 ? "조건에 맞는 곡이 없어요." : "아직 등록된 노래가 없어요."}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
             {songs && songs.length > 0
@@ -397,6 +512,11 @@ function SongsPage() {
                 ? "위의 [AI로 만들기] 또는 [수동 추가] 버튼으로 첫 곡을 등록해보세요."
                 : "곧 멋진 노래가 추가될 거예요!"}
           </p>
+          {songs && songs.length > 0 && filtering && (
+            <Button size="sm" variant="outline" className="mt-3" onClick={resetFilters}>
+              필터 초기화
+            </Button>
+          )}
         </div>
       )}
 
@@ -416,8 +536,15 @@ function SongsPage() {
                   {s.status === "generating_audio" || s.status === "generating_video" ? "⏳" : "🎵"}
                 </div>
               )}
-              <div className="absolute top-2 right-2 glass-soft rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                {LEVEL_LABEL[s.level] ?? s.level}
+              <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                  {LEVEL_LABEL[s.level] ?? s.level}
+                </span>
+                {s.genre && GENRE_LABEL[s.genre] && (
+                  <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-medium">
+                    {GENRE_LABEL[s.genre]}
+                  </span>
+                )}
               </div>
               <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
                 {s.source === "curated" ? (
@@ -449,6 +576,7 @@ function SongsPage() {
               <div className="text-[11px] text-muted-foreground mt-1">
                 {STATUS_LABEL[s.status] ??
                   `가사 ${Array.isArray(s.lyrics) ? s.lyrics.length : 0}줄`}
+                {s.theme && THEME_LABEL[s.theme] && ` · ${THEME_LABEL[s.theme]}`}
               </div>
             </div>
           </Link>
@@ -623,6 +751,8 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
           title_zh: titleZh,
           level,
           style,
+          // 작사에 쓴 키워드를 그대로 남긴다 — 주제 분류의 근거가 된다.
+          topic: keyword.trim(),
           lyrics: plain,
           parsedLyrics: parsed,
           vocalGender: vocalGender || undefined,
@@ -794,6 +924,8 @@ function CreateSongForm({ onDone }: { onDone: () => void }) {
   const [title, setTitle] = useState("");
   const [titleZh, setTitleZh] = useState("");
   const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner");
+  const [genre, setGenre] = useState<SongGenre | "">("");
+  const [theme, setTheme] = useState<SongTheme | "">("");
   const [coverUrl, setCoverUrl] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
   const [lyricsRaw, setLyricsRaw] = useState("");
@@ -806,6 +938,8 @@ function CreateSongForm({ onDone }: { onDone: () => void }) {
           title,
           title_zh: titleZh,
           level,
+          genre: genre || undefined,
+          theme: theme || undefined,
           cover_url: coverUrl,
           media_url: mediaUrl,
           lyrics,
@@ -846,6 +980,30 @@ function CreateSongForm({ onDone }: { onDone: () => void }) {
               <SelectItem value="beginner">입문</SelectItem>
               <SelectItem value="intermediate">중급</SelectItem>
               <SelectItem value="advanced">고급</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">장르 (선택)</label>
+          <Select value={genre || "_"} onValueChange={(v) => setGenre(v === "_" ? "" : (v as SongGenre))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_">지정 안 함</SelectItem>
+              {SONG_GENRES.map((g) => (
+                <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">주제 (선택)</label>
+          <Select value={theme || "_"} onValueChange={(v) => setTheme(v === "_" ? "" : (v as SongTheme))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_">지정 안 함</SelectItem>
+              {SONG_THEMES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -947,6 +1105,8 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
   const [titleZh, setTitleZh] = useState("");
   const [artist, setArtist] = useState("");
   const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner");
+  const [genre, setGenre] = useState<SongGenre | "">("");
+  const [theme, setTheme] = useState<SongTheme | "">("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [lyricsText, setLyricsText] = useState("");
   const [pinyinText, setPinyinText] = useState("");
@@ -963,6 +1123,8 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
           title_zh: titleZh.trim(),
           artist: artist.trim(),
           level,
+          genre: genre || undefined,
+          theme: theme || undefined,
           youtube_url: youtubeUrl.trim(),
           lyrics,
           pinyin,
@@ -1009,6 +1171,34 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
               <SelectItem value="beginner">입문</SelectItem>
               <SelectItem value="intermediate">중급</SelectItem>
               <SelectItem value="advanced">고급</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">장르</label>
+          <Select value={genre || "_"} onValueChange={(v) => setGenre(v === "_" ? "" : (v as SongGenre))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_">지정 안 함</SelectItem>
+              {SONG_GENRES.map((g) => (
+                <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            AI 생성 곡은 스타일에서 자동으로 정해지지만, 실제 노래는 직접 골라야
+            장르 필터에 잡혀요.
+          </p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">주제</label>
+          <Select value={theme || "_"} onValueChange={(v) => setTheme(v === "_" ? "" : (v as SongTheme))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_">지정 안 함</SelectItem>
+              {SONG_THEMES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

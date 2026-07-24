@@ -236,6 +236,10 @@ export const songs = pgTable("songs", {
   status: text("status").notNull().default("draft"),
   topic: text("topic"),
   style: text("style"),
+  // 필터 축 두 가지. 장르는 스타일 프리셋(또는 등록 폼)에서, 주제는 작사
+  // 키워드에서 정해진다. 값은 src/lib/song-taxonomy.ts 참고.
+  genre: text("genre"),
+  theme: text("theme"),
   youtube_id: text("youtube_id"),
   external_url: text("external_url"),
   media_url: text("media_url"),

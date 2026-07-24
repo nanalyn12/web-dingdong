@@ -26,6 +26,13 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyProfile } from "@/lib/auth-client";
 import { useSongProgress } from "@/lib/song-progress";
@@ -60,6 +67,14 @@ function isSectionHeader(text: string | null | undefined): boolean {
 }
 
 import {
+  GENRE_LABEL,
+  SONG_GENRES,
+  SONG_THEMES,
+  THEME_LABEL,
+  type SongGenre,
+  type SongTheme,
+} from "@/lib/song-taxonomy";
+import {
   generateSongLessonContent,
   generateSongMp4,
   getSong,
@@ -68,6 +83,7 @@ import {
   reannotateSong,
   resyncSongLyrics,
   setSongLyricTimes,
+  setSongTaxonomy,
   type GrammarNote,
   type LyricLine,
   type SongRow,
@@ -547,6 +563,16 @@ function SongPlayer({
                 <span className="rounded-full glass-soft px-2 py-0.5 text-[11px] font-semibold">
                   {LEVEL_LABEL[song.level] ?? song.level}
                 </span>
+                {song.genre && GENRE_LABEL[song.genre] && (
+                  <span className="rounded-full glass-soft px-2 py-0.5 text-[11px] font-semibold">
+                    {GENRE_LABEL[song.genre]}
+                  </span>
+                )}
+                {song.theme && THEME_LABEL[song.theme] && (
+                  <span className="rounded-full glass-soft px-2 py-0.5 text-[11px] font-semibold">
+                    {THEME_LABEL[song.theme]}
+                  </span>
+                )}
                 {song.source === "curated" ? (
                   <span className="rounded-full bg-rose-500/15 text-rose-700 px-2 py-0.5 text-[11px] font-semibold">
                     🎧 실제 노래
@@ -648,6 +674,7 @@ function SongPlayer({
                     🎤 탭 싱크
                   </Button>
                 )}
+                <TaxonomyEditor song={song} />
                 <ResyncLyricsButton song={song} />
                 <RetryMp4Button song={song} />
                 <MakeLessonContentButton song={song} />
@@ -1999,6 +2026,75 @@ function ReannotateButton({ song }: { song: SongRow }) {
   );
 }
 
+
+// Editor-only: set the genre / theme a song is filtered under. AI songs infer
+// both from their style preset and lyric keyword, but curated songs have
+// neither to go on.
+function TaxonomyEditor({ song }: { song: SongRow }) {
+  const { data: profile } = useMyProfile();
+  const qc = useQueryClient();
+  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const mutation = useMutation({
+    mutationFn: (patch: { genre?: SongGenre | null; theme?: SongTheme | null }) =>
+      setSongTaxonomy({ data: { songId: song.id, ...patch } }),
+    onSuccess: () => {
+      toast.success("분류를 저장했어요 🎼");
+      qc.invalidateQueries({ queryKey: ["song", song.id] });
+      qc.invalidateQueries({ queryKey: ["songs"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "분류 저장 실패"),
+  });
+
+  if (!isEditor) return null;
+  return (
+    <>
+      <Select
+        value={song.genre ?? "_"}
+        onValueChange={(v) =>
+          mutation.mutate({ genre: v === "_" ? null : (v as SongGenre) })
+        }
+        disabled={mutation.isPending}
+      >
+        <SelectTrigger
+          className="h-8 w-40 text-xs"
+          title="목록에서 이 곡이 묶일 장르예요."
+        >
+          <SelectValue placeholder="장르 지정" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="_">장르 없음</SelectItem>
+          {SONG_GENRES.map((g) => (
+            <SelectItem key={g.value} value={g.value}>
+              {g.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={song.theme ?? "_"}
+        onValueChange={(v) =>
+          mutation.mutate({ theme: v === "_" ? null : (v as SongTheme) })
+        }
+        disabled={mutation.isPending}
+      >
+        <SelectTrigger
+          className="h-8 w-40 text-xs"
+          title="목록에서 이 곡이 묶일 주제예요."
+        >
+          <SelectValue placeholder="주제 지정" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="_">주제 없음</SelectItem>
+          {SONG_THEMES.map((t) => (
+            <SelectItem key={t.value} value={t.value}>
+              {t.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  );
+}
 
 // Editor-only: re-pull Suno's word alignment when the highlight is off-beat.
 function ResyncLyricsButton({ song }: { song: SongRow }) {
