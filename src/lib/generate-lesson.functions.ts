@@ -72,7 +72,9 @@ function normalizeLesson(raw: z.infer<typeof LessonSchema>) {
 
 const toJson = (value: unknown): Json => value as Json;
 
-function extractJsonObject(text: string) {
+/** Exported so the video-lesson enrichment parses model output exactly the
+ * same way — a second copy of this would drift from this one. */
+export function extractJsonObject(text: string) {
   const trimmed = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");

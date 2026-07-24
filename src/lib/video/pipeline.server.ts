@@ -16,6 +16,7 @@ import type { Json } from "@/db/schema";
 import { getMediaDir } from "@/lib/suno.server";
 import { FOCUS_LABEL, levelFromAudience } from "./config";
 import type { ScriptScene, VideoJobConfig, VideoScript } from "./config";
+import type { LessonEnrichment } from "./lesson-enrich.server";
 
 // ─── job state helpers ───────────────────────────────────────────────────────
 
@@ -979,6 +980,20 @@ async function createLessonFromScript(
     .filter((sc) => sc.zh)
     .map((sc) => ({ zh: sc.zh, pinyin: sc.pinyin, ko: sc.ko }));
 
+  // 실전대화·슬라이드·퀴즈. Non-fatal: a video lesson without practice material
+  // is still a usable lesson, and this runs after the video is already
+  // published. The script's own per-scene quizzes are the fallback — they cost
+  // nothing and were being thrown away.
+  let enrichment: LessonEnrichment = { dialogues: [], slides: [], quiz: [] };
+  try {
+    const { buildLessonEnrichment } = await import("./lesson-enrich.server");
+    enrichment = await buildLessonEnrichment(cfg, script);
+  } catch (e) {
+    console.warn("[video] 강의 보강 콘텐츠 생성 실패 (비치명):", e);
+    const { quizFromScript } = await import("./lesson-enrich.server");
+    enrichment.quiz = quizFromScript(script);
+  }
+
   const [lesson] = await db
     .insert(tables.lessons)
     .values({
@@ -987,9 +1002,12 @@ async function createLessonFromScript(
       order_index: nextOrder,
       title: script.title.slice(0, 80),
       lesson_type: "video",
-      level: "beginner",
+      level: levelFromAudience(cfg.audience),
       content_md: contentMd,
       key_expressions: keyExpressions as unknown as Json,
+      dialogues: enrichment.dialogues as unknown as Json,
+      slides: enrichment.slides as unknown as Json,
+      quiz: enrichment.quiz as unknown as Json,
       video: {
         youtube_video_id: videoRef.youtubeVideoId ?? undefined,
         media_url: videoRef.mediaUrl ?? undefined,
