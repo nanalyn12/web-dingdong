@@ -56,6 +56,8 @@ import {
   getYouTubeStatus,
   listVideoJobs,
   listVideoSchedules,
+  listWebHostedVideos,
+  rehostWebHostedVideos,
   retryVideoJob,
   runVideoScheduleNow,
   suggestVideoTopics,
@@ -227,7 +229,8 @@ function StudioPage() {
           <CreateWizard initialCourseId={search.courseId || null} />
         </TabsContent>
 
-        <TabsContent value="jobs" className="mt-4">
+        <TabsContent value="jobs" className="mt-4 space-y-4">
+          <RehostPanel />
           <JobList jobs={jobs.data ?? []} />
         </TabsContent>
 
@@ -235,6 +238,74 @@ function StudioPage() {
           <SchedulePanel />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+/* ── 웹 전용 영상 → YouTube 이전 ────────────────────────────────────────── */
+
+// Web-only renders keep their mp4 on the volume forever, which is what filled
+// it. This moves them onto YouTube in small batches; the panel disappears once
+// nothing is left to move.
+function RehostPanel() {
+  const qc = useQueryClient();
+  const callList = useServerFn(listWebHostedVideos);
+  const callRehost = useServerFn(rehostWebHostedVideos);
+  const [log, setLog] = useState<string[]>([]);
+
+  const pending = useQuery({
+    queryKey: ["web-hosted-videos"],
+    queryFn: () => callList({}),
+  });
+
+  const run = useMutation({
+    mutationFn: () => callRehost({ data: { batch: 3 } }),
+    onSuccess: ({ results, remaining }) => {
+      setLog((prev) => [
+        ...prev,
+        ...results.map((r) =>
+          r.status === "migrated"
+            ? `✅ ${r.title.slice(0, 34)} → ${r.videoId} (${Math.round((r.freedBytes ?? 0) / 1e6)}MB 확보)`
+            : `${r.status === "skipped" ? "⏭️" : "❌"} ${r.title.slice(0, 34)} — ${r.reason}`,
+        ),
+      ]);
+      const ok = results.filter((r) => r.status === "migrated").length;
+      if (ok > 0) toast.success(`${ok}개 이전 완료 — 남은 ${remaining}개`);
+      else toast.error("이전된 영상이 없어요. 로그를 확인해주세요.");
+      qc.invalidateQueries({ queryKey: ["web-hosted-videos"] });
+      qc.invalidateQueries({ queryKey: ["video-jobs"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "이전 실패"),
+  });
+
+  const count = pending.data?.length ?? 0;
+  if (!pending.isLoading && count === 0 && log.length === 0) return null;
+
+  return (
+    <div className="glass rounded-2xl p-4 space-y-3 border border-amber-400/40 bg-amber-50/40">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Youtube className="size-4 text-red-500 shrink-0" />
+        <span className="text-sm font-semibold">웹 전용 영상 {count}개가 볼륨을 쓰고 있어요</span>
+        <span className="text-xs text-muted-foreground">
+          YouTube(비공개 목록)로 옮기면 볼륨이 비워지고 재생은 임베드로 바뀝니다.
+        </span>
+        <Button
+          size="sm"
+          className="ml-auto"
+          disabled={run.isPending || count === 0}
+          onClick={() => run.mutate()}
+        >
+          {run.isPending && <Loader2 className="size-3.5 mr-1 animate-spin" />}
+          {run.isPending ? "업로드 중…" : `3개 이전하기`}
+        </Button>
+      </div>
+      {log.length > 0 && (
+        <div className="rounded-xl bg-white/60 p-2 max-h-56 overflow-auto text-[11px] font-mono space-y-0.5">
+          {log.map((l, i) => (
+            <div key={i}>{l}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

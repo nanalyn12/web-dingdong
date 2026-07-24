@@ -148,6 +148,36 @@ export const getYouTubeStatus = createServerFn({ method: "GET" })
     return { connected: await youtubeConnected() };
   });
 
+// ── 웹 전용 영상 → YouTube 이전 ─────────────────────────────────────────────
+
+/** 볼륨에서 재생 중인(웹 전용) 드라마 목록 — 이전 대상. */
+export const listWebHostedVideos = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) => {
+    await assertEditor(context.userId);
+    const { listWebHostedDramas } = await import("./rehost.server");
+    return await listWebHostedDramas();
+  });
+
+/** 웹 전용 영상을 YouTube로 올리고 볼륨을 비운다. 한 번에 batch개씩 —
+ * 업로드는 느리고 서버 요청 타임아웃이 있으니 여러 번 나눠 호출한다. */
+export const rehostWebHostedVideos = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ batch: z.number().int().min(1).max(10).default(3) }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { youtubeConnected } = await import("./youtube.server");
+    if (!(await youtubeConnected())) {
+      throw new Error("YouTube가 연결되어 있지 않아요. 먼저 연결해주세요.");
+    }
+    const { rehostWebHostedDramas } = await import("./rehost.server");
+    const results = await rehostWebHostedDramas(data.batch);
+    const { listWebHostedDramas } = await import("./rehost.server");
+    return { results, remaining: (await listWebHostedDramas()).length };
+  });
+
 // ── 예약·반복 ────────────────────────────────────────────────────────────────
 
 const ScheduleConfigInput = ConfigInput.omit({ keyword: true, topic: true }).extend({

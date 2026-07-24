@@ -91,10 +91,59 @@ function run(cmd: string, args: string[]): Promise<void> {
     });
     ps.on("error", reject);
     ps.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`ffmpeg 실패 (code ${code}): …${err.slice(-600)}`));
+      if (code === 0) return resolve();
+      // ffmpeg buries the real cause under 600 chars of encoder statistics.
+      // A full disk is the one failure the operator must act on, so say it
+      // plainly instead of making them read x264 parameters.
+      if (/No space left on device/i.test(err)) {
+        return reject(
+          new Error(
+            "저장 공간이 부족해 영상을 쓰지 못했어요. Railway 볼륨을 늘리거나 오래된 영상을 정리해주세요.",
+          ),
+        );
+      }
+      reject(new Error(`ffmpeg 실패 (code ${code}): …${err.slice(-600)}`));
     });
   });
+}
+
+// ─── disk space ──────────────────────────────────────────────────────────────
+
+/** Free bytes on the media volume, or null when the platform can't tell us. */
+async function freeMediaBytes(): Promise<number | null> {
+  try {
+    const { statfs } = await import("node:fs/promises");
+    const st = await statfs(getMediaDir());
+    return st.bavail * st.bsize;
+  } catch {
+    return null; // statfs is unavailable on some platforms — skip the check
+  }
+}
+
+/** Rough size of the finished mp4. The rate is measured, not theoretical: the
+ * rendered library averages ~1.8 Mbps at 720p (crf 23 over stock footage, which
+ * compresses worse than a static talking head). 1080p is scaled from that. */
+function estimateOutputBytes(cfg: VideoJobConfig): number {
+  const bitsPerSec = cfg.resolution === "1920x1080" ? 3_500_000 : 1_800_000;
+  return ((cfg.lengthSeconds + 2) * bitsPerSec) / 8 + 1_000_000;
+}
+
+/** Refuse to start a render that cannot possibly fit.
+ *
+ * Without this the job runs the whole way — Gemini script, Google TTS for every
+ * sentence, a Pexels clip per scene — and only dies at the final mux, so a full
+ * volume burns real API spend on each of the eight daily schedules. Headroom is
+ * 2x the estimate: the mux writes the mp4, then the BGM pass rewrites it. */
+async function assertRenderSpace(cfg: VideoJobConfig): Promise<void> {
+  const free = await freeMediaBytes();
+  if (free === null) return;
+  const need = estimateOutputBytes(cfg) * 2;
+  if (free >= need) return;
+  const mb = (n: number) => `${Math.round(n / 1_000_000)}MB`;
+  throw new Error(
+    `저장 공간 부족 — 남은 용량 ${mb(free)}, 이 영상에 최소 ${mb(need)} 필요. ` +
+      `Railway 볼륨을 늘리거나 오래된 영상을 정리한 뒤 다시 시도해주세요.`,
+  );
 }
 
 // CJK-capable font for drawtext/subtitles — downloaded once, cached on disk.
@@ -416,9 +465,15 @@ export async function runVideoJob(jobId: string): Promise<void> {
 
   const work = join(tmpdir(), `dingdong-video-${jobId.slice(0, 8)}`);
   await mkdir(work, { recursive: true });
+  // Set once the mp4 + thumbnail are complete on the volume — from that point
+  // a failure is an upload problem and the files are worth keeping.
+  let rendered = false;
 
   try {
     await setJob(jobId, { status: "running", error: null });
+
+    // 0) Fail fast on a full volume — before spending Gemini/TTS/Pexels calls.
+    await assertRenderSpace(cfg);
 
     // 1) Script
     await step(jobId, "대본 생성 중 (Gemini)", 5);
@@ -618,6 +673,7 @@ export async function runVideoJob(jobId: string): Promise<void> {
       thumbnail_path: thumbName,
       progress: 100,
     });
+    rendered = true;
 
     if (cfg.uploadMode === "auto") {
       await uploadAndFinalize(jobId);
@@ -629,11 +685,32 @@ export async function runVideoJob(jobId: string): Promise<void> {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`[video ${jobId.slice(0, 8)}] failed:`, msg);
-    await setJob(jobId, { status: "failed", error: msg });
+    // A render that died mid-write leaves a half-finished mp4 on the volume,
+    // and the boot-time orphan sweep won't touch it while the job row exists.
+    // On a schedule that retries daily those partials pile up on exactly the
+    // disk that was already too full.
+    //
+    // Only render-stage failures though — once the mp4 is finished, a failed
+    // upload keeps it on purpose so 재시도 can resume from the upload step.
+    if (!rendered) {
+      await discardJobOutput(jobId);
+      await setJob(jobId, { status: "failed", error: msg, video_path: null });
+    } else {
+      await setJob(jobId, { status: "failed", error: msg });
+    }
     const { notifyAdmins } = await import("@/lib/notify.server");
     await notifyAdmins("🎬 영상 생성 실패", `${cfg.topic || cfg.keyword}: ${msg}`);
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/** Remove a job's rendered mp4/thumbnail from the volume. Safe to call when
+ * they were never written. */
+async function discardJobOutput(jobId: string): Promise<void> {
+  const dir = getMediaDir();
+  for (const name of [`videos/${jobId}.mp4`, `videos/${jobId}-thumb.jpg`]) {
+    await rm(join(dir, name), { force: true }).catch(() => {});
   }
 }
 
