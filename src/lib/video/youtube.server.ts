@@ -19,6 +19,13 @@ const SCOPE = [
  * Callers can catch this to fall back to web-only publishing. */
 export class YouTubeAuthError extends Error {}
 
+/** Raised when the channel hit its daily upload allowance
+ * ("uploadLimitExceeded"). Distinct from YouTubeAuthError because reconnecting
+ * does not help — the allowance is per channel per ~24h, so a schedule that
+ * queues several videos at once exhausts it partway through. Callers publish
+ * web-only rather than throwing away an mp4 that is already rendered. */
+export class YouTubeUploadLimitError extends Error {}
+
 function clientCreds() {
   const id = process.env.GOOGLE_CLIENT_ID;
   const secret = process.env.GOOGLE_CLIENT_SECRET;
@@ -372,6 +379,11 @@ export async function uploadToYouTube(args: {
   );
   if (!init.ok) {
     const t = await init.text().catch(() => "");
+    if (t.includes("uploadLimitExceeded")) {
+      throw new YouTubeUploadLimitError(
+        "YouTube 일일 업로드 한도를 초과했어요 (uploadLimitExceeded). 한도는 약 24시간 뒤 회복됩니다.",
+      );
+    }
     throw new Error(`YouTube 업로드 시작 실패 (${init.status}): ${t.slice(0, 300)}`);
   }
   const location = init.headers.get("location");

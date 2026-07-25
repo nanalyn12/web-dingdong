@@ -95,15 +95,26 @@ async function tick() {
       const lastKst = new Date(new Date(s.last_run_at).getTime() + 9 * 3600_000)
         .toISOString()
         .slice(0, 10);
-      if (lastKst === dateKey) continue;
+      if (lastKst === dateKey) {
+        // Logged because a silent skip here is indistinguishable from a
+        // scheduler that never ticked at all.
+        console.log(`[scheduler] "${s.name}" ${dateKey}에 이미 실행됨 → 건너뜀`);
+        continue;
+      }
     }
-    await runScheduleOnce(s.id);
+    await runScheduleOnce(s.id, { scheduled: true });
   }
 }
 
 /** Creates the schedule's jobs (countPerRun, rotating keywords — one keyword
- *  per job). Exported for the "지금 실행" button; returns the first job id. */
-export async function runScheduleOnce(scheduleId: string): Promise<string> {
+ *  per job). Exported for the "지금 실행" button; returns the first job id.
+ *
+ *  `scheduled` marks a run that came from the ticker — only those stamp
+ *  last_run_at (see below). */
+export async function runScheduleOnce(
+  scheduleId: string,
+  opts: { scheduled?: boolean } = {},
+): Promise<string> {
   const rows = await db
     .select()
     .from(tables.video_schedules)
@@ -138,11 +149,14 @@ export async function runScheduleOnce(scheduleId: string): Promise<string> {
     jobIds.push(job.id);
   }
 
+  // last_run_at is strictly the ticker's "already ran today" marker, so only a
+  // scheduled run stamps it. A manual 지금 실행 that stamped it would make the
+  // tick skip that day's real run.
   await db
     .update(tables.video_schedules)
     .set({
       next_keyword_index: (idx + count) % keywords.length,
-      last_run_at: new Date().toISOString(),
+      ...(opts.scheduled ? { last_run_at: new Date().toISOString() } : {}),
     })
     .where(eq(tables.video_schedules.id, scheduleId));
 

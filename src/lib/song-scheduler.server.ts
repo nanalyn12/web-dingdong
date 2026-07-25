@@ -56,17 +56,28 @@ async function songTick() {
       const lastKst = new Date(new Date(s.last_run_at).getTime() + 9 * 3600_000)
         .toISOString()
         .slice(0, 10);
-      if (lastKst === dateKey) continue; // already ran today
+      if (lastKst === dateKey) {
+        // Logged because a silent skip here is indistinguishable from a
+        // scheduler that never ticked at all.
+        console.log(`[song-sched] "${s.name}" ${dateKey}에 이미 실행됨 → 건너뜀`);
+        continue;
+      }
     }
-    await runSongScheduleOnce(s.id).catch((e) =>
+    await runSongScheduleOnce(s.id, { scheduled: true }).catch((e) =>
       console.error(`[song-sched] "${s.name}" 실행 실패:`, e),
     );
   }
 }
 
 /** Create one song from a schedule (rotating keywords). Exported for the
- *  "지금 실행" button. Returns the created songId. */
-export async function runSongScheduleOnce(scheduleId: string): Promise<string> {
+ *  "지금 실행" button. Returns the created songId.
+ *
+ *  `scheduled` marks a run that came from the ticker — only those stamp
+ *  last_run_at (see below). */
+export async function runSongScheduleOnce(
+  scheduleId: string,
+  opts: { scheduled?: boolean } = {},
+): Promise<string> {
   const rows = await db
     .select()
     .from(tables.song_schedules)
@@ -86,7 +97,20 @@ export async function runSongScheduleOnce(scheduleId: string): Promise<string> {
   const { draftSongInternal, submitSongToSuno } = await import(
     "@/lib/songs.functions"
   );
-  const draft = await draftSongInternal({ keyword, level, style: s.style });
+  // Drafting runs before any songs row exists, so a Gemini failure here used
+  // to leave nothing at all behind — no row, no notification, just a log line.
+  let draft: Awaited<ReturnType<typeof draftSongInternal>>;
+  try {
+    draft = await draftSongInternal({ keyword, level, style: s.style });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const { notifyAdmins } = await import("@/lib/notify.server");
+    await notifyAdmins(
+      "🎵 학습송 가사 생성 실패",
+      `"${s.name}" (키워드: ${keyword}) — ${msg}`,
+    ).catch(() => {});
+    throw e;
+  }
   const { songId, ok, error } = await submitSongToSuno({
     draft,
     level,
@@ -97,14 +121,18 @@ export async function runSongScheduleOnce(scheduleId: string): Promise<string> {
       s.vocal_gender === "m" || s.vocal_gender === "f" ? s.vocal_gender : undefined,
   });
 
-  // The run happened either way — advance the rotation and stamp it so the
-  // schedule doesn't retry this minute. A Suno rejection leaves a visible
-  // failed song (with its lyrics) that an editor can fix and retry.
+  // The run happened either way — advance the rotation. A Suno rejection
+  // leaves a visible failed song (with its lyrics) that an editor can fix.
+  //
+  // last_run_at is strictly the ticker's "already ran today" marker, so only a
+  // scheduled run stamps it. A manual 지금 실행 that stamped it would make the
+  // tick skip that day's real run — testing a schedule in the morning silently
+  // cancelled its evening firing.
   await db
     .update(tables.song_schedules)
     .set({
       next_keyword_index: (idx + 1) % keywords.length,
-      last_run_at: new Date().toISOString(),
+      ...(opts.scheduled ? { last_run_at: new Date().toISOString() } : {}),
     })
     .where(eq(tables.song_schedules.id, scheduleId));
 
