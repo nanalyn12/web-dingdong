@@ -733,11 +733,27 @@ export async function advanceSongMp4(row: SongRow): Promise<SongRow> {
       return row; // still pending
     }
 
-    const video = await downloadAndStore(
-      rec.response.videoUrl,
-      `songs/${row.id}/${row.suno_audio_id ?? "track"}.mp4`,
-      "video/mp4",
-    );
+    let video: { url: string };
+    try {
+      video = await downloadAndStore(
+        rec.response.videoUrl,
+        `songs/${row.id}/${row.suno_audio_id ?? "track"}.mp4`,
+        "video/mp4",
+      );
+    } catch (e) {
+      // Suno keeps the file ~15 days but the task still reports SUCCESS after
+      // it is swept, so the URL 404s forever. Retrying every 20s never
+      // succeeds — record it as failed so the poller lets go and the editor
+      // can decide whether the video is worth regenerating.
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/\((?:404|410|451)\)/.test(msg)) {
+        await updateSong(row.id, {
+          status: "failed_video",
+          error: `Suno 임시 파일이 만료되어 영상을 가져올 수 없어요 (${msg}). 필요하면 MP4를 다시 만들어주세요.`,
+        });
+      }
+      throw e;
+    }
 
     return updateSong(row.id, { video_url: video.url, status: "ready" });
 }
