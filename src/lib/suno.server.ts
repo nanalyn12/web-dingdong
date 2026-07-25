@@ -199,22 +199,33 @@ export async function sunoCreateMp4(args: {
   });
 }
 
+export type SunoMp4Status =
+  | "PENDING"
+  | "SUCCESS"
+  | "CREATE_TASK_FAILED"
+  | "GENERATE_MP4_FAILED"
+  | "CALLBACK_EXCEPTION";
+
 export type SunoMp4Record = {
   taskId: string;
-  status:
-    | "PENDING"
-    | "SUCCESS"
-    | "CREATE_TASK_FAILED"
-    | "GENERATE_MP4_FAILED"
-    | "CALLBACK_EXCEPTION";
+  status: SunoMp4Status;
   errorMessage?: string | null;
   response?: { videoUrl?: string } | null;
 };
 
+/** Unlike the music endpoint, the MP4 endpoint reports progress in
+ * `successFlag` — there is no `status` field on the payload at all. Reading
+ * `status` yielded undefined, which callers read as "still generating", so a
+ * finished video was never downloaded and quietly expired after 15 days.
+ * Normalize here so callers keep one field to check. */
 export async function sunoGetMp4(taskId: string): Promise<SunoMp4Record> {
-  return sunoFetch<SunoMp4Record>("/api/v1/mp4/record-info", {
-    query: { taskId },
-  });
+  const raw = await sunoFetch<
+    Omit<SunoMp4Record, "status"> & {
+      status?: SunoMp4Status;
+      successFlag?: SunoMp4Status;
+    }
+  >("/api/v1/mp4/record-info", { query: { taskId } });
+  return { ...raw, status: raw.successFlag ?? raw.status ?? "PENDING" };
 }
 
 // ─── Storage helpers ────────────────────────────────────────────────────────

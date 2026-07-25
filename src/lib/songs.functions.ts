@@ -541,27 +541,16 @@ export async function advanceSongAudio(row: SongRow): Promise<SongRow> {
       console.warn("[song lesson] auto-generate failed:", e);
     }
 
-    // Auto-kickoff MP4 generation right after audio is ready.
-    // Failures here are non-fatal — audio still becomes usable; user can retry MP4.
-    let mp4Patch: { suno_mp4_task_id?: string; status?: string } = {
-      status: "ready",
-    };
-    try {
-      const { sunoCreateMp4 } = await import("@/lib/suno.server");
-      const mp4 = await sunoCreateMp4({
-        taskId: row.suno_audio_task_id,
-        audioId: track.id,
-        author: "DingDong",
-        domainName: "dingdong.lms",
-      });
-      mp4Patch = {
-        suno_mp4_task_id: mp4.taskId,
-        status: "generating_video",
-      };
-    } catch (e) {
-      console.warn("[suno] auto MP4 kickoff failed:", e);
-      // Keep status = ready so audio playback still works; editor can retry.
-    }
+    // MP4 video is opt-in, not automatic. Every song used to kick one off, at
+    // 2 credits and ~8MB of volume each (~2.2GB/month at the current schedule
+    // load) — for a video most songs never needed. Editors start one from the
+    // song page (generateSongMp4) when they actually want it.
+    //
+    // It also removed a race: the client poller and the background poller both
+    // reach this point for the same song, and the loser used to create a second
+    // paid task, get a 409, and write status = ready — which hid the song from
+    // the poller so the video the winner paid for was never downloaded.
+    const mp4Patch = { status: "ready" };
 
     return updateSong(row.id, {
       media_url: audio.url,
