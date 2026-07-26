@@ -42,6 +42,8 @@ export const Route = createFileRoute("/_app/dramas/")({
   notFoundComponent: () => <div>없습니다.</div>,
 });
 
+const PAGE_SIZE = 24;
+
 const LEVEL_LABEL: Record<string, string> = {
   beginner: "입문",
   intermediate: "중급",
@@ -96,6 +98,17 @@ function DramasPage() {
     [dramas, genreFilter, levelFilter],
   );
   const filtering = genreFilter !== "all" || levelFilter !== "all";
+
+  // The library grows by a handful of videos a day, so the grid is paged
+  // rather than rendering every card. Filtering narrows the same list, so the
+  // page resets whenever it changes — otherwise a filter applied on page 5
+  // would open on an empty screen.
+  const [shown, setShown] = useState(PAGE_SIZE);
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+  }, [genreFilter, levelFilter]);
+  const pagedDramas = visibleDramas.slice(0, shown);
+  const remaining = visibleDramas.length - pagedDramas.length;
 
   const del = useMutation({
     mutationFn: (id: string) => deleteDrama({ data: { id } }),
@@ -266,7 +279,7 @@ function DramasPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visibleDramas.map((d) => {
+        {pagedDramas.map((d) => {
           const canDelete = isAdmin || d.created_by === profile?.id;
           return (
             <div
@@ -342,6 +355,21 @@ function DramasPage() {
           );
         })}
       </div>
+
+      {remaining > 0 && (
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <Button
+            variant="outline"
+            className="rounded-2xl px-8"
+            onClick={() => setShown((n) => n + PAGE_SIZE)}
+          >
+            더 보기 ({remaining}개 남음)
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {pagedDramas.length} / {visibleDramas.length}개
+          </span>
+        </div>
+      )}
     </div>
   );
 }

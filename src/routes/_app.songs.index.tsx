@@ -89,6 +89,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 // Suno audio 생성은 보통 60~180초 소요. 진행률은 경과시간 기반 추정.
+const PAGE_SIZE = 24;
 const EST_AUDIO_SEC = 150;
 const EST_VIDEO_SEC = 120;
 const POLL_INTERVAL_MS = 8000;
@@ -200,6 +201,15 @@ function SongsPage() {
     search.theme !== "all" ||
     search.source !== "all" ||
     !!search.q.trim();
+
+  // Paged like the video library — filters narrow the same list, so any change
+  // to them starts over rather than leaving the reader deep in a shorter list.
+  const [shown, setShown] = useState(PAGE_SIZE);
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+  }, [search.level, search.genre, search.theme, search.source, search.q]);
+  const pagedSongs = filteredSongs.slice(0, shown);
+  const remaining = filteredSongs.length - pagedSongs.length;
   const resetFilters = () =>
     navigate({
       search: () => ({
@@ -521,7 +531,7 @@ function SongsPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredSongs.map((s) => (
+        {pagedSongs.map((s) => (
           <Link
             key={s.id}
             to="/songs/$id"
@@ -588,6 +598,21 @@ function SongsPage() {
           </Link>
         ))}
       </div>
+
+      {remaining > 0 && (
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <Button
+            variant="outline"
+            className="rounded-2xl px-8"
+            onClick={() => setShown((n) => n + PAGE_SIZE)}
+          >
+            더 보기 ({remaining}곡 남음)
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {pagedSongs.length} / {filteredSongs.length}곡
+          </span>
+        </div>
+      )}
     </div>
   );
 }
