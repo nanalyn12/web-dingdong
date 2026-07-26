@@ -67,12 +67,12 @@ export function useDraggableFab() {
     const r = el.getBoundingClientRect();
     startRef.current = { px: e.clientX, py: e.clientY, x: r.left, y: r.top };
     movedRef.current = false;
-    try {
-      el.setPointerCapture(e.pointerId);
-    } catch {
-      // Capture is an optimization (it keeps moves coming when the pointer
-      // outruns the button); dragging still works without it.
-    }
+    // Capture is deliberately NOT taken here. Capturing on pointerdown
+    // retargets the compatibility mouse events — and therefore `click` — to
+    // the capturing wrapper, so the button's own onClick never fired and the
+    // panel could not be opened with a mouse at all. Touch was unaffected
+    // because it captures the original target implicitly. It is taken in
+    // onPointerMove instead, once this is known to be a drag.
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLElement>) => {
@@ -82,6 +82,16 @@ export function useDraggableFab() {
     const dx = e.clientX - start.px;
     const dy = e.clientY - start.py;
     if (!movedRef.current && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    if (!movedRef.current) {
+      // Now it is a drag, so keep the moves coming even if the pointer
+      // outruns the button. Retargeting the click no longer matters here —
+      // `wasDragged` suppresses it anyway.
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        /* dragging still works without capture */
+      }
+    }
     movedRef.current = true;
     const next = {
       x: clamp(start.x + dx, MARGIN, window.innerWidth - el.offsetWidth - MARGIN),
