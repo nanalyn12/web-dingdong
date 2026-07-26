@@ -1542,6 +1542,13 @@ type AnswerState = {
   orderPicks?: number[];
 };
 
+/** What the learner should have answered, whatever the question type. */
+function correctAnswerText(q: QuizItem): string | undefined {
+  if (q.type === "choice") return q.options[q.correct];
+  if (q.type === "fill") return q.answer;
+  return q.answer_text;
+}
+
 function QuizRunner({
   quiz,
   onScore,
@@ -1698,10 +1705,22 @@ function QuizRunner({
             ) : (
               <X className="size-5 shrink-0 mt-0.5" />
             )}
-            <div>
-              <div className="font-bold mb-1">
+            <div className="space-y-1">
+              <div className="font-bold">
                 {a.correct ? "정답이에요! 🎉" : "아쉬워요"}
               </div>
+              {/* Only about a third of generated items carry an explanation, so
+                  a wrong answer used to leave nothing but "아쉬워요". The
+                  answer itself is always present — show it here for every
+                  question type rather than per-block. */}
+              {!a.correct && correctAnswerText(q) && (
+                <div>
+                  정답:{" "}
+                  <span className="font-semibold" lang="zh-CN">
+                    {correctAnswerText(q)}
+                  </span>
+                </div>
+              )}
               {q.explanation && <div>{q.explanation}</div>}
             </div>
           </div>
@@ -1873,14 +1892,7 @@ function FillBlock({
           </Button>
         </div>
       )}
-      {submitted && !answer?.correct && (
-        <div className="text-sm">
-          정답:{" "}
-          <span className="font-semibold text-emerald-700" lang="zh-CN">
-            {q.answer}
-          </span>
-        </div>
-      )}
+      {/* The correct answer is shown once, in the shared feedback box below. */}
       {!submitted && q.hint && (
         <Collapsible>
           <CollapsibleTrigger asChild>
@@ -1981,14 +1993,7 @@ function OrderBlock({
           </Button>
         </div>
       )}
-      {submitted && q.answer_text && (
-        <div className="text-sm">
-          정답:{" "}
-          <span className="font-semibold text-emerald-700" lang="zh-CN">
-            {q.answer_text}
-          </span>
-        </div>
-      )}
+      {/* The correct answer is shown once, in the shared feedback box below. */}
     </div>
   );
 }
