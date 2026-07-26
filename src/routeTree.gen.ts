@@ -19,11 +19,11 @@ import { Route as AppStudentsRouteImport } from './routes/_app.students'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppCoursesRouteImport } from './routes/_app.courses'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppSongsIndexRouteImport } from './routes/_app.songs.index'
 import { Route as AppDramasIndexRouteImport } from './routes/_app.dramas.index'
 import { Route as AppCurriculumIndexRouteImport } from './routes/_app.curriculum.index'
+import { Route as AppCoursesIndexRouteImport } from './routes/_app.courses.index'
 import { Route as ApiYoutubeConnectRouteImport } from './routes/api/youtube.connect'
 import { Route as ApiYoutubeCallbackRouteImport } from './routes/api/youtube.callback'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
@@ -85,11 +85,6 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
-const AppCoursesRoute = AppCoursesRouteImport.update({
-  id: '/courses',
-  path: '/courses',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppAdminRoute = AppAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -108,6 +103,11 @@ const AppDramasIndexRoute = AppDramasIndexRouteImport.update({
 const AppCurriculumIndexRoute = AppCurriculumIndexRouteImport.update({
   id: '/curriculum/',
   path: '/curriculum/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCoursesIndexRoute = AppCoursesIndexRouteImport.update({
+  id: '/courses/',
+  path: '/courses/',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiYoutubeConnectRoute = ApiYoutubeConnectRouteImport.update({
@@ -151,9 +151,9 @@ const AppCurriculumIdRoute = AppCurriculumIdRouteImport.update({
   getParentRoute: () => AppRoute,
 } as any)
 const AppCoursesIdRoute = AppCoursesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppCoursesRoute,
+  id: '/courses/$id',
+  path: '/courses/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 const ApiPublicHooksReengagementPushRoute =
   ApiPublicHooksReengagementPushRouteImport.update({
@@ -172,7 +172,6 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AppAdminRoute
-  '/courses': typeof AppCoursesRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/integrations': typeof AppIntegrationsRoute
   '/onboarding': typeof AppOnboardingRoute
@@ -189,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/youtube/callback': typeof ApiYoutubeCallbackRoute
   '/api/youtube/connect': typeof ApiYoutubeConnectRoute
+  '/courses/': typeof AppCoursesIndexRoute
   '/curriculum/': typeof AppCurriculumIndexRoute
   '/dramas/': typeof AppDramasIndexRoute
   '/songs/': typeof AppSongsIndexRoute
@@ -198,7 +198,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/admin': typeof AppAdminRoute
-  '/courses': typeof AppCoursesRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/integrations': typeof AppIntegrationsRoute
   '/onboarding': typeof AppOnboardingRoute
@@ -216,6 +215,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/youtube/callback': typeof ApiYoutubeCallbackRoute
   '/api/youtube/connect': typeof ApiYoutubeConnectRoute
+  '/courses': typeof AppCoursesIndexRoute
   '/curriculum': typeof AppCurriculumIndexRoute
   '/dramas': typeof AppDramasIndexRoute
   '/songs': typeof AppSongsIndexRoute
@@ -227,7 +227,6 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/_app/admin': typeof AppAdminRoute
-  '/_app/courses': typeof AppCoursesRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/onboarding': typeof AppOnboardingRoute
@@ -245,6 +244,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/youtube/callback': typeof ApiYoutubeCallbackRoute
   '/api/youtube/connect': typeof ApiYoutubeConnectRoute
+  '/_app/courses/': typeof AppCoursesIndexRoute
   '/_app/curriculum/': typeof AppCurriculumIndexRoute
   '/_app/dramas/': typeof AppDramasIndexRoute
   '/_app/songs/': typeof AppSongsIndexRoute
@@ -257,7 +257,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/admin'
-    | '/courses'
     | '/dashboard'
     | '/integrations'
     | '/onboarding'
@@ -274,6 +273,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/youtube/callback'
     | '/api/youtube/connect'
+    | '/courses/'
     | '/curriculum/'
     | '/dramas/'
     | '/songs/'
@@ -283,7 +283,6 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/admin'
-    | '/courses'
     | '/dashboard'
     | '/integrations'
     | '/onboarding'
@@ -301,6 +300,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/youtube/callback'
     | '/api/youtube/connect'
+    | '/courses'
     | '/curriculum'
     | '/dramas'
     | '/songs'
@@ -311,7 +311,6 @@ export interface FileRouteTypes {
     | '/_app'
     | '/auth'
     | '/_app/admin'
-    | '/_app/courses'
     | '/_app/dashboard'
     | '/_app/integrations'
     | '/_app/onboarding'
@@ -329,6 +328,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/youtube/callback'
     | '/api/youtube/connect'
+    | '/_app/courses/'
     | '/_app/curriculum/'
     | '/_app/dramas/'
     | '/_app/songs/'
@@ -419,13 +419,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/courses': {
-      id: '/_app/courses'
-      path: '/courses'
-      fullPath: '/courses'
-      preLoaderRoute: typeof AppCoursesRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/admin': {
       id: '/_app/admin'
       path: '/admin'
@@ -452,6 +445,13 @@ declare module '@tanstack/react-router' {
       path: '/curriculum'
       fullPath: '/curriculum/'
       preLoaderRoute: typeof AppCurriculumIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/courses/': {
+      id: '/_app/courses/'
+      path: '/courses'
+      fullPath: '/courses/'
+      preLoaderRoute: typeof AppCoursesIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/youtube/connect': {
@@ -512,10 +512,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/courses/$id': {
       id: '/_app/courses/$id'
-      path: '/$id'
+      path: '/courses/$id'
       fullPath: '/courses/$id'
       preLoaderRoute: typeof AppCoursesIdRouteImport
-      parentRoute: typeof AppCoursesRoute
+      parentRoute: typeof AppRoute
     }
     '/api/public/hooks/reengagement-push': {
       id: '/api/public/hooks/reengagement-push'
@@ -534,18 +534,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AppCoursesRouteChildren {
-  AppCoursesIdRoute: typeof AppCoursesIdRoute
-}
-
-const AppCoursesRouteChildren: AppCoursesRouteChildren = {
-  AppCoursesIdRoute: AppCoursesIdRoute,
-}
-
-const AppCoursesRouteWithChildren = AppCoursesRoute._addFileChildren(
-  AppCoursesRouteChildren,
-)
-
 interface AppVocabularyRouteChildren {
   AppVocabularyReviewRoute: typeof AppVocabularyReviewRoute
 }
@@ -560,7 +548,6 @@ const AppVocabularyRouteWithChildren = AppVocabularyRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
-  AppCoursesRoute: typeof AppCoursesRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
@@ -568,10 +555,12 @@ interface AppRouteChildren {
   AppStudioRoute: typeof AppStudioRoute
   AppVocabularyRoute: typeof AppVocabularyRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
+  AppCoursesIdRoute: typeof AppCoursesIdRoute
   AppCurriculumIdRoute: typeof AppCurriculumIdRoute
   AppDramasIdRoute: typeof AppDramasIdRoute
   AppLessonsIdRoute: typeof AppLessonsIdRoute
   AppSongsIdRoute: typeof AppSongsIdRoute
+  AppCoursesIndexRoute: typeof AppCoursesIndexRoute
   AppCurriculumIndexRoute: typeof AppCurriculumIndexRoute
   AppDramasIndexRoute: typeof AppDramasIndexRoute
   AppSongsIndexRoute: typeof AppSongsIndexRoute
@@ -579,7 +568,6 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
-  AppCoursesRoute: AppCoursesRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppOnboardingRoute: AppOnboardingRoute,
@@ -587,10 +575,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppStudioRoute: AppStudioRoute,
   AppVocabularyRoute: AppVocabularyRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
+  AppCoursesIdRoute: AppCoursesIdRoute,
   AppCurriculumIdRoute: AppCurriculumIdRoute,
   AppDramasIdRoute: AppDramasIdRoute,
   AppLessonsIdRoute: AppLessonsIdRoute,
   AppSongsIdRoute: AppSongsIdRoute,
+  AppCoursesIndexRoute: AppCoursesIndexRoute,
   AppCurriculumIndexRoute: AppCurriculumIndexRoute,
   AppDramasIndexRoute: AppDramasIndexRoute,
   AppSongsIndexRoute: AppSongsIndexRoute,

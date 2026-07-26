@@ -158,7 +158,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex flex-1">
         <AppSidebar />
-        <main className="flex-1 p-4 md:pl-0">{children}</main>
+        {/* min-w-0: without it this flex item refuses to shrink below its
+            content's min-content width, so one wide child scrolls the whole
+            page sideways on a phone instead of being contained. */}
+        <main className="min-w-0 flex-1 p-4 md:pl-0">{children}</main>
       </div>
     </div>
   );

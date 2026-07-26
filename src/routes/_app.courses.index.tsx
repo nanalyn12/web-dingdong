@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
@@ -51,7 +51,7 @@ const LEVEL_LABEL: Record<Level, string> = {
   advanced: "고급 (HSK 7~9)",
 };
 
-export const Route = createFileRoute("/_app/courses")({
+export const Route = createFileRoute("/_app/courses/")({
   head: () => ({
     meta: [
       { title: "강의 — DingDong" },
@@ -499,14 +499,22 @@ function CourseCard({ course }: { course: CourseWithCount }) {
                 {course.weeks}주차 과정
               </span>
             </div>
-            <h3 className="text-lg font-bold leading-tight line-clamp-2">
-              {course.title}
-            </h3>
-            {course.description && (
-              <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2">
-                {course.description}
-              </p>
-            )}
+            {/* The body opens the course, where the lesson list lives; the CTA
+                below still jumps straight into the lesson itself. */}
+            <Link
+              to="/courses/$id"
+              params={{ id: course.id }}
+              className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <h3 className="text-lg font-bold leading-tight line-clamp-2 hover:text-primary transition-colors">
+                {course.title}
+              </h3>
+              {course.description && (
+                <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2">
+                  {course.description}
+                </p>
+              )}
+            </Link>
           </div>
 
           {/* Progress ring */}

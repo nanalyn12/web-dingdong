@@ -34,6 +34,27 @@ export const getMyLessonProgress = createServerFn({ method: "GET" })
     };
   });
 
+/** Every lesson this user has touched, for the course pages to badge their
+ * lists with. One request per reader rather than one per lesson row. */
+export const listMyLessonProgress = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) => {
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({
+        lesson_id: tables.lesson_progress.lesson_id,
+        completed_tabs: tables.lesson_progress.completed_tabs,
+        completed_at: tables.lesson_progress.completed_at,
+      })
+      .from(tables.lesson_progress)
+      .where(eq(tables.lesson_progress.user_id, context.userId));
+    return rows.map((r) => ({
+      lesson_id: r.lesson_id,
+      tabs: ((r.completed_tabs as string[]) ?? []).length,
+      completed: !!r.completed_at,
+    }));
+  });
+
 const SaveInput = z.object({
   lessonId: z.string().uuid(),
   completedTabs: z.array(z.string().min(1).max(30)).max(20).optional(),

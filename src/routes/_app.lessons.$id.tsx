@@ -24,6 +24,7 @@ import {
   Pencil,
 } from "lucide-react";
 
+import { CourseLessonNav } from "@/components/course-lesson-nav";
 import { getLesson } from "@/lib/courses.functions";
 import { getLessonRelatedSongs } from "@/lib/content-links.functions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -270,6 +271,8 @@ function LessonPage() {
 
   return (
     <section className="glass-read rounded-3xl p-6 sm:p-8 space-y-6">
+      <CourseLessonNav lessonId={id} />
+
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{lesson.title}</h1>
