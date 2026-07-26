@@ -53,6 +53,30 @@ function coerceObject(v: unknown): Record<string, unknown> {
   return {};
 }
 
+/** A panel with a single line often comes back as one bare object instead of
+ * a one-element array. Left as-is it reaches the lesson page as `lines.map`
+ * on a non-array and takes the whole page down with the root error boundary. */
+function coerceLines(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (s.startsWith("[") || s.startsWith("{")) {
+      try { return coerceLines(JSON.parse(s)); } catch { /* fall through */ }
+    }
+    return [];
+  }
+  if (v && typeof v === "object") return [v];
+  return [];
+}
+
+function normalizePanelsForStorage(raw: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((panel) => {
+    const p = coerceObject(panel);
+    return "lines" in p ? { ...p, lines: coerceLines(p.lines) } : p;
+  });
+}
+
 function normalizeLesson(raw: z.infer<typeof LessonSchema>) {
   return {
     title: (raw.title || "").trim(),
@@ -60,13 +84,13 @@ function normalizeLesson(raw: z.infer<typeof LessonSchema>) {
     key_expressions: Array.isArray(raw.key_expressions) ? raw.key_expressions : [],
     cultural_note: coerceObject(raw.cultural_note),
     dialogue_scene: raw.dialogue_scene || "",
-    comic_panels: Array.isArray(raw.comic_panels) ? raw.comic_panels : [],
+    comic_panels: normalizePanelsForStorage(raw.comic_panels),
     dialogues: Array.isArray(raw.dialogues) ? raw.dialogues : [],
     video_keywords: Array.isArray(raw.video_keywords) ? raw.video_keywords : [],
     slides: Array.isArray(raw.slides) ? raw.slides : [],
     // Store the canonical shape so the lesson page has nothing to repair.
     quiz: normalizeQuizForStorage(raw.quiz),
-    storybook_pages: Array.isArray(raw.storybook_pages) ? raw.storybook_pages : [],
+    storybook_pages: normalizePanelsForStorage(raw.storybook_pages),
     vocab_comparison: Array.isArray(raw.vocab_comparison) ? raw.vocab_comparison : [],
     cultural_snippet: coerceObject(raw.cultural_snippet),
   };
@@ -151,7 +175,7 @@ ${titleBlock}
 [key_expressions] 6-9개. 각 항목 zh(한자)/pinyin/ko/hsk(1-9) 필수. emoji(단어 의미를 직관적으로 표현하는 이모지 1개) 필수.
 [cultural_note] 반드시 {"title":"한국어 소제목","description":"한국어 본문 300자 이상"} 형태의 객체. 주제와 관련된 중국 문화 배경을 깊이 있게. description 키 이름을 바꾸지 말 것. 빈 객체 금지.
 [dialogue_scene] 영어 한 문단 (실전 대화 장면 묘사 + "No text, no characters").
-[comic_panels] 정확히 4개. 캐릭터는 지수(한국인 학습자) + 叮叮(중국인 친구). 각 패널 narration(한국어)/lines(zh/pinyin/ko/speaker)/image_prompt(영어, "No text, no characters") 필수.
+[comic_panels] 정확히 4개. 캐릭터는 지수(한국인 학습자) + 叮叮(중국인 친구). 각 패널 narration(한국어)/lines/image_prompt(영어, "No text, no characters") 필수. lines는 반드시 배열 — 대사가 하나뿐이어도 [{...}] 형태로 감싸고, 각 원소는 zh/pinyin/ko/speaker 키를 가진 객체.
 [dialogues] 8-10개. content의 "## 실전 대화"와 동일한 내용을 구조화. speaker/zh(한자)/pinyin/ko.
 [video_keywords] 정확히 2개. 1번 한국어, 2번 중국어. 영어 금지.
 [slides] 정확히 5장. 각 슬라이드는 반드시 다음 필드를 모두 포함하세요: title(한국어 제목, 12자 이내), subtitle(한 줄 한국어 부제), key_point(핵심 한 문장), content(마크다운 본문 — ###, **, - 사용, 중국어는 반드시 한자로, 예문엔 한국어 번역 병기, 최소 120자), tip(학습 팁 한 문장), image_prompt(영어 + "No text, no characters"). 가능하면 vocab(zh/pinyin/ko 3~5개) 또는 examples(zh/pinyin/ko 2~3개) 중 주제에 맞는 쪽을 추가하세요. 주제 순서: ① 도입/개요 ② 핵심 표현 ③ 문법 포인트 ④ 실전 활용 ⑤ 정리/복습.

@@ -82,12 +82,22 @@ type Slide = {
   image_url?: string;
 };
 
+type PanelLine = { speaker?: string; zh: string; pinyin?: string; ko: string };
+
 type ComicPanel = {
   narration?: string;
   image_prompt?: string;
   image_url?: string;
-  lines?: Array<{ speaker?: string; zh: string; pinyin?: string; ko: string }>;
+  // A one-line panel sometimes generated as a bare object rather than a
+  // one-element array. Newer lessons are normalized on write, older rows
+  // are not — read through panelLines() rather than mapping this directly.
+  lines?: PanelLine[] | PanelLine;
 };
+
+function panelLines(panel: ComicPanel): PanelLine[] {
+  if (Array.isArray(panel.lines)) return panel.lines;
+  return panel.lines ? [panel.lines] : [];
+}
 
 type CulturalCard = {
   title?: string;
@@ -686,7 +696,7 @@ function ComicStrip({
               {p.narration && (
                 <p className="text-xs text-muted-foreground italic">{p.narration}</p>
               )}
-              {(p.lines ?? []).map((l, j) => (
+              {panelLines(p).map((l, j) => (
                 <div key={j} className="rounded-lg bg-background/50 p-2 text-sm">
                   {l.speaker && (
                     <div className="text-[10px] text-muted-foreground">
