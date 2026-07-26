@@ -31,11 +31,15 @@ export function LessonPdfButton({
 
   const download = async () => {
     setBusy(true);
+    const container = document.createElement("div");
     try {
       const dateStr = new Date().toLocaleDateString("ko-KR");
-      const container = document.createElement("div");
+      // Parked off-screen: html2canvas needs a laid-out node with real
+      // dimensions (so `display:none` is out), but appending it inline meant
+      // the whole report visibly appeared at the bottom of the page while the
+      // PDF was being rendered.
       container.style.cssText =
-        "padding:32px;font-family:'Noto Sans KR','Pretendard',system-ui,sans-serif;color:#0f172a;background:#fff;width:720px;";
+        "position:fixed;left:-10000px;top:0;z-index:-1;padding:32px;font-family:'Noto Sans KR','Pretendard',system-ui,sans-serif;color:#0f172a;background:#fff;width:720px;";
       container.innerHTML = `
         <div style="border-bottom:2px solid #f9a8d4;padding-bottom:12px;margin-bottom:20px;">
           <div style="font-size:12px;color:#64748b;">DingDong 학습 리포트 · ${dateStr}</div>
@@ -106,9 +110,9 @@ export function LessonPdfButton({
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         })
         .save();
-
-      document.body.removeChild(container);
     } finally {
+      // In `finally` so a failed render cannot strand the report in the page.
+      container.remove();
       setBusy(false);
     }
   };

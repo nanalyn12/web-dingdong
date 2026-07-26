@@ -409,11 +409,14 @@ function CourseCard({ course }: { course: CourseWithCount }) {
     ?.lessons?.[0]?.id;
 
   const accent = {
+    // Amber/orange was the one accent outside the pink–sky–mint–lavender
+    // palette, and beginner cards are the bulk of the list. Mint matches the
+    // 🌱 chip the same level already uses elsewhere.
     beginner: {
-      bar: "bg-gradient-to-b from-amber-400 to-orange-500",
-      pill: "bg-amber-500/15 text-amber-700",
-      ring: "text-amber-500",
-      glow: "hover:shadow-[0_10px_30px_-12px_rgba(245,158,11,0.45)]",
+      bar: "bg-gradient-to-b from-emerald-300 to-teal-500",
+      pill: "bg-emerald-500/15 text-emerald-700",
+      ring: "text-emerald-500",
+      glow: "hover:shadow-[0_10px_30px_-12px_rgba(16,185,129,0.4)]",
     },
     intermediate: {
       bar: "bg-gradient-to-b from-rose-400 to-pink-500",

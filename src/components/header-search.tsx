@@ -70,7 +70,9 @@ export function HeaderSearch() {
   const showPanel = open && debounced.length >= 1;
 
   return (
-    <div ref={boxRef} className="relative flex-1 max-w-md">
+    // min-w-0 lets this shrink first when the header runs out of room, instead
+    // of pushing the buttons beside it down to one character per line.
+    <div ref={boxRef} className="relative flex-1 min-w-0 max-w-md">
       <div className="flex items-center gap-2 rounded-2xl bg-white/40 px-3 py-2">
         <Search className="size-4 text-muted-foreground shrink-0" />
         <input

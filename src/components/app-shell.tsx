@@ -142,9 +142,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
             </div>
           ) : (
+            // shrink-0 + nowrap: in the flex header the search box would
+            // otherwise squeeze this down until "로그인" wrapped one character
+            // per line on narrow phones.
             <Link
               to="/auth"
-              className="inline-flex items-center gap-2 rounded-2xl gradient-primary text-primary-foreground px-4 py-2 text-sm font-medium shadow-[var(--shadow-soft)] hover:opacity-90 transition"
+              className="shrink-0 whitespace-nowrap inline-flex items-center gap-2 rounded-2xl gradient-primary text-primary-foreground px-3 sm:px-4 py-2 text-sm font-medium shadow-[var(--shadow-soft)] hover:opacity-90 transition"
             >
               <LogIn className="size-4" />
               로그인

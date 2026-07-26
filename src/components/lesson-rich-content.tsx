@@ -720,7 +720,18 @@ export function RichLessonContent({
         }
         if (b.type === "expression-list") {
           return (
-            <div key={i} className="grid gap-2.5 md:grid-cols-2">
+            <div
+              key={i}
+              className={cn(
+                "grid gap-2.5",
+                // A lone expression in its own block used to sit in the left
+                // half of a two-column grid with dead space beside it, and the
+                // Chinese line wrapped mid-phrase for no reason. Only split
+                // into columns when there is actually something to pair with —
+                // and never inside a slide, where the column is already narrow.
+                b.items.length > 1 && variant !== "slide" && "md:grid-cols-2",
+              )}
+            >
               {b.items.map((item, idx) => (
                 <ExpressionCard
                   key={idx}
@@ -756,7 +767,13 @@ export function RichLessonContent({
         }
         if (b.type === "bullet-list") {
           return (
-            <ul key={i} className="grid gap-2 sm:grid-cols-2 list-none p-0">
+            <ul
+              key={i}
+              className={cn(
+                "grid gap-2 list-none p-0",
+                b.items.length > 1 && "sm:grid-cols-2",
+              )}
+            >
               {b.items.map((t, idx) => {
                 const tone = TONES[idx % TONES.length];
                 const zh = extractChinese(t);
