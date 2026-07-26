@@ -41,6 +41,7 @@ import {
 
 import { useIsEditor } from "@/lib/auth-client";
 import { generateLesson } from "@/lib/generate-lesson.functions";
+import { courseMatchesCategory, findCategory } from "@/lib/course-categories";
 
 type Level = "beginner" | "intermediate" | "advanced";
 
@@ -60,11 +61,20 @@ export const Route = createFileRoute("/_app/courses")({
       },
     ],
   }),
+  // `cat` comes from the landing page's category tiles. Unknown values are
+  // simply ignored, so a stale or hand-edited link still shows every course.
+  // Optional on purpose: returning the key as `string | undefined` would make
+  // it required, forcing every existing <Link to="/courses"> to pass a search.
+  validateSearch: (search: Record<string, unknown>): { cat?: string } =>
+    typeof search.cat === "string" ? { cat: search.cat } : {},
   component: CoursesPage,
 });
 
 function CoursesPage() {
   const isEditor = useIsEditor();
+  const { cat } = Route.useSearch();
+  const navigate = useNavigate();
+  const category = findCategory(cat);
   const { data: courses, isLoading, error } = useQuery({
     queryKey: ["courses-with-counts"],
     queryFn: () => listCoursesWithCounts(),
@@ -76,9 +86,9 @@ function CoursesPage() {
     return () => clearTimeout(t);
   }, []);
 
-  const filtered = (courses ?? []).filter((c) =>
-    levelFilter === "all" ? true : c.level === levelFilter,
-  );
+  const filtered = (courses ?? [])
+    .filter((c) => (category ? courseMatchesCategory(c, category) : true))
+    .filter((c) => (levelFilter === "all" ? true : c.level === levelFilter));
   const totalLessons = (courses ?? []).reduce(
     (s, c) => s + (c.lesson_count ?? 0),
     0,
@@ -95,10 +105,25 @@ function CoursesPage() {
       <section data-tour="course-list" className="space-y-5">
         <div className="glass rounded-3xl p-6 md:p-7 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold">강의 목록</h2>
+            <h2 className="text-2xl md:text-3xl font-bold">
+              {category ? `${category.emoji} ${category.label}` : "강의 목록"}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {courses ? `총 ${courses.length}개 강의 · 세부 강의 ${totalLessons}개` : "강의를 불러오는 중…"}
+              {!courses
+                ? "강의를 불러오는 중…"
+                : category
+                  ? `${category.label} 관련 강의 ${filtered.length}개`
+                  : `총 ${courses.length}개 강의 · 세부 강의 ${totalLessons}개`}
             </p>
+            {category && (
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/courses", search: {} })}
+                className="mt-2 text-xs font-medium text-primary hover:opacity-80"
+              >
+                ← 전체 강의 보기
+              </button>
+            )}
           </div>
           <div className="inline-flex rounded-2xl bg-white/60 border border-white/60 p-1 self-start md:self-auto">
             {([
@@ -141,9 +166,25 @@ function CoursesPage() {
           </div>
         )}
         {courses && courses.length > 0 && filtered.length === 0 && (
-          <p className="text-muted-foreground px-2">
-            선택한 난이도의 강의가 아직 없어요.
-          </p>
+          // Arriving from a category tile and finding nothing needs more than
+          // a one-liner — say which category is empty and offer a way out.
+          <div className="glass rounded-3xl p-10 text-center space-y-3">
+            <div className="text-4xl">{category?.emoji ?? "🔍"}</div>
+            <p className="text-muted-foreground">
+              {category
+                ? `아직 ${category.label} 강의가 준비되지 않았어요.`
+                : "선택한 난이도의 강의가 아직 없어요."}
+            </p>
+            {category && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate({ to: "/courses", search: {} })}
+              >
+                전체 강의 보기
+              </Button>
+            )}
+          </div>
         )}
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((c) => (

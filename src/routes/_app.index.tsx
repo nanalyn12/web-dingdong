@@ -13,6 +13,7 @@ import {
 
 import { runTour } from "@/lib/coachmark";
 import { landingTourSteps } from "@/lib/tour-steps";
+import { COURSE_CATEGORIES } from "@/lib/course-categories";
 
 
 import heroDingdong from "@/assets/hero-dingdong.png";
@@ -141,25 +142,21 @@ function Landing() {
         />
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
 
-          {[
-            { e: "🧋", t: "일상 회화", c: "bg-pink/50" },
-            { e: "✈️", t: "여행 중국어", c: "bg-sky/50" },
-            { e: "💼", t: "비즈니스", c: "bg-lavender/50" },
-            { e: "🎬", t: "드라마·영화", c: "bg-mint/50" },
-            { e: "🥟", t: "음식·문화", c: "bg-pink/50" },
-            { e: "📝", t: "HSK 시험", c: "bg-sky/50" },
-          ].map((cat) => (
+          {/* These used to be six identical links to the unfiltered course
+              list, under a heading promising per-category recommendations. */}
+          {COURSE_CATEGORIES.map((cat) => (
             <Link
-              key={cat.t}
+              key={cat.key}
               to="/courses"
+              search={{ cat: cat.key }}
               className="glass-soft rounded-3xl p-5 text-center hover:scale-[1.03] hover:bg-white/60 transition group"
             >
               <div
-                className={`size-14 mx-auto rounded-2xl ${cat.c} grid place-items-center text-3xl mb-3 group-hover:scale-110 transition`}
+                className={`size-14 mx-auto rounded-2xl ${cat.chip} grid place-items-center text-3xl mb-3 group-hover:scale-110 transition`}
               >
-                {cat.e}
+                {cat.emoji}
               </div>
-              <div className="font-semibold text-sm">{cat.t}</div>
+              <div className="font-semibold text-sm">{cat.label}</div>
             </Link>
           ))}
         </div>
