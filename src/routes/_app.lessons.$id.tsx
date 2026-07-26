@@ -259,7 +259,7 @@ function LessonPage() {
         : "고급 (HSK 7~9급)";
 
   return (
-    <section className="glass rounded-3xl p-6 sm:p-8 space-y-6">
+    <section className="glass-read rounded-3xl p-6 sm:p-8 space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">{lesson.title}</h1>

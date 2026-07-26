@@ -576,7 +576,7 @@ function ScenePanel({
   const isEditor = profile?.role === "teacher" || profile?.role === "admin";
   return (
     <div className="space-y-4">
-      <div className="glass rounded-3xl p-5 space-y-2">
+      <div className="glass-read rounded-3xl p-5 space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h2 className="text-xl font-bold">
             🎬 장면 {scene.index} · {scene.title}
@@ -596,7 +596,7 @@ function ScenePanel({
       </div>
 
       {scene.key_lines?.length > 0 && (
-        <div className="glass rounded-3xl p-5 space-y-3">
+        <div className="glass-read rounded-3xl p-5 space-y-3">
           <div className="font-semibold flex items-center gap-2">💬 핵심 대사</div>
           <div className="space-y-2">
             {(() => {
@@ -642,7 +642,7 @@ function ScenePanel({
 
 
       {scene.vocab?.length > 0 && (
-        <div className="glass rounded-3xl p-5 space-y-3">
+        <div className="glass-read rounded-3xl p-5 space-y-3">
           <div className="font-semibold flex items-center gap-2">📚 핵심 단어</div>
           <div className="grid sm:grid-cols-2 gap-2">
             {scene.vocab.map((v, i) => (

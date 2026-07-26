@@ -62,7 +62,10 @@
 
   /* Base */
   --background: oklch(0.985 0.012 320);
-  --foreground: oklch(0.32 0.05 285);
+  /* Body copy sits a little darker than the original 0.32/0.05: learners read
+     long lesson pages here, and this buys AA headroom on every gradient stop
+     without turning the text pure black. */
+  --foreground: oklch(0.28 0.045 285);
 
   /* Pastel palette */
   --pink: oklch(0.88 0.08 0);
@@ -70,11 +73,15 @@
   --mint: oklch(0.9 0.07 165);
   --lavender: oklch(0.88 0.07 295);
 
-  /* Glass surfaces — semi-transparent whites */
-  --card: oklch(1 0 0 / 55%);
-  --card-foreground: oklch(0.3 0.05 285);
-  --popover: oklch(1 0 0 / 85%);
-  --popover-foreground: oklch(0.3 0.05 285);
+  /* Glass surfaces — semi-transparent whites.
+     At 55% the four-stop app gradient showed through every card, so the colour
+     behind a paragraph changed as the page scrolled and the eye had to keep
+     re-adapting. 80% keeps the glass look while holding the reading background
+     nearly still; long-form surfaces use `glass-read` on top of this. */
+  --card: oklch(1 0 0 / 80%);
+  --card-foreground: oklch(0.28 0.045 285);
+  --popover: oklch(1 0 0 / 92%);
+  --popover-foreground: oklch(0.28 0.045 285);
 
   /* Brand */
   --primary: oklch(0.75 0.14 350);
@@ -82,14 +89,21 @@
   --secondary: oklch(0.93 0.05 220);
   --secondary-foreground: oklch(0.32 0.06 270);
   --muted: oklch(0.96 0.02 300);
-  --muted-foreground: oklch(0.55 0.04 285);
+  /* Was 0.55, which measured 4.2–4.6:1 on the gradient — right at or under the
+     AA line for the small text this token is mostly used for. */
+  --muted-foreground: oklch(0.45 0.035 285);
   --accent: oklch(0.9 0.07 165);
   --accent-foreground: oklch(0.3 0.06 200);
   --destructive: oklch(0.7 0.18 25);
   --destructive-foreground: oklch(0.99 0 0);
 
-  --border: oklch(1 0 0 / 45%);
-  --input: oklch(1 0 0 / 60%);
+  /* A white border on a now-opaque white card is invisible (1.01:1), which left
+     cards, inputs and table rows with no readable edge. A soft neutral gives
+     structure back without drawing a hard line. */
+  --border: oklch(0.72 0.02 290 / 35%);
+  /* Inputs and textareas render `border-input` over a transparent field, so a
+     white border left the box edge invisible on light cards. */
+  --input: oklch(0.72 0.02 290 / 50%);
   --ring: oklch(0.78 0.12 340);
 
   /* Sidebar — glass */
@@ -167,19 +181,32 @@
   }
 }
 
-/* Glass utilities */
+/* Glass utilities.
+   `saturate(160%)` pushed the pastel background's chroma up through every
+   surface on the page; 120% keeps the glassy lift without amplifying colour,
+   and the smaller blur radius costs less on low-end devices. */
 @utility glass {
   background: var(--card);
-  backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(120%);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-glass);
 }
 
 @utility glass-soft {
-  background: oklch(1 0 0 / 0.35);
-  backdrop-filter: blur(14px) saturate(150%);
-  border: 1px solid oklch(1 0 0 / 0.4);
+  background: oklch(1 0 0 / 0.6);
+  backdrop-filter: blur(12px) saturate(115%);
+  border: 1px solid oklch(1 0 0 / 0.5);
   box-shadow: var(--shadow-soft);
+}
+
+/* Long-form reading surface — lesson bodies, lyrics, scene text.
+   Nearly opaque on purpose: this is where a learner's eyes stay for minutes at
+   a time, so the background behind the text must not move with the gradient. */
+@utility glass-read {
+  background: oklch(1 0 0 / 0.94);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-glass);
 }
 
 @utility gradient-primary {

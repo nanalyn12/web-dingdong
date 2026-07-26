@@ -817,7 +817,7 @@ function SongPlayer({
         </div>
 
         {/* Scrollable lyric list */}
-        <div className="lg:col-span-2 glass rounded-3xl p-4">
+        <div className="lg:col-span-2 glass-read rounded-3xl p-4">
           <div className="text-xs font-semibold text-muted-foreground mb-2 px-1 flex items-center justify-between">
             <span>전체 가사</span>
             {hasTimes && (
