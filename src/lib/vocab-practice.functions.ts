@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTextProvider } from "./ai-gateway.server";
-import { requireAuth } from "@/lib/auth-middleware";
+import { optionalAuth, requireAuth } from "@/lib/auth-middleware";
 import { assertEditor } from "@/lib/courses.functions";
 import type { Json } from "@/db/schema";
 
@@ -13,6 +13,16 @@ const Input = z.object({
   pinyin: z.string().optional().nullable(),
   ko: z.string().optional().nullable(),
 });
+
+/** Thrown when a guest asks for a word that is not in the shared cache yet.
+ * The client matches on this to show a sign-in prompt rather than an error. */
+export const GUEST_GENERATION_BLOCKED = "GUEST_GENERATION_BLOCKED";
+
+export function isGuestGenerationBlocked(err: unknown): boolean {
+  return (err instanceof Error ? err.message : String(err)).includes(
+    GUEST_GENERATION_BLOCKED,
+  );
+}
 
 export type VocabExample = { zh: string; pinyin: string; ko: string };
 export type VocabQuizMeaning = {
@@ -157,15 +167,22 @@ async function writeCache(
 }
 
 /** Serve a word's study material, generating it only on a cache miss.
- * Public: a learner opening a brand-new word populates the shared entry. */
+ *
+ * Reading the shared cache stays open to everyone — it costs nothing and a
+ * guest browsing a lesson should still see the words. Populating it is a model
+ * call, so that part needs a session: otherwise any visitor could spend our
+ * quota just by opening words nobody had looked at yet. */
 export const generateVocabPractice = createServerFn({ method: "POST" })
+  .middleware([optionalAuth])
   .inputValidator((d: unknown) => Input.parse(d))
-  .handler(async ({ data }): Promise<VocabPractice> => {
+  .handler(async ({ data, context }): Promise<VocabPractice> => {
     const cached = await readCache(data.zh).catch((e) => {
       console.warn("[vocab-practice] cache read failed:", e);
       return null;
     });
     if (cached) return cached;
+
+    if (!context.userId) throw new Error(GUEST_GENERATION_BLOCKED);
 
     const practice = await buildVocabPractice(data);
     // A failed write only costs a regeneration next time, so never fail the

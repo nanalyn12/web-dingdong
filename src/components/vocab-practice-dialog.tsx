@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import {
   Sparkles,
   Volume2,
@@ -27,6 +28,7 @@ import { useZhTts } from "@/lib/use-zh-tts";
 import { scorePronunciation } from "@/lib/vocab";
 import {
   generateVocabPractice,
+  isGuestGenerationBlocked,
   regenerateVocabPractice,
   type VocabExample,
   type VocabPractice,
@@ -163,7 +165,24 @@ export function VocabPracticeDialog({
           </div>
         )}
 
-        {gen.error && (
+        {/* A guest hitting a word nobody has opened yet is not an error — the
+            material simply has to be generated, and that needs an account. */}
+        {gen.error && isGuestGenerationBlocked(gen.error) && (
+          <div className="rounded-2xl bg-primary/5 border border-primary/20 p-5 text-center space-y-3">
+            <div className="text-3xl">🔒</div>
+            <div className="text-sm font-semibold text-slate-800">
+              이 단어의 학습 자료는 아직 준비되지 않았어요
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              새 단어의 예문·퀴즈는 AI가 만들어요. 로그인하면 바로 생성해 드릴게요.
+            </p>
+            <Button asChild size="sm">
+              <Link to="/auth">로그인하고 학습 자료 만들기</Link>
+            </Button>
+          </div>
+        )}
+
+        {gen.error && !isGuestGenerationBlocked(gen.error) && (
           <div className="rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm p-3">
             생성 실패: {(gen.error as Error).message}
             <Button size="sm" variant="ghost" className="ml-2" onClick={() => gen.mutate(word)}>

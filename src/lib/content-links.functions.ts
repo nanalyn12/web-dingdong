@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { requireAuth } from "@/lib/auth-middleware";
+import { optionalAuth, requireAuth } from "@/lib/auth-middleware";
 import { assertEditor } from "@/lib/courses.functions";
 import type { Json } from "@/db/schema";
 
@@ -149,10 +149,16 @@ async function generateAndCache(songId: string): Promise<SongRelatedContent | nu
   return result;
 }
 
-/** 노래의 연계 학습 데이터 — 캐시가 없으면 최초 1회 AI로 생성. */
+/** 노래의 연계 학습 데이터 — 캐시가 없으면 최초 1회 AI로 생성.
+ *
+ * Reading the cache is open to everyone; the generation on a miss is a model
+ * call, so it needs a session. A guest on an ungenerated song just gets null
+ * and the section stays hidden, exactly as it already does when generation
+ * fails. */
 export const getSongRelatedContent = createServerFn({ method: "GET" })
+  .middleware([optionalAuth])
   .inputValidator((i: unknown) => z.object({ songId: z.string().uuid() }).parse(i))
-  .handler(async ({ data }): Promise<SongRelatedContent | null> => {
+  .handler(async ({ data, context }): Promise<SongRelatedContent | null> => {
     const { db, tables } = await import("@/db");
     const rows = await db
       .select({ related_content: tables.songs.related_content })
@@ -162,6 +168,7 @@ export const getSongRelatedContent = createServerFn({ method: "GET" })
     if (!rows[0]) throw new Error("노래를 찾을 수 없습니다.");
     const cached = rows[0].related_content as SongRelatedContent | null;
     if (cached?.links?.length) return cached;
+    if (!context.userId) return null;
     try {
       return await generateAndCache(data.songId);
     } catch (e) {

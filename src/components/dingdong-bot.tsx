@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Mic, MicOff, Send, Volume2, X, MessageSquare, HelpCircle } from "lucide-react";
 
 import { assistantChat } from "@/lib/assistant.functions";
+import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDraggableFab } from "@/lib/use-draggable-fab";
@@ -122,6 +123,7 @@ export function DingDongBot() {
   const [blinking, setBlinking] = useState(false);
   const [mouthOpen, setMouthOpen] = useState(0); // 0..1
 
+  const { session } = useSession();
   const fab = useDraggableFab();
   // The two-line caption is what made the resting button ~260px wide and easy
   // to collide with, so it introduces itself once and then gets out of the way.
@@ -253,7 +255,8 @@ export function DingDongBot() {
 
   const send = async (text: string, fromVoice = false) => {
     const trimmed = text.trim();
-    if (!trimmed || loading) return;
+    // The composer is hidden for guests; this guards the voice path too.
+    if (!trimmed || loading || !session) return;
     const next: ChatMsg[] = [...messages, { role: "user", content: trimmed }];
     setMessages(next);
     setInput("");
@@ -590,6 +593,21 @@ export function DingDongBot() {
                 <p className="text-[10px] text-center text-muted-foreground pt-1">
                   원하는 답이 없다면 「AI 채팅」 탭에서 자유롭게 물어보세요!
                 </p>
+              </div>
+            ) : !session ? (
+              /* Free chat is a model call per message, so it needs an account.
+                 The FAQ tab above is pre-written and stays open to everyone. */
+              <div className="rounded-2xl bg-white/70 border border-white/60 p-5 text-center space-y-3">
+                <div className="text-3xl">🐼</div>
+                <div className="text-sm font-semibold text-foreground">
+                  叮叮과 자유롭게 대화하려면 로그인해 주세요
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  로그인 없이도 위의 「자주 묻는 질문」 탭은 그대로 쓸 수 있어요.
+                </p>
+                <Button asChild size="sm" className="rounded-full">
+                  <Link to="/auth">로그인하기</Link>
+                </Button>
               </div>
             ) : (
               <>

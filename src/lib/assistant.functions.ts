@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { z } from "zod";
 
+import { requireAuth } from "@/lib/auth-middleware";
 import { createTextProvider } from "./ai-gateway.server";
 
 const MessageSchema = z.object({
@@ -50,7 +51,11 @@ ${Object.entries(NAV_TARGETS).map(([p, l]) => `- ${p} → ${l}`).join("\n")}
 
 const NAV_RE = /<<NAV:(\/[a-zA-Z0-9/_-]*)>>/;
 
+// Signed in only. This was the one AI entry point with neither authentication
+// nor a cache in front of it, so every message from every visitor was a fresh
+// model call chargeable to us.
 export const assistantChat = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
     const gateway = createTextProvider();
