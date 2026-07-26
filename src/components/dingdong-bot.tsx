@@ -6,6 +6,7 @@ import { Mic, MicOff, Send, Volume2, X, MessageSquare, HelpCircle } from "lucide
 import { assistantChat } from "@/lib/assistant.functions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useDraggableFab } from "@/lib/use-draggable-fab";
 import pandaImg from "@/assets/hero-dingdong.png";
 import { FAQ_CATEGORIES, FAQ_ITEMS, type FaqCategory } from "@/lib/dingdong-faq";
 
@@ -121,6 +122,13 @@ export function DingDongBot() {
   const [blinking, setBlinking] = useState(false);
   const [mouthOpen, setMouthOpen] = useState(0); // 0..1
 
+  const fab = useDraggableFab();
+  // The two-line caption is what made the resting button ~260px wide and easy
+  // to collide with, so it introduces itself once and then gets out of the way.
+  const [labelPinned, setLabelPinned] = useState(true);
+  const [hovering, setHovering] = useState(false);
+  const [scrolling, setScrolling] = useState(false);
+
   const stopSpeakRef = useRef<(() => void) | null>(null);
   const recognitionRef = useRef<any>(null);
   const sendFn = useServerFn(assistantChat);
@@ -153,6 +161,27 @@ export function DingDongBot() {
   useEffect(() => {
     if (historyRef.current) historyRef.current.scrollTop = historyRef.current.scrollHeight;
   }, [messages, loading]);
+
+  // Say hello, then shrink to just the panda.
+  useEffect(() => {
+    const t = setTimeout(() => setLabelPinned(false), 8000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Fade back while the learner is reading past it, restore once they settle.
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const onScroll = () => {
+      setScrolling(true);
+      clearTimeout(t);
+      t = setTimeout(() => setScrolling(false), 800);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(t);
+    };
+  }, []);
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 200);
@@ -309,14 +338,31 @@ export function DingDongBot() {
 
   return (
     <>
-      {/* FAB — clearly labeled as a voice AI assistant */}
+      {/* FAB — clearly labeled as a voice AI assistant, and draggable so it can
+          be moved off whatever page content it happens to be covering. */}
       <div
+        ref={fab.ref}
+        style={fab.style}
+        {...fab.handlers}
+        onPointerEnter={() => setHovering(true)}
+        onPointerLeave={() => setHovering(false)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex items-center gap-2",
+          "fixed bottom-6 right-6 z-50 flex items-center gap-2 touch-none select-none",
+          // Snapped left, the caption has to sit on the button's right or it
+          // would run off the screen.
+          fab.side === "left" && "flex-row-reverse",
+          fab.dragging ? "cursor-grabbing transition-none" : "cursor-grab transition-[opacity,top,left,right] duration-200",
+          scrolling && !fab.dragging && !hovering ? "opacity-40" : "opacity-100",
           open && "hidden",
         )}
       >
-        <div className="hidden sm:flex flex-col items-end mr-1 pointer-events-none select-none">
+        <div
+          className={cn(
+            "hidden sm:flex flex-col mr-1 pointer-events-none select-none transition-opacity duration-300",
+            fab.side === "left" ? "items-start ml-1 mr-0" : "items-end",
+            labelPinned || hovering ? "opacity-100" : "opacity-0",
+          )}
+        >
           <span className="glass-soft rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-widest uppercase text-primary">
             🎙️ 음성 AI
           </span>
@@ -325,18 +371,29 @@ export function DingDongBot() {
           </span>
         </div>
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            if (fab.wasDragged()) return; // that click just ended a drag
+            setOpen(true);
+          }}
           data-tour="bot-fab"
           className={cn(
             "relative h-16 w-16 rounded-full",
-            "glass shadow-xl hover:scale-105 transition-transform",
+            "glass shadow-xl transition-transform",
+            !fab.dragging && "hover:scale-105",
             "flex items-center justify-center overflow-visible",
           )}
-          aria-label="음성으로 대화하는 AI 도우미 叮叮 열기"
-          title="말로 대화하는 AI 도우미 — 클릭해서 시작하기"
+          aria-label="음성으로 대화하는 AI 도우미 叮叮 열기 (드래그해서 위치를 옮길 수 있어요)"
+          title="말로 대화하는 AI 도우미 — 클릭해서 시작하기 · 드래그해서 위치 옮기기"
         >
-          {/* pulsing rings signal it's a live voice bot */}
-          <span aria-hidden className="absolute inset-0 rounded-full ring-2 ring-primary/40 animate-ping opacity-60" />
+          {/* Pulsing ring signals it's a live voice bot. It runs while the
+              caption is up and on hover — left on permanently it is just
+              motion in the corner of every page. */}
+          {(labelPinned || hovering) && (
+            <span
+              aria-hidden
+              className="absolute inset-0 rounded-full ring-2 ring-primary/40 animate-ping opacity-60"
+            />
+          )}
           <img
             src={pandaImg}
             alt="叮叮"
