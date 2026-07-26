@@ -17,6 +17,7 @@ import { z } from "zod";
 
 import { createTextProvider } from "@/lib/ai-gateway.server";
 import { extractJsonObject } from "@/lib/generate-lesson.functions";
+import { normalizeQuiz, normalizeQuizForStorage, QUIZ_PROMPT_SPEC } from "@/lib/quiz-normalize";
 import { levelFromAudience } from "./config";
 import type { VideoJobConfig, VideoScript } from "./config";
 
@@ -93,7 +94,8 @@ ${scriptDigest(script)}
 
 [dialogues] 8-10개. 영상에서 배운 표현을 실제로 써먹는 하나의 이어지는 대화. 등장인물은 지수(한국인 학습자)와 叮叮(중국인 친구). 각 항목 speaker/zh(한자)/pinyin/ko 필수.
 [slides] 정확히 5장. 각 슬라이드는 반드시 다음 필드를 모두 포함하세요: title(한국어 제목, 12자 이내), subtitle(한 줄 한국어 부제), key_point(핵심 한 문장), content(마크다운 본문 — ###, **, - 사용, 중국어는 반드시 한자로, 예문엔 한국어 번역 병기, 최소 120자), tip(학습 팁 한 문장), image_prompt(영어 + "No text, no characters"). 가능하면 vocab(zh/pinyin/ko 3~5개) 또는 examples(zh/pinyin/ko 2~3개) 중 주제에 맞는 쪽을 추가하세요. 주제 순서: ① 영상 내용 요약 ② 핵심 표현 ③ 문법 포인트 ④ 실전 활용 ⑤ 정리/복습.
-[quiz] 정확히 6개. choice 2 + fill 2 + order 2. 모두 영상에 나온 표현을 묻도록 출제하세요.`;
+${QUIZ_PROMPT_SPEC}
+  · 6문항 모두 위 영상에 나온 표현을 묻도록 출제하세요.`;
 }
 
 /** Generate the practice material for one video lesson.
@@ -118,15 +120,19 @@ export async function buildLessonEnrichment(
   return {
     dialogues: Array.isArray(parsed.dialogues) ? parsed.dialogues : [],
     slides: Array.isArray(parsed.slides) ? parsed.slides : [],
-    quiz: Array.isArray(parsed.quiz) ? parsed.quiz : [],
+    // Canonical shape on write — the lesson quiz UI only renders one shape.
+    quiz: normalizeQuizForStorage(parsed.quiz),
   };
 }
 
 /** The script already carries per-scene quiz questions, which until now only
  * reached the drama player. Free fallback when the AI call fails — a lesson
- * with quizzes beats a lesson with nothing. */
+ * with quizzes beats a lesson with nothing.
+ *
+ * Those are written for the drama player's looser reader ({question, options,
+ * answer}), so they go through the same normalizer as everything else. */
 export function quizFromScript(script: VideoScript): unknown[] {
-  return script.scenes
-    .flatMap((sc) => sc.quiz ?? [])
-    .filter((q) => q?.question && q?.answer);
+  return normalizeQuiz(
+    script.scenes.flatMap((sc) => sc.quiz ?? []).filter((q) => q?.question && q?.answer),
+  );
 }

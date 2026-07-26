@@ -999,6 +999,9 @@ async function createLessonFromScript(
     enrichment = await buildLessonEnrichment(cfg, script);
   } catch (e) {
     console.warn("[video] 강의 보강 콘텐츠 생성 실패 (비치명):", e);
+  }
+  // Also covers a call that succeeded but produced no usable quiz item.
+  if (enrichment.quiz.length === 0) {
     const { quizFromScript } = await import("./lesson-enrich.server");
     enrichment.quiz = quizFromScript(script);
   }

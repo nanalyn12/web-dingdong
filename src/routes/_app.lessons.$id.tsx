@@ -47,6 +47,13 @@ import { generateLessonCulturalCards } from "@/lib/cultural-cards.functions";
 import { useZhTts } from "@/lib/use-zh-tts";
 import { generateLessonComicImages } from "@/lib/lesson-images.functions";
 import { KeyExpressionCard } from "@/components/key-expression-card";
+import {
+  normalizeQuiz,
+  type QuizChoice,
+  type QuizFill,
+  type QuizItem,
+  type QuizOrder,
+} from "@/lib/quiz-normalize";
 
 export const Route = createFileRoute("/_app/lessons/$id")({
   head: () => ({ meta: [{ title: "레슨 — DingDong" }] }),
@@ -87,32 +94,6 @@ type CulturalCard = {
   description?: string;
 } & Record<string, unknown>;
 
-type QuizChoice = {
-  type: "choice";
-  question_ko: string;
-  question_zh?: string;
-  options: string[];
-  correct: number;
-  explanation?: string;
-};
-type QuizFill = {
-  type: "fill";
-  question_ko: string;
-  sentence_zh: string;
-  answer: string;
-  hint?: string;
-  explanation?: string;
-};
-type QuizOrder = {
-  type: "order";
-  question_ko: string;
-  words: string[];
-  correct_order: number[];
-  answer_text?: string;
-  explanation?: string;
-};
-type QuizItem = QuizChoice | QuizFill | QuizOrder;
-
 type LessonRow = {
   id: string;
   title: string;
@@ -121,7 +102,9 @@ type LessonRow = {
   key_expressions: KeyExpression[];
   dialogues: Dialogue[];
   slides: Slide[];
-  quiz: QuizItem[];
+  // Raw as stored: shapes vary wildly per generation, so it is normalized on
+  // read rather than trusted. See @/lib/quiz-normalize.
+  quiz: unknown[];
   comic_panels: ComicPanel[];
   cultural_note: CulturalCard | null;
   cultural_snippet: CulturalCard | null;
@@ -246,6 +229,10 @@ function LessonPage() {
     mutationFn: () => callGenCultural({ data: { lessonId: id } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lesson", id] }),
   });
+
+  // Lessons generated before the quiz schema was pinned down store each item
+  // under whatever keys that run invented, so repair them into one shape here.
+  const quiz = useMemo(() => normalizeQuiz(lesson?.quiz), [lesson?.quiz]);
 
   if (isLoading) {
     return (
@@ -458,7 +445,7 @@ function LessonPage() {
 
         <TabsContent value="quiz">
           <QuizRunner
-            quiz={lesson.quiz ?? []}
+            quiz={quiz}
             onScore={(correct, total) => {
               setQuizScore({ correct, total });
               saveProgress(id, {
