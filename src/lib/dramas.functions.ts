@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
@@ -47,14 +47,38 @@ export type DramaRow = {
   created_at: string;
 };
 
+/** What the library grid actually renders. Deliberately excludes `scenes`:
+ * the card only needs how many there are, and shipping the full jsonb for
+ * every drama made the list response grow past 2 MB once the scheduler had
+ * produced a hundred-odd videos. */
+export type DramaListRow = Omit<DramaRow, "scenes"> & { scene_count: number };
+
 export const listDramas = createServerFn({ method: "GET" }).handler(
-  async (): Promise<DramaRow[]> => {
+  async (): Promise<DramaListRow[]> => {
     const { db, tables } = await import("@/db");
     const rows = await db
-      .select()
+      .select({
+        id: tables.dramas.id,
+        title: tables.dramas.title,
+        title_zh: tables.dramas.title_zh,
+        description: tables.dramas.description,
+        level: tables.dramas.level,
+        youtube_url: tables.dramas.youtube_url,
+        youtube_video_id: tables.dramas.youtube_video_id,
+        media_url: tables.dramas.media_url,
+        thumbnail_url: tables.dramas.thumbnail_url,
+        duration_seconds: tables.dramas.duration_seconds,
+        genre: tables.dramas.genre,
+        has_captions: tables.dramas.has_captions,
+        created_by: tables.dramas.created_by,
+        created_at: tables.dramas.created_at,
+        // jsonb_array_length throws on a non-array, so guard the type first.
+        scene_count: sql<number>`case when jsonb_typeof(${tables.dramas.scenes}) = 'array'
+          then jsonb_array_length(${tables.dramas.scenes}) else 0 end`.mapWith(Number),
+      })
       .from(tables.dramas)
       .orderBy(desc(tables.dramas.created_at));
-    return rows as unknown as DramaRow[];
+    return rows as unknown as DramaListRow[];
   },
 );
 

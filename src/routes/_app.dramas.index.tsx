@@ -283,6 +283,8 @@ function DramasPage() {
                     <img
                       src={d.thumbnail_url}
                       alt={d.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -294,11 +296,11 @@ function DramasPage() {
                     {LEVEL_LABEL[d.level] ?? d.level}
                   </div>
                   <div className="absolute bottom-2 left-2 bg-black/60 text-white rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                    🎞 {d.scenes?.length ?? 0}장면
+                    🎞 {d.scene_count}장면
                     {(progressMap.get(d.id) ?? 0) > 0 && (
                       <span className="ml-1 text-emerald-300">
-                        · ✅ {Math.min(progressMap.get(d.id)!, d.scenes?.length ?? 0)}
-                        /{d.scenes?.length ?? 0}
+                        · ✅ {Math.min(progressMap.get(d.id)!, d.scene_count)}
+                        /{d.scene_count}
                       </span>
                     )}
                   </div>

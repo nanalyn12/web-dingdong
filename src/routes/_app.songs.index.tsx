@@ -530,7 +530,13 @@ function SongsPage() {
           >
             <div className="aspect-video bg-gradient-to-br from-pink-200/60 via-purple-200/40 to-sky-200/60 relative overflow-hidden">
               {s.cover_url ? (
-                <img src={s.cover_url} alt={s.title} className="w-full h-full object-cover" />
+                <img
+                  src={s.cover_url}
+                  alt={s.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full grid place-items-center text-5xl">
                   {s.status === "generating_audio" || s.status === "generating_video" ? "⏳" : "🎵"}
