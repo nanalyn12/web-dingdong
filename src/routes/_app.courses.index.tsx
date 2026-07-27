@@ -69,6 +69,17 @@ const SORTERS: Record<SortKey, (a: CourseWithCount, b: CourseWithCount) => numbe
   title: (a, b) => a.title.localeCompare(b.title, "ko"),
 };
 
+// Narration language of a course's video lessons. "모든 영상" also keeps courses
+// that have no video lesson at all — filtering those away would hide every
+// hand-written course behind a control that only describes videos.
+type LangKey = "all" | "ko" | "zh";
+
+const LANG_LABEL: Record<LangKey, string> = {
+  all: "모든 영상",
+  ko: "한국어 나레이션",
+  zh: "중국어 나레이션",
+};
+
 export const Route = createFileRoute("/_app/courses/")({
   head: () => ({
     meta: [
@@ -99,6 +110,7 @@ function CoursesPage() {
   });
   const [levelFilter, setLevelFilter] = useState<"all" | Level>("all");
   const [sort, setSort] = useState<SortKey>("newest");
+  const [lang, setLang] = useState<LangKey>("all");
 
   useEffect(() => {
     const t = setTimeout(() => runTour("courses", coursesTourSteps()), 700);
@@ -110,6 +122,7 @@ function CoursesPage() {
   const filtered = (courses ?? [])
     .filter((c) => (category ? courseMatchesCategory(c, category) : true))
     .filter((c) => (levelFilter === "all" ? true : c.level === levelFilter))
+    .filter((c) => (lang === "all" ? true : (c.video_languages ?? []).includes(lang)))
     .sort(SORTERS[sort]);
   const totalLessons = (courses ?? []).reduce(
     (s, c) => s + (c.lesson_count ?? 0),
@@ -170,6 +183,21 @@ function CoursesPage() {
                 </button>
               ))}
             </div>
+            <Select value={lang} onValueChange={(v) => setLang(v as LangKey)}>
+              <SelectTrigger
+                aria-label="영상 나레이션 언어"
+                className="h-9 w-[142px] rounded-2xl bg-white/60 border-white/60 text-xs font-medium"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(LANG_LABEL) as LangKey[]).map((k) => (
+                  <SelectItem key={k} value={k} className="text-xs">
+                    {LANG_LABEL[k]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
               <SelectTrigger
                 aria-label="정렬 기준"
@@ -210,9 +238,11 @@ function CoursesPage() {
           <div className="glass rounded-3xl p-10 text-center space-y-3">
             <div className="text-4xl">{category?.emoji ?? "🔍"}</div>
             <p className="text-muted-foreground">
-              {category
-                ? `아직 ${category.label} 강의가 준비되지 않았어요.`
-                : "선택한 난이도의 강의가 아직 없어요."}
+              {lang !== "all"
+                ? `${LANG_LABEL[lang]} 영상이 있는 강의가 아직 없어요.`
+                : category
+                  ? `아직 ${category.label} 강의가 준비되지 않았어요.`
+                  : "선택한 난이도의 강의가 아직 없어요."}
             </p>
             {category && (
               <Button

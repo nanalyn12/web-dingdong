@@ -8,10 +8,20 @@
  * narration stayed one chunk, so TTS synthesised it in a single breath and the
  * subtitle became one 60-character cue running a dozen seconds.
  * Full-width punctuation therefore splits with or without trailing space;
- * ASCII punctuation still needs it, so "3.5초" and "Dr. Wang" stay intact. */
+ * ASCII punctuation still needs it, so "3.5초" and "Dr. Wang" stay intact.
+ *
+ * A closing quote right after the punctuation means the sentence has not ended
+ * — it is a quotation inside one. Korean narration quotes Chinese constantly
+ * ("你吃饭了吗？"라고 인사해요), and splitting there produced a fragment ending
+ * in a bare quote plus an orphan clause, in the subtitles and in the TTS
+ * chunking alike. */
+const CLOSING_QUOTE = `"'”’」』）)`;
+
 export function splitSentences(text: string): string[] {
   return text
-    .split(/(?<=[。！？…])\s*|(?<=[.!?])\s+/)
+    .split(
+      new RegExp(`(?<=[。！？…])(?![${CLOSING_QUOTE}])\\s*|(?<=[.!?])(?![${CLOSING_QUOTE}])\\s+`),
+    )
     .map((s) => s.trim())
     .filter(Boolean);
 }

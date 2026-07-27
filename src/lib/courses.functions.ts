@@ -59,6 +59,9 @@ export type CourseWithCount = {
   // ISO string. The server already returns newest-first; this is here so the
   // list can offer other orderings without a second round trip.
   created_at: string;
+  // Narration languages of the video lessons in this course, deduped. Empty for
+  // courses with no video lesson. A course can carry both.
+  video_languages: string[];
 };
 
 export const listCoursesWithCounts = createServerFn({ method: "GET" }).handler(
@@ -87,10 +90,28 @@ export const listCoursesWithCounts = createServerFn({ method: "GET" }).handler(
     for (const l of lessons) {
       counts.set(l.course_id, (counts.get(l.course_id) ?? 0) + 1);
     }
+    // Narration language per course. The language lives on the video job that
+    // produced the lesson, so this joins back through lesson_id rather than
+    // duplicating the field onto courses.
+    const { sql } = await import("drizzle-orm");
+    const langRows = await db.execute<{ course_id: string; lang: string }>(sql`
+      SELECT DISTINCT l.course_id, j.config->>'language' AS lang
+        FROM video_jobs j
+        JOIN lessons l ON l.id = j.lesson_id
+       WHERE j.config->>'language' IS NOT NULL`);
+    const langs = new Map<string, Set<string>>();
+    for (const row of langRows.rows ?? []) {
+      if (!row.course_id || !row.lang) continue;
+      const set = langs.get(row.course_id) ?? new Set<string>();
+      set.add(row.lang);
+      langs.set(row.course_id, set);
+    }
+
     return courses.map((c) => ({
       ...c,
       weeks: c.weeks ?? 1,
       lesson_count: counts.get(c.id) ?? 0,
+      video_languages: [...(langs.get(c.id) ?? [])],
     }));
   },
 );

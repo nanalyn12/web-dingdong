@@ -17,7 +17,7 @@ import { getMediaDir } from "@/lib/suno.server";
 import { pinyinFor } from "./pinyin";
 import { ensureSceneKorean } from "./translate.server";
 import { FOCUS_LABEL, levelFromAudience } from "./config";
-import type { ScriptScene, VideoJobConfig, VideoScript } from "./config";
+import type { SceneSegment, ScriptScene, VideoJobConfig, VideoScript } from "./config";
 import type { LessonEnrichment } from "./lesson-enrich.server";
 
 // ─── job state helpers ───────────────────────────────────────────────────────
@@ -963,7 +963,51 @@ function parseSrtTimes(srt: string): { start: number; end: number }[] {
   return out;
 }
 
-const HAN_EXTRACT = /[㐀-鿿][㐀-鿿，、\s]*[㐀-鿿]|[㐀-鿿]/;
+// Every Han run in a string, not just the first. Korean narration routinely
+// names two expressions in one sentence ("你好 대신 早上好"), and matching
+// without /g returned only 你好 — so the sentence the scene was built to teach
+// disappeared behind a passing mention of it.
+const HAN_RUNS = /[㐀-鿿][㐀-鿿，、]*[㐀-鿿]|[㐀-鿿]/g;
+
+/** Re-join sentence fragments that an older split produced inside a quotation.
+ *
+ * splitSentences now keeps `"你吃饭了吗？"라고 인사해요.` whole, but videos
+ * rendered before that carry the broken pair in their stored segments, and the
+ * timings are tied to audio that cannot be re-cut. Merging them for display
+ * costs nothing and removes lines that begin with a bare quote.
+ *
+ * Korean narration only: on Chinese narration each segment is paired with its
+ * own Korean sentence by index, and merging would shift that alignment. */
+function mergeQuoteFragments(cfg: VideoJobConfig, segs: SceneSegment[]): SceneSegment[] {
+  if (cfg.language !== "ko") return segs;
+  const out: SceneSegment[] = [];
+  for (const seg of segs) {
+    const prev = out[out.length - 1];
+    if (prev && /^["'”’」』）)]/.test(seg.text.trim())) {
+      out[out.length - 1] = {
+        text: `${prev.text}${seg.text.trim()}`,
+        start: prev.start,
+        end: seg.end,
+      };
+      continue;
+    }
+    out.push(seg);
+  }
+  return out;
+}
+
+/** The Chinese a Korean-narration line should display.
+ *
+ * Prefers the scene's featured expression when the sentence mentions it, then
+ * the longest run — a longer run is the expression being taught, where a bare
+ * 你好 is usually the thing being contrasted against. */
+function pickHan(text: string, featured: string | undefined): string {
+  const runs: string[] = text.match(HAN_RUNS) ?? [];
+  if (!runs.length) return "";
+  const f = (featured ?? "").trim();
+  if (f && (runs.includes(f) || text.includes(f))) return f;
+  return [...runs].sort((a, b) => b.length - a.length)[0];
+}
 
 /** Attach the finished video to a course as a "video" lesson. */
 async function createLessonFromScript(
@@ -1089,7 +1133,7 @@ export function buildDramaScenes(
   const times = parseSrtTimes(srt);
   const intro = 1.5;
   const scenes = script.scenes.map((sc, i) => {
-    const segs = sc.segments ?? [];
+    const segs = mergeQuoteFragments(cfg, sc.segments ?? []);
     const sceneStart = segs[0]?.start ?? times[i]?.start ?? 0;
     const sceneEnd = segs.at(-1)?.end ?? times[i]?.end ?? sceneStart;
 
@@ -1114,9 +1158,7 @@ export function buildDramaScenes(
     const key_lines = segs.length
       ? segs.map((seg, si) => {
           const isZhNarration = cfg.language === "zh";
-          const containsSceneZh = !!sc.zh && seg.text.includes(sc.zh);
-          const han = seg.text.match(HAN_EXTRACT)?.[0]?.trim() ?? "";
-          const lineZh = isZhNarration ? seg.text : containsSceneZh ? sc.zh : han;
+          const lineZh = isZhNarration ? seg.text : pickHan(seg.text, sc.zh);
           const koForSeg = koSentences?.[si] ?? sc.narration_ko ?? sc.ko ?? "";
           return {
             zh: lineZh,
@@ -1139,6 +1181,25 @@ export function buildDramaScenes(
             },
           ]
         : [];
+
+    // A scene is built to teach one expression, but on Korean narration that
+    // expression only reached the screen when a narration sentence happened to
+    // spell it out — the closing scene of a greetings video taught 再见 and
+    // showed 你好. Lead with it when the narration never does; it costs nothing,
+    // the script already carries the reading and the translation.
+    if (
+      cfg.language === "ko" &&
+      sc.zh &&
+      key_lines.length &&
+      !key_lines.some((l) => l.zh === sc.zh)
+    ) {
+      key_lines.unshift({
+        zh: sc.zh,
+        pinyin: pinyinFor(sc.zh, sc.pinyin),
+        ko: sc.ko,
+        time_seconds: Math.floor(sceneStart + intro),
+      });
+    }
 
     return {
       index: i + 1,
