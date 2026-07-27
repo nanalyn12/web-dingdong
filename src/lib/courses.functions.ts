@@ -56,6 +56,9 @@ export type CourseWithCount = {
   level: string;
   weeks: number;
   lesson_count: number;
+  // ISO string. The server already returns newest-first; this is here so the
+  // list can offer other orderings without a second round trip.
+  created_at: string;
 };
 
 export const listCoursesWithCounts = createServerFn({ method: "GET" }).handler(
@@ -68,6 +71,7 @@ export const listCoursesWithCounts = createServerFn({ method: "GET" }).handler(
         description: tables.courses.description,
         level: tables.courses.level,
         weeks: tables.courses.weeks,
+        created_at: tables.courses.created_at,
       })
       .from(tables.courses)
       .orderBy(desc(tables.courses.created_at));

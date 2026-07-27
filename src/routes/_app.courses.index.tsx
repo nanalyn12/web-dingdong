@@ -51,6 +51,24 @@ const LEVEL_LABEL: Record<Level, string> = {
   advanced: "고급 (HSK 7~9)",
 };
 
+type SortKey = "newest" | "oldest" | "title";
+
+const SORT_LABEL: Record<SortKey, string> = {
+  newest: "최신순",
+  oldest: "오래된순",
+  title: "가나다순",
+};
+
+// The server hands the list back newest-first, so "newest" is a no-op reorder
+// and stays the default. Korean titles do not sort correctly by code point —
+// localeCompare with an explicit locale keeps 가/나/다 in the expected order
+// and puts Latin-titled courses somewhere predictable.
+const SORTERS: Record<SortKey, (a: CourseWithCount, b: CourseWithCount) => number> = {
+  newest: (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
+  oldest: (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at),
+  title: (a, b) => a.title.localeCompare(b.title, "ko"),
+};
+
 export const Route = createFileRoute("/_app/courses/")({
   head: () => ({
     meta: [
@@ -80,15 +98,19 @@ function CoursesPage() {
     queryFn: () => listCoursesWithCounts(),
   });
   const [levelFilter, setLevelFilter] = useState<"all" | Level>("all");
+  const [sort, setSort] = useState<SortKey>("newest");
 
   useEffect(() => {
     const t = setTimeout(() => runTour("courses", coursesTourSteps()), 700);
     return () => clearTimeout(t);
   }, []);
 
+  // filter() already returns a fresh array, so sorting it in place never
+  // reorders the react-query cache.
   const filtered = (courses ?? [])
     .filter((c) => (category ? courseMatchesCategory(c, category) : true))
-    .filter((c) => (levelFilter === "all" ? true : c.level === levelFilter));
+    .filter((c) => (levelFilter === "all" ? true : c.level === levelFilter))
+    .sort(SORTERS[sort]);
   const totalLessons = (courses ?? []).reduce(
     (s, c) => s + (c.lesson_count ?? 0),
     0,
@@ -125,27 +147,44 @@ function CoursesPage() {
               </button>
             )}
           </div>
-          <div className="inline-flex rounded-2xl bg-white/60 border border-white/60 p-1 self-start md:self-auto">
-            {([
-              ["all", "전체"],
-              ["beginner", "입문"],
-              ["intermediate", "중급"],
-              ["advanced", "고급"],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setLevelFilter(key)}
-                className={[
-                  "px-3 py-1.5 rounded-xl text-xs font-medium transition",
-                  levelFilter === key
-                    ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                    : "text-muted-foreground hover:text-foreground",
-                ].join(" ")}
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            <div className="inline-flex rounded-2xl bg-white/60 border border-white/60 p-1">
+              {([
+                ["all", "전체"],
+                ["beginner", "입문"],
+                ["intermediate", "중급"],
+                ["advanced", "고급"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setLevelFilter(key)}
+                  className={[
+                    "px-3 py-1.5 rounded-xl text-xs font-medium transition",
+                    levelFilter === key
+                      ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
+                      : "text-muted-foreground hover:text-foreground",
+                  ].join(" ")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+              <SelectTrigger
+                aria-label="정렬 기준"
+                className="h-9 w-[116px] rounded-2xl bg-white/60 border-white/60 text-xs font-medium"
               >
-                {label}
-              </button>
-            ))}
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
+                  <SelectItem key={k} value={k} className="text-xs">
+                    {SORT_LABEL[k]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
