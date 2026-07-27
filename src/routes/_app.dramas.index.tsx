@@ -50,6 +50,13 @@ const LEVEL_LABEL: Record<string, string> = {
   advanced: "고급",
 };
 
+// What the learner is choosing between: a Korean narrator explaining and
+// quoting the Chinese, or Chinese throughout.
+const NARRATION_LABEL: Record<string, string> = {
+  ko: "한국어 설명",
+  zh: "중국어 몰입",
+};
+
 function DramasPage() {
   const { data: profile } = useMyProfile();
   const isEditor = profile?.role === "teacher" || profile?.role === "admin";
@@ -70,6 +77,10 @@ function DramasPage() {
   const [creating, setCreating] = useState(false);
   const [genreFilter, setGenreFilter] = useState("all");
   const [levelFilter, setLevelFilter] = useState("all");
+  // Which language the narrator speaks: Korean explains in Korean and quotes the
+  // Chinese, Chinese is immersion. That is the choice a learner makes when
+  // picking one video to watch, so it belongs next to genre and level.
+  const [langFilter, setLangFilter] = useState("all");
 
   // Options come from the data rather than a fixed list, so the dropdowns stay
   // in step as the library grows instead of offering categories nothing is in.
@@ -87,17 +98,23 @@ function DramasPage() {
       present.has(l),
     );
   }, [dramas]);
+  const langOptions = useMemo(() => {
+    const present = new Set((dramas ?? []).map((d) => d.narration_language).filter(Boolean));
+    return (["ko", "zh"] as const).filter((l) => present.has(l));
+  }, [dramas]);
 
   const visibleDramas = useMemo(
     () =>
       (dramas ?? []).filter(
         (d) =>
           (genreFilter === "all" || d.genre === genreFilter) &&
-          (levelFilter === "all" || d.level === levelFilter),
+          (levelFilter === "all" || d.level === levelFilter) &&
+          (langFilter === "all" || d.narration_language === langFilter),
       ),
-    [dramas, genreFilter, levelFilter],
+    [dramas, genreFilter, levelFilter, langFilter],
   );
-  const filtering = genreFilter !== "all" || levelFilter !== "all";
+  const filtering =
+    genreFilter !== "all" || levelFilter !== "all" || langFilter !== "all";
 
   // The library grows by a handful of videos a day, so the grid is paged
   // rather than rendering every card. Filtering narrows the same list, so the
@@ -106,7 +123,7 @@ function DramasPage() {
   const [shown, setShown] = useState(PAGE_SIZE);
   useEffect(() => {
     setShown(PAGE_SIZE);
-  }, [genreFilter, levelFilter]);
+  }, [genreFilter, levelFilter, langFilter]);
   const pagedDramas = visibleDramas.slice(0, shown);
   const remaining = visibleDramas.length - pagedDramas.length;
 
@@ -190,7 +207,7 @@ function DramasPage() {
       {creating && isEditor && <CreateDramaForm onDone={() => setCreating(false)} />}
 
       {/* Filters — only worth showing once there is something to narrow down. */}
-      {(genreOptions.length > 1 || levelOptions.length > 1) && (
+      {(genreOptions.length > 1 || levelOptions.length > 1 || langOptions.length > 1) && (
         <div className="glass rounded-3xl p-3 flex items-center gap-2 flex-wrap">
           <SlidersHorizontal className="size-4 text-muted-foreground ml-1" />
           {genreOptions.length > 1 && (
@@ -218,6 +235,21 @@ function DramasPage() {
                 {levelOptions.map((l) => (
                   <SelectItem key={l} value={l}>
                     {LEVEL_LABEL[l] ?? l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {langOptions.length > 1 && (
+            <Select value={langFilter} onValueChange={setLangFilter}>
+              <SelectTrigger className="w-40 h-9 text-sm" aria-label="나레이션 언어">
+                <SelectValue placeholder="나레이션" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 나레이션</SelectItem>
+                {langOptions.map((l) => (
+                  <SelectItem key={l} value={l}>
+                    {NARRATION_LABEL[l]}
                   </SelectItem>
                 ))}
               </SelectContent>

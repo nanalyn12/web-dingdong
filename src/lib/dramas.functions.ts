@@ -51,7 +51,12 @@ export type DramaRow = {
  * the card only needs how many there are, and shipping the full jsonb for
  * every drama made the list response grow past 2 MB once the scheduler had
  * produced a hundred-odd videos. */
-export type DramaListRow = Omit<DramaRow, "scenes"> & { scene_count: number };
+export type DramaListRow = Omit<DramaRow, "scenes"> & {
+  scene_count: number;
+  // Narration language of the video job that produced this drama ("ko" | "zh").
+  // Null for the handful written by hand rather than generated.
+  narration_language: string | null;
+};
 
 export const listDramas = createServerFn({ method: "GET" }).handler(
   async (): Promise<DramaListRow[]> => {
@@ -75,6 +80,17 @@ export const listDramas = createServerFn({ method: "GET" }).handler(
         // jsonb_array_length throws on a non-array, so guard the type first.
         scene_count: sql<number>`case when jsonb_typeof(${tables.dramas.scenes}) = 'array'
           then jsonb_array_length(${tables.dramas.scenes}) else 0 end`.mapWith(Number),
+        // A correlated subquery rather than a join: no video job today points at
+        // the same drama twice, but a join would silently duplicate rows if one
+        // ever did, and the library is the page that must not grow phantom cards.
+        //
+        // The outer column is written out rather than interpolated: Drizzle
+        // renders `${tables.dramas.id}` unqualified as "id", which the subquery
+        // then resolves against video_jobs, making the condition j.drama_id =
+        // j.id — always false, and null for every row with no error.
+        narration_language: sql<
+          string | null
+        >`(select j.config->>'language' from video_jobs j where j.drama_id = "dramas"."id" limit 1)`,
       })
       .from(tables.dramas)
       .orderBy(desc(tables.dramas.created_at));
