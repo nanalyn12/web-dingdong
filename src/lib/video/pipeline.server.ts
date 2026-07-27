@@ -14,6 +14,8 @@ import { db, tables } from "@/db";
 import { splitSentences, wrapSubtitle } from "./subtitles";
 import type { Json } from "@/db/schema";
 import { getMediaDir } from "@/lib/suno.server";
+import { pinyinFor } from "./pinyin";
+import { ensureSceneKorean } from "./translate.server";
 import { FOCUS_LABEL, levelFromAudience } from "./config";
 import type { ScriptScene, VideoJobConfig, VideoScript } from "./config";
 import type { LessonEnrichment } from "./lesson-enrich.server";
@@ -481,6 +483,19 @@ export async function runVideoJob(jobId: string): Promise<void> {
     const script = job.script
       ? (job.script as unknown as VideoScript)
       : await generateScript(cfg);
+
+    // 1b) Korean narration. The generator is asked for narration_ko inline, but
+    //     on a long script it drops or truncates the field often enough that
+    //     everything derived from it — the lesson body, the drama's Korean
+    //     lines, the scene summaries — shipped untranslated. Repair it here,
+    //     once, before anything reads it.
+    await step(jobId, "한국어 번역 확인 중", 10);
+    const ko = await ensureSceneKorean(cfg, script.scenes);
+    if (ko.repaired) {
+      console.log(`[video] narration_ko 보정: ${ko.repaired}/${script.scenes.length} 장면`);
+    }
+    script.scenes = ko.scenes;
+
     await setJob(jobId, { script: script as unknown as Json });
     const scenes = script.scenes;
 
@@ -987,7 +1002,7 @@ async function createLessonFromScript(
 
   const keyExpressions = script.scenes
     .filter((sc) => sc.zh)
-    .map((sc) => ({ zh: sc.zh, pinyin: sc.pinyin, ko: sc.ko }));
+    .map((sc) => ({ zh: sc.zh, pinyin: pinyinFor(sc.zh, sc.pinyin), ko: sc.ko }));
 
   // 실전대화·슬라이드·퀴즈. Non-fatal: a video lesson without practice material
   // is still a usable lesson, and this runs after the video is already
@@ -1044,7 +1059,9 @@ async function createLessonFromScript(
 export function buildLessonMarkdown(script: VideoScript): string {
   return script.scenes
     .map((sc, i) => {
-      const zhBlock = sc.zh ? `\n\n**${sc.zh}** (${sc.pinyin})\n${sc.ko}` : "";
+      // A blank pinyin used to render as an empty "()" under the key sentence.
+      const py = pinyinFor(sc.zh, sc.pinyin);
+      const zhBlock = sc.zh ? `\n\n**${sc.zh}**${py ? ` (${py})` : ""}\n${sc.ko}` : "";
       // Chinese narration is unreadable to a learner without its translation,
       // and `sc.ko` only covers the short teaching line.
       const koBlock =
@@ -1082,19 +1099,32 @@ export function buildDramaScenes(
     // every narration sentence made a 60-character Chinese scene show a
     // one-clause Korean gloss, so translate from narration_ko and align it
     // sentence by sentence.
-    const koSentences = splitSentences(sc.narration_ko ?? "");
+    //
+    // ensureSceneKorean writes ko_sentences aligned to these segments. Older
+    // scripts have only the paragraph: re-splitting it is safe when the counts
+    // agree, but indexing into a translation that merged two sentences shifted
+    // every later line onto the wrong Korean, so use it whole in that case.
+    const paragraphKo = splitSentences(sc.narration_ko ?? "");
+    const koSentences =
+      sc.ko_sentences?.length === segs.length
+        ? sc.ko_sentences
+        : paragraphKo.length === segs.length
+          ? paragraphKo
+          : null;
     const key_lines = segs.length
       ? segs.map((seg, si) => {
           const isZhNarration = cfg.language === "zh";
           const containsSceneZh = !!sc.zh && seg.text.includes(sc.zh);
           const han = seg.text.match(HAN_EXTRACT)?.[0]?.trim() ?? "";
-          // Sentence counts should match (the prompt demands it); if the model
-          // merged or split one, fall back to the whole translation.
-          const koForSeg =
-            koSentences[si] ?? sc.narration_ko ?? sc.ko ?? "";
+          const lineZh = isZhNarration ? seg.text : containsSceneZh ? sc.zh : han;
+          const koForSeg = koSentences?.[si] ?? sc.narration_ko ?? sc.ko ?? "";
           return {
-            zh: isZhNarration ? seg.text : containsSceneZh ? sc.zh : han,
-            pinyin: containsSceneZh || isZhNarration ? sc.pinyin ?? "" : "",
+            zh: lineZh,
+            // The script only carries pinyin for the short teaching line, so
+            // every other Chinese line used to render with none at all. Derive
+            // it, and keep the script's reading for the line it actually
+            // describes.
+            pinyin: pinyinFor(lineZh, lineZh === sc.zh ? sc.pinyin : ""),
             ko: isZhNarration ? koForSeg : seg.text,
             time_seconds: Math.floor(seg.start + intro),
           };
@@ -1103,7 +1133,7 @@ export function buildDramaScenes(
         ? [
             {
               zh: sc.zh,
-              pinyin: sc.pinyin,
+              pinyin: pinyinFor(sc.zh, sc.pinyin),
               ko: sc.ko,
               time_seconds: Math.floor(sceneStart + intro),
             },
@@ -1118,7 +1148,11 @@ export function buildDramaScenes(
       // Must be Korean — on Chinese-narration videos `narration` is Chinese.
       summary_ko: (sc.narration_ko || sc.narration).slice(0, 120),
       key_lines,
-      vocab: (sc.vocab ?? []).filter((v) => v?.zh),
+      // The model leaves vocab pinyin blank often enough that the word card
+      // rendered a bare hanzi; it is derivable, so derive it.
+      vocab: (sc.vocab ?? [])
+        .filter((v) => v?.zh)
+        .map((v) => ({ ...v, pinyin: pinyinFor(v.zh, v.pinyin) })),
       quiz: (sc.quiz ?? []).filter((q) => q?.question && q?.answer),
     };
   });

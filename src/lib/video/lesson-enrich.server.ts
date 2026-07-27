@@ -18,6 +18,7 @@ import { z } from "zod";
 import { createTextProvider } from "@/lib/ai-gateway.server";
 import { extractJsonObject } from "@/lib/generate-lesson.functions";
 import { normalizeQuiz, normalizeQuizForStorage, QUIZ_PROMPT_SPEC } from "@/lib/quiz-normalize";
+import { pinyinFor } from "./pinyin";
 import { levelFromAudience } from "./config";
 import type { VideoJobConfig, VideoScript } from "./config";
 
@@ -43,10 +44,12 @@ export type LessonEnrichment = {
 function scriptDigest(script: VideoScript): string {
   return script.scenes
     .map((sc, i) => {
-      const line = sc.zh ? `\n   핵심문장: ${sc.zh} (${sc.pinyin}) — ${sc.ko}` : "";
+      const line = sc.zh
+        ? `\n   핵심문장: ${sc.zh} (${pinyinFor(sc.zh, sc.pinyin)}) — ${sc.ko}`
+        : "";
       const vocab = (sc.vocab ?? [])
         .filter((v) => v?.zh)
-        .map((v) => `${v.zh}(${v.pinyin}) ${v.ko}`)
+        .map((v) => `${v.zh}(${pinyinFor(v.zh, v.pinyin)}) ${v.ko}`)
         .join(", ");
       const vocabLine = vocab ? `\n   단어: ${vocab}` : "";
       const narration = (sc.narration_ko || sc.narration || "").slice(0, 200);

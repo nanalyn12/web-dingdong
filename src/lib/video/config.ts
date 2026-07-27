@@ -115,6 +115,11 @@ export type ScriptScene = {
   // below only covers the short `zh` teaching line, so using it as "the
   // translation" left most of what was actually said untranslated.
   narration_ko?: string;
+  // `narration_ko` split to match `segments` one-for-one. Derived by
+  // ensureSceneKorean rather than by re-splitting the paragraph, because a
+  // translation that merges two sentences shifts every later line against the
+  // audio it is captioning.
+  ko_sentences?: string[];
   zh: string; // Chinese learning line featured in this scene
   pinyin: string;
   ko: string; // Korean translation of `zh` (the teaching line, not the narration)
