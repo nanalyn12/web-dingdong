@@ -55,6 +55,7 @@ import {
   type QuizItem,
   type QuizOrder,
 } from "@/lib/quiz-normalize";
+import { LEVEL_LABEL_HSK } from "@/lib/levels";
 
 export const Route = createFileRoute("/_app/lessons/$id")({
   head: () => ({ meta: [{ title: "레슨 — DingDong" }] }),
@@ -262,12 +263,7 @@ function LessonPage() {
 
   const level: Level = lesson.level ?? "beginner";
   const showPinyin = level === "beginner";
-  const levelLabel =
-    level === "beginner"
-      ? "입문 (HSK 1~3급)"
-      : level === "intermediate"
-        ? "중급 (HSK 4~6급)"
-        : "고급 (HSK 7~9급)";
+  const levelLabel = LEVEL_LABEL_HSK[level];
 
   return (
     <section className="glass-read rounded-3xl p-6 sm:p-8 space-y-6">

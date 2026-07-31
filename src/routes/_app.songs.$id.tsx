@@ -89,6 +89,7 @@ import {
   type SongRow,
   type VocabItem,
 } from "@/lib/songs.functions";
+import { levelLabel } from "@/lib/levels";
 
 export const Route = createFileRoute("/_app/songs/$id")({
   loader: ({ params, context }) =>
@@ -104,12 +105,6 @@ export const Route = createFileRoute("/_app/songs/$id")({
   ),
   notFoundComponent: () => <div>없습니다.</div>,
 });
-
-const LEVEL_LABEL: Record<string, string> = {
-  beginner: "입문",
-  intermediate: "중급",
-  advanced: "고급",
-};
 
 function SongPlayerPage() {
   const { id } = Route.useParams();
@@ -561,7 +556,7 @@ function SongPlayer({
               )}
               <div className="flex gap-1.5 mt-2 flex-wrap">
                 <span className="rounded-full glass-soft px-2 py-0.5 text-[11px] font-semibold">
-                  {LEVEL_LABEL[song.level] ?? song.level}
+                  {levelLabel(song.level)}
                 </span>
                 {song.genre && GENRE_LABEL[song.genre] && (
                   <span className="rounded-full glass-soft px-2 py-0.5 text-[11px] font-semibold">

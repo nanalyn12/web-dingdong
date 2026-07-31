@@ -16,6 +16,7 @@ import {
   saveWidgetLayout,
   type WidgetId,
 } from "@/lib/widgets.functions";
+import { levelLabel } from "@/lib/levels";
 
 const WIDGET_META: Record<WidgetId, { title: string; emoji: string }> = {
   quote: { title: "오늘의 명언", emoji: "💬" },
@@ -359,12 +360,6 @@ function ContinueWidget({ signedIn }: { signedIn: boolean }) {
 
 /* ── 🎵 오늘의 학습송 ───────────────────────────────────────────────────── */
 
-const SONG_LEVEL_LABEL: Record<string, string> = {
-  beginner: "입문",
-  intermediate: "중급",
-  advanced: "고급",
-};
-
 function DailySongWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ["widget-daily-song"],
@@ -391,7 +386,7 @@ function DailySongWidget() {
           <p className="text-[11px] text-muted-foreground line-clamp-1">{data.title_zh}</p>
         )}
         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-          {SONG_LEVEL_LABEL[data.level] ?? data.level}
+          {levelLabel(data.level)}
         </span>
       </div>
     </Link>

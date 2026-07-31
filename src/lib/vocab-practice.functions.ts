@@ -89,7 +89,7 @@ async function buildVocabPractice(data: z.infer<typeof Input>): Promise<VocabPra
 }`,
       "",
       "규칙:",
-      "- 난이도별 예문 길이: 입문 6-10자, 중급 10-16자, 고급 16자 이상.",
+      "- 난이도별 예문 길이: 초급 6-10자, 중급 10-16자, 고급 16자 이상.",
       "- 예문은 일상에서 정말 자주 쓰이는 자연스러운 문장으로.",
       "- quiz는 정확히 2개 (meaning 1 + fill 1).",
       "- meaning 보기 4개 중 1개만 정답, 나머지는 그럴듯한 오답.",

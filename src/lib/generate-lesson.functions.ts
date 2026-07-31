@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/auth-middleware";
 import { normalizeQuizForStorage, QUIZ_PROMPT_SPEC } from "@/lib/quiz-normalize";
 import { createTextProvider } from "./ai-gateway.server";
 import { assertEditor } from "./courses.functions";
+import { LEVEL_LABEL_HSK } from "@/lib/levels";
 
 // ---------- Input ----------
 const LevelEnum = z.enum(["beginner", "intermediate", "advanced"]);
@@ -124,12 +125,7 @@ function buildPrompt(args: {
   existingTitles: string[];
   nextOrder: number;
 }) {
-  const levelKo =
-    args.level === "beginner"
-      ? "입문 (HSK 1~3급)"
-      : args.level === "intermediate"
-        ? "중급 (HSK 4~6급)"
-        : "고급 (HSK 7~9급)";
+  const levelKo = LEVEL_LABEL_HSK[args.level];
 
   const pinyinRule =
     args.level === "beginner"

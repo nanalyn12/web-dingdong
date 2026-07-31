@@ -35,7 +35,7 @@ export function landingTourSteps(): DriveStep[] {
       element: '[data-tour="level-path"]',
       popover: {
         title: "🗺️ 단계별 학습 지도",
-        description: "입문 → 중급 → 고급 단계로 HSK 1~9급까지 함께 가요.",
+        description: "초급 → 중급 → 고급 단계로 HSK 1~9급까지 함께 가요.",
       },
     },
   ];

@@ -19,6 +19,7 @@ import { COURSE_CATEGORIES } from "@/lib/course-categories";
 import heroDingdong from "@/assets/hero-dingdong.png";
 import { listCoursesWithCounts } from "@/lib/courses.functions";
 import { WidgetPanel } from "@/components/widget-panel";
+import { LEVEL_HSK, LEVEL_LABEL } from "@/lib/levels";
 
 export const Route = createFileRoute("/_app/")({
   head: () => ({
@@ -43,9 +44,9 @@ const LEVEL_META: Record<
   string,
   { label: string; emoji: string; chip: string }
 > = {
-  beginner: { label: "입문 · HSK 1~3", emoji: "🌱", chip: "bg-mint/60" },
-  intermediate: { label: "중급 · HSK 4~6", emoji: "🌿", chip: "bg-sky/60" },
-  advanced: { label: "고급 · HSK 7~9", emoji: "🌳", chip: "bg-lavender/60" },
+  beginner: { label: `${LEVEL_LABEL.beginner} · ${LEVEL_HSK.beginner}`, emoji: "🌱", chip: "bg-mint/60" },
+  intermediate: { label: `${LEVEL_LABEL.intermediate} · ${LEVEL_HSK.intermediate}`, emoji: "🌿", chip: "bg-sky/60" },
+  advanced: { label: `${LEVEL_LABEL.advanced} · ${LEVEL_HSK.advanced}`, emoji: "🌳", chip: "bg-lavender/60" },
 };
 
 function Landing() {
@@ -231,24 +232,24 @@ function Landing() {
           {[
             {
               k: "beginner",
-              title: "입문",
-              hsk: "HSK 1~3급",
+              title: LEVEL_LABEL.beginner,
+              hsk: LEVEL_HSK.beginner,
               emoji: "🌱",
               c: "bg-mint/60",
               desc: "한어병음과 기본 인사부터. 자기소개와 일상 표현까지.",
             },
             {
               k: "intermediate",
-              title: "중급",
-              hsk: "HSK 4~6급",
+              title: LEVEL_LABEL.intermediate,
+              hsk: LEVEL_HSK.intermediate,
               emoji: "🌿",
               c: "bg-sky/60",
               desc: "실전 대화와 뉴스·드라마. 자유 회화의 자신감 단계.",
             },
             {
               k: "advanced",
-              title: "고급",
-              hsk: "HSK 7~9급",
+              title: LEVEL_LABEL.advanced,
+              hsk: LEVEL_HSK.advanced,
               emoji: "🌳",
               c: "bg-lavender/60",
               desc: "전문 어휘와 비즈니스. 원어민 수준의 표현 다루기.",

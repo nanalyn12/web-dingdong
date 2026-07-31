@@ -46,6 +46,13 @@ import {
   type LyricLine,
   type SongRow,
 } from "@/lib/songs.functions";
+import {
+  LEVEL_LABEL,
+  LEVEL_LABEL_HSK,
+  LEVEL_OPTIONS,
+  LEVEL_ORDER,
+  levelLabel,
+} from "@/lib/levels";
 
 const songsSearchSchema = z.object({
   level: fallback(z.enum(["all", "beginner", "intermediate", "advanced"]), "all").default("all"),
@@ -74,12 +81,7 @@ export const Route = createFileRoute("/_app/songs/")({
   notFoundComponent: () => <div>없습니다.</div>,
 });
 
-const LEVEL_LABEL: Record<string, string> = {
-  all: "전체",
-  beginner: "입문",
-  intermediate: "중급",
-  advanced: "고급",
-};
+const LEVEL_FILTER_LABEL: Record<string, string> = { all: "전체", ...LEVEL_LABEL };
 
 const STATUS_LABEL: Record<string, string> = {
   generating_audio: "🎙️ 음원 생성 중…",
@@ -305,10 +307,10 @@ function SongsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{LEVEL_LABEL.all}</SelectItem>
-            <SelectItem value="beginner">{LEVEL_LABEL.beginner}</SelectItem>
-            <SelectItem value="intermediate">{LEVEL_LABEL.intermediate}</SelectItem>
-            <SelectItem value="advanced">{LEVEL_LABEL.advanced}</SelectItem>
+            <SelectItem value="all">{LEVEL_FILTER_LABEL.all}</SelectItem>
+            {LEVEL_OPTIONS.map((l) => (
+              <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         {genreOptions.length > 1 && (
@@ -554,7 +556,7 @@ function SongsPage() {
               )}
               <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                 <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                  {LEVEL_LABEL[s.level] ?? s.level}
+                  {levelLabel(s.level)}
                 </span>
                 {s.genre && GENRE_LABEL[s.genre] && (
                   <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-medium">
@@ -837,9 +839,9 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
             <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="beginner">입문</SelectItem>
-                <SelectItem value="intermediate">중급</SelectItem>
-                <SelectItem value="advanced">고급</SelectItem>
+                {LEVEL_OPTIONS.map((l) => (
+                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1008,9 +1010,9 @@ function CreateSongForm({ onDone }: { onDone: () => void }) {
           <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="beginner">입문</SelectItem>
-              <SelectItem value="intermediate">중급</SelectItem>
-              <SelectItem value="advanced">고급</SelectItem>
+              {LEVEL_OPTIONS.map((l) => (
+                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -1199,9 +1201,9 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
           <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="beginner">입문</SelectItem>
-              <SelectItem value="intermediate">중급</SelectItem>
-              <SelectItem value="advanced">고급</SelectItem>
+              {LEVEL_OPTIONS.map((l) => (
+                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -1561,9 +1563,9 @@ function SongSchedulePanel() {
             <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="beginner">입문 (HSK 1~2)</SelectItem>
-                <SelectItem value="intermediate">중급 (HSK 3~4)</SelectItem>
-                <SelectItem value="advanced">고급 (HSK 5+)</SelectItem>
+                {LEVEL_ORDER.map((l) => (
+                  <SelectItem key={l} value={l}>{LEVEL_LABEL_HSK[l]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

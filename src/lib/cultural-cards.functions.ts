@@ -7,6 +7,7 @@ import { createTextProvider } from "./ai-gateway.server";
 import { requireAuth } from "@/lib/auth-middleware";
 import { assertEditor } from "@/lib/courses.functions";
 import type { Json } from "@/db/schema";
+import { LEVEL_LABEL_HSK, levelLabelHsk } from "@/lib/levels";
 
 // Cultural cards only. Regenerating a whole lesson to fill these in would also
 // redo slides, comic panels and quizzes — roughly ten times the output tokens
@@ -22,12 +23,6 @@ export type CulturalCards = {
 export type CulturalUsage = {
   inputTokens: number;
   outputTokens: number;
-};
-
-const LEVEL_KO: Record<string, string> = {
-  beginner: "입문 (HSK 1~2급)",
-  intermediate: "중급 (HSK 3~4급)",
-  advanced: "고급 (HSK 5급 이상)",
 };
 
 function extractJson(text: string): unknown {
@@ -56,7 +51,7 @@ export async function buildCulturalCards(input: {
   contentExcerpt?: string | null;
 }): Promise<{ cards: CulturalCards; usage: CulturalUsage }> {
   const gateway = createTextProvider();
-  const levelKo = LEVEL_KO[input.level ?? "beginner"] ?? LEVEL_KO.beginner;
+  const levelKo = levelLabelHsk(input.level) || LEVEL_LABEL_HSK.beginner;
 
   const system = [
     "당신은 한국인 성인 학습자를 가르치는 중국어 선생님 '叮叮'입니다.",

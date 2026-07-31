@@ -34,6 +34,7 @@ import {
   type VocabPractice,
 } from "@/lib/vocab-practice.functions";
 import { useMyProfile } from "@/lib/auth-client";
+import { LEVEL_LABEL } from "@/lib/levels";
 
 type SR = {
   lang: string;
@@ -276,7 +277,6 @@ function ExamplesPanel({
     intermediate: "from-sky-100 to-sky-50 border-sky-200 text-sky-700",
     advanced: "from-violet-100 to-violet-50 border-violet-200 text-violet-700",
   } as const;
-  const labels = { beginner: "입문", intermediate: "중급", advanced: "고급" } as const;
   const list: VocabExample[] = data.examples[level] ?? [];
   return (
     <div className="space-y-3">
@@ -293,7 +293,7 @@ function ExamplesPanel({
                 : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50",
             )}
           >
-            {labels[l]}
+            {LEVEL_LABEL[l]}
           </button>
         ))}
       </div>

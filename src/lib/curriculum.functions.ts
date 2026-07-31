@@ -7,6 +7,7 @@ import type { Json } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-middleware";
 import { createTextProvider } from "./ai-gateway.server";
 import { assertEditor, getRole } from "./courses.functions";
+import { levelLabel } from "@/lib/levels";
 
 const GenerateInput = z.object({
   courseId: z.string().uuid().optional().nullable(),
@@ -240,12 +241,6 @@ export type CurriculumLinkedContent = {
   generated_at: string;
 };
 
-const LEVEL_LABEL: Record<string, string> = {
-  beginner: "입문",
-  intermediate: "중급",
-  advanced: "고급",
-};
-
 function fmtDuration(seconds: number | null) {
   if (!seconds) return "";
   const m = Math.round(seconds / 60);
@@ -418,7 +413,7 @@ async function generateAndCacheLinks(
         title: row.title,
         // topic is often just the title again — only show it when it adds something.
         subtitle: [
-          LEVEL_LABEL[row.level] ?? row.level,
+          levelLabel(row.level),
           row.artist,
           row.topic !== row.title ? row.topic : null,
         ]

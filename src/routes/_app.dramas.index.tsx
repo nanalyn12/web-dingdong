@@ -20,6 +20,7 @@ import { listMyDramaProgress } from "@/lib/drama-progress.functions";
 import { generateDrama } from "@/lib/generate-drama.functions";
 import { resyncAllDramasWithoutCaptions } from "@/lib/resync-dramas.functions";
 import { probeCaptions, type ProbeResult } from "@/lib/youtube-captions.functions";
+import { LEVEL_OPTIONS, levelLabel } from "@/lib/levels";
 
 
 export const Route = createFileRoute("/_app/dramas/")({
@@ -43,12 +44,6 @@ export const Route = createFileRoute("/_app/dramas/")({
 });
 
 const PAGE_SIZE = 24;
-
-const LEVEL_LABEL: Record<string, string> = {
-  beginner: "입문",
-  intermediate: "중급",
-  advanced: "고급",
-};
 
 // What the learner is choosing between: a Korean narrator explaining and
 // quoting the Chinese, or Chinese throughout.
@@ -234,7 +229,7 @@ function DramasPage() {
                 <SelectItem value="all">전체 난이도</SelectItem>
                 {levelOptions.map((l) => (
                   <SelectItem key={l} value={l}>
-                    {LEVEL_LABEL[l] ?? l}
+                    {levelLabel(l)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -338,7 +333,7 @@ function DramasPage() {
                     </div>
                   )}
                   <div className="absolute top-2 right-2 glass-soft rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                    {LEVEL_LABEL[d.level] ?? d.level}
+                    {levelLabel(d.level)}
                   </div>
                   <div className="absolute bottom-2 left-2 bg-black/60 text-white rounded-full px-2 py-0.5 text-[10px] font-semibold">
                     🎞 {d.scene_count}장면
@@ -580,9 +575,9 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="beginner">입문</SelectItem>
-              <SelectItem value="intermediate">중급</SelectItem>
-              <SelectItem value="advanced">고급</SelectItem>
+              {LEVEL_OPTIONS.map((l) => (
+                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

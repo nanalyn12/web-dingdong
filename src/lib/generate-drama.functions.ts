@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
 import { assertEditor } from "@/lib/courses.functions";
+import { LEVEL_LABEL_HSK } from "@/lib/levels";
 
 const LevelEnum = z.enum(["beginner", "intermediate", "advanced"]);
 const LangEnum = z.enum(["auto", "zh-CN", "zh-TW", "en"]);
@@ -52,12 +53,7 @@ function buildPrompt(args: {
   level: "beginner" | "intermediate" | "advanced";
   genre: string;
 }) {
-  const levelKo =
-    args.level === "beginner"
-      ? "입문 (HSK 1~3급)"
-      : args.level === "intermediate"
-        ? "중급 (HSK 4~6급)"
-        : "고급 (HSK 7~9급)";
+  const levelKo = LEVEL_LABEL_HSK[args.level];
   return `너는 한국인 성인 중국어 학습자를 위한 드라마 학습 콘텐츠 디자이너야.
 첨부된 YouTube 영상(중국어 드라마/콘텐츠)을 시청한 뒤, 학습용 장면(scene) 4~8개로 분할하고 각 장면별 학습 자료를 만들어줘.
 난이도: ${levelKo}${args.genre ? `\n장르: ${args.genre}` : ""}
