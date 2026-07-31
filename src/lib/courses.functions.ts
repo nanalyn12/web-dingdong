@@ -49,6 +49,53 @@ export const createCourse = createServerFn({ method: "POST" })
     return { courseId: row.id };
   });
 
+const UpdateCourseInput = z.object({
+  courseId: z.string().uuid(),
+  title: z.string().trim().min(1, "제목은 필수입니다").max(80),
+  description: z.string().trim().max(500).optional().default(""),
+  level: LevelEnum,
+  weeks: z.number().int().min(1).max(15),
+});
+
+/** Edit a course's own fields. Lessons keep their own level — a course whose
+ * level changes does not silently relabel material already published under it;
+ * use the studio/backfill path for that. */
+export const updateCourse = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => UpdateCourseInput.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    // Same rule as updateLesson: admin edits anyone's, teacher only own.
+    const isAdmin = (await getRole(context.userId)) === "admin";
+    const rows = await db
+      .select({ created_by: tables.courses.created_by })
+      .from(tables.courses)
+      .where(eq(tables.courses.id, data.courseId))
+      .limit(1);
+    if (!rows[0]) throw new Error("강의를 찾을 수 없습니다.");
+    if (!isAdmin && rows[0].created_by !== context.userId) {
+      throw new Error("본인이 만든 강의만 수정할 수 있어요.");
+    }
+    // weeks feeds the progress ring; letting it drop below the lesson count
+    // would render a course as over-full.
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tables.lessons)
+      .where(eq(tables.lessons.course_id, data.courseId));
+    await db
+      .update(tables.courses)
+      .set({
+        title: data.title,
+        description: data.description || null,
+        level: data.level,
+        weeks: Math.max(data.weeks, count),
+        updated_at: new Date().toISOString(),
+      })
+      .where(eq(tables.courses.id, data.courseId));
+    return { ok: true as const, weeks: Math.max(data.weeks, count) };
+  });
+
 export type CourseWithCount = {
   id: string;
   title: string;
@@ -120,7 +167,12 @@ export type CourseWithLessons = {
   id: string;
   title: string;
   level: string;
-  lessons: { id: string; title: string; order_index: number }[];
+  lessons: {
+    id: string;
+    title: string;
+    description: string | null;
+    order_index: number;
+  }[];
 };
 
 export const listCoursesWithLessons = createServerFn({ method: "GET" }).handler(
@@ -142,19 +194,22 @@ export const listCoursesWithLessons = createServerFn({ method: "GET" }).handler(
         id: tables.lessons.id,
         course_id: tables.lessons.course_id,
         title: tables.lessons.title,
+        description: tables.lessons.description,
         order_index: tables.lessons.order_index,
       })
       .from(tables.lessons)
       .where(inArray(tables.lessons.course_id, ids))
       .orderBy(asc(tables.lessons.order_index));
 
-    const byCourse = new Map<
-      string,
-      { id: string; title: string; order_index: number }[]
-    >();
+    const byCourse = new Map<string, CourseWithLessons["lessons"]>();
     for (const l of lessons) {
       const arr = byCourse.get(l.course_id) ?? [];
-      arr.push({ id: l.id, title: l.title, order_index: l.order_index });
+      arr.push({
+        id: l.id,
+        title: l.title,
+        description: l.description,
+        order_index: l.order_index,
+      });
       byCourse.set(l.course_id, arr);
     }
     return courses.map((c) => ({
@@ -177,6 +232,7 @@ export const getLesson = createServerFn({ method: "GET" })
       .select({
         id: tables.lessons.id,
         title: tables.lessons.title,
+        description: tables.lessons.description,
         content_md: tables.lessons.content_md,
         level: tables.lessons.level,
         key_expressions: tables.lessons.key_expressions,
@@ -197,7 +253,8 @@ export const getLesson = createServerFn({ method: "GET" })
 
 const UpdateLessonInput = z.object({
   lessonId: z.string().uuid(),
-  title: z.string().min(1, "제목은 필수입니다"),
+  title: z.string().trim().min(1, "제목은 필수입니다").max(120),
+  description: z.string().trim().max(300).optional().default(""),
 });
 
 export const updateLesson = createServerFn({ method: "POST" })
@@ -219,7 +276,11 @@ export const updateLesson = createServerFn({ method: "POST" })
     }
     await db
       .update(tables.lessons)
-      .set({ title: data.title })
+      .set({
+        title: data.title,
+        description: data.description || null,
+        updated_at: new Date().toISOString(),
+      })
       .where(eq(tables.lessons.id, data.lessonId));
     return { ok: true as const };
   });

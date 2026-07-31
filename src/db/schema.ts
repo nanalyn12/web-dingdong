@@ -143,6 +143,9 @@ export const lessons = pgTable(
     .notNull()
     .references(() => courses.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
+  // One-line summary shown under the title in course/lesson lists. Nullable —
+  // every lesson created before this column existed has none.
+  description: text("description"),
   order_index: integer("order_index").notNull(),
   lesson_type: text("lesson_type"),
   level: text("level"),

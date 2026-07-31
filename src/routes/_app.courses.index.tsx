@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import {
   createCourse,
+  updateCourse,
   listCoursesWithCounts,
   listCoursesWithLessons,
   updateLesson,
@@ -37,19 +38,15 @@ import {
   mergeCourses,
   splitCourse,
   type CourseWithCount,
+  type CourseWithLessons,
 } from "@/lib/courses.functions";
 
 import { useIsEditor } from "@/lib/auth-client";
 import { generateLesson } from "@/lib/generate-lesson.functions";
 import { courseMatchesCategory, findCategory } from "@/lib/course-categories";
+import { LEVEL_LABEL_HSK, LEVEL_OPTIONS, LEVEL_ORDER, levelLabelHsk } from "@/lib/levels";
 
 type Level = "beginner" | "intermediate" | "advanced";
-
-const LEVEL_LABEL: Record<Level, string> = {
-  beginner: "입문 (HSK 1~3)",
-  intermediate: "중급 (HSK 4~6)",
-  advanced: "고급 (HSK 7~9)",
-};
 
 type SortKey = "newest" | "oldest" | "title";
 
@@ -163,11 +160,9 @@ function CoursesPage() {
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             <div className="inline-flex rounded-2xl bg-white/60 border border-white/60 p-1">
               {([
-                ["all", "전체"],
-                ["beginner", "입문"],
-                ["intermediate", "중급"],
-                ["advanced", "고급"],
-              ] as const).map(([key, label]) => (
+                ["all", "전체"] as const,
+                ...LEVEL_OPTIONS.map((l) => [l.value, l.label] as const),
+              ]).map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -366,7 +361,7 @@ function CreateCourseForm() {
             id="course-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="예: 일상 대화 입문"
+            placeholder="예: 일상 대화 초급"
             required
             disabled={creating}
           />
@@ -393,9 +388,9 @@ function CreateCourseForm() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(LEVEL_LABEL) as Level[]).map((l) => (
+                {LEVEL_ORDER.map((l) => (
                   <SelectItem key={l} value={l}>
-                    {LEVEL_LABEL[l]}
+                    {LEVEL_LABEL_HSK[l]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -562,7 +557,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${accent.pill}`}>
-                {LEVEL_LABEL[courseLevel]}
+                {levelLabelHsk(courseLevel)}
               </span>
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/50 text-foreground">
                 {course.weeks}주차 과정
@@ -657,6 +652,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
               <span className="text-[10px] opacity-70 group-open/details:rotate-180 transition-transform">▾</span>
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-4">
+              <CourseEditDialog course={course} />
               <CourseStructureDialog course={course} />
               <Button
                 size="sm"
@@ -700,9 +696,9 @@ function CourseCard({ course }: { course: CourseWithCount }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(Object.keys(LEVEL_LABEL) as Level[]).map((l) => (
+                      {LEVEL_ORDER.map((l) => (
                         <SelectItem key={l} value={l}>
-                          {LEVEL_LABEL[l]}
+                          {LEVEL_LABEL_HSK[l]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -739,6 +735,152 @@ function CourseCard({ course }: { course: CourseWithCount }) {
 }
 
 /** 강의 구조 편집: 레슨 이동 / 강의 분리 / 강의 합치기 */
+/** Edit a course's own title/description/level/weeks.
+ *
+ * The list could create, delete, move and merge courses but never rename one,
+ * so a typo in a title was only fixable by deleting the course and its
+ * lessons. */
+function CourseEditDialog({ course }: { course: CourseWithCount }) {
+  const qc = useQueryClient();
+  const save = useServerFn(updateCourse);
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(course.title);
+  const [description, setDescription] = useState(course.description ?? "");
+  const [level, setLevel] = useState<Level>(
+    LEVEL_ORDER.includes(course.level as Level) ? (course.level as Level) : "beginner",
+  );
+  const [weeks, setWeeks] = useState(course.weeks);
+
+  // Reopening after a cancel should show what is stored, not the abandoned edit.
+  useEffect(() => {
+    if (!open) return;
+    setTitle(course.title);
+    setDescription(course.description ?? "");
+    setLevel(
+      LEVEL_ORDER.includes(course.level as Level) ? (course.level as Level) : "beginner",
+    );
+    setWeeks(course.weeks);
+  }, [open, course]);
+
+  const saveMut = useMutation({
+    mutationFn: () =>
+      save({ data: { courseId: course.id, title: title.trim(), description, level, weeks } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.weeks !== weeks
+          ? `저장했어요. 세부 강의가 ${r.weeks}개라 주차는 ${r.weeks}주로 맞췄어요.`
+          : "강의 정보를 저장했어요.",
+      );
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["courses-with-counts"] });
+      qc.invalidateQueries({ queryKey: ["sidebar-courses-with-lessons"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "저장 실패"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="w-full rounded-xl text-xs">
+          ✏️ 강의 정보 수정 (제목·설명·난이도)
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-base">강의 정보 수정</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!title.trim() || saveMut.isPending) return;
+            saveMut.mutate();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor={`edit-title-${course.id}`}>제목 *</Label>
+            <Input
+              id={`edit-title-${course.id}`}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={80}
+              required
+              disabled={saveMut.isPending}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`edit-desc-${course.id}`}>설명</Label>
+            <Textarea
+              id={`edit-desc-${course.id}`}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              placeholder="이 코스에서 배우는 내용을 간단히 적어주세요."
+              disabled={saveMut.isPending}
+            />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>난이도 *</Label>
+              <Select
+                value={level}
+                onValueChange={(v) => setLevel(v as Level)}
+                disabled={saveMut.isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEVEL_ORDER.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {LEVEL_LABEL_HSK[l]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>몇 주차 강의 *</Label>
+              <Select
+                value={String(weeks)}
+                onValueChange={(v) => setWeeks(Number(v))}
+                disabled={saveMut.isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WEEKS_OPTIONS.map((w) => (
+                    <SelectItem key={w} value={String(w)}>
+                      {w}주차
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            난이도를 바꿔도 이미 만들어진 세부 강의의 난이도는 그대로예요.
+          </p>
+          <div className="flex gap-2 justify-end pt-1">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              disabled={saveMut.isPending}
+            >
+              취소
+            </Button>
+            <Button type="submit" disabled={!title.trim() || saveMut.isPending}>
+              {saveMut.isPending ? "저장 중…" : "저장"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CourseStructureDialog({ course }: { course: CourseWithCount }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -978,7 +1120,7 @@ function LessonListEditor({ courseId }: { courseId: string }) {
   const lessons = data?.find((c) => c.id === courseId)?.lessons ?? [];
 
   const updateM = useMutation({
-    mutationFn: (vars: { lessonId: string; title: string }) =>
+    mutationFn: (vars: { lessonId: string; title: string; description: string }) =>
       update({ data: vars }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sidebar-courses-with-lessons"] });
@@ -1004,7 +1146,9 @@ function LessonListEditor({ courseId }: { courseId: string }) {
             key={l.id}
             lesson={l}
             isEditor={isEditor}
-            onSave={(title) => updateM.mutate({ lessonId: l.id, title })}
+            onSave={(title, description) =>
+              updateM.mutate({ lessonId: l.id, title, description })
+            }
             onDelete={() => {
               if (confirm(`"${l.title}" 세부 강의를 삭제할까요?`)) {
                 deleteM.mutate(l.id);
@@ -1030,60 +1174,80 @@ function LessonRow({
   onDelete,
   saving,
 }: {
-  lesson: { id: string; title: string; order_index: number };
+  lesson: CourseWithLessons["lessons"][number];
   isEditor: boolean;
-  onSave: (title: string) => void;
+  onSave: (title: string, description: string) => void;
   onDelete: () => void;
   saving: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(lesson.title);
+  const [descDraft, setDescDraft] = useState(lesson.description ?? "");
   const navigate = useNavigate();
 
   if (editing) {
     return (
-      <li className="flex items-center gap-2">
+      <li className="space-y-1.5 rounded-xl bg-white/50 p-2">
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           className="h-8 text-sm"
+          placeholder="세부 강의 제목"
+          maxLength={120}
           autoFocus
         />
-        <Button
-          size="sm"
-          variant="default"
-          disabled={saving || !draft.trim()}
-          onClick={() => {
-            onSave(draft.trim());
-            setEditing(false);
-          }}
-        >
-          저장
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            setDraft(lesson.title);
-            setEditing(false);
-          }}
-        >
-          취소
-        </Button>
+        <Textarea
+          value={descDraft}
+          onChange={(e) => setDescDraft(e.target.value)}
+          className="min-h-14 text-sm"
+          placeholder="설명 (선택) — 이 강의에서 배우는 내용을 한두 줄로"
+          maxLength={300}
+        />
+        <div className="flex justify-end gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setDraft(lesson.title);
+              setDescDraft(lesson.description ?? "");
+              setEditing(false);
+            }}
+          >
+            취소
+          </Button>
+          <Button
+            size="sm"
+            variant="default"
+            disabled={saving || !draft.trim()}
+            onClick={() => {
+              onSave(draft.trim(), descDraft.trim());
+              setEditing(false);
+            }}
+          >
+            저장
+          </Button>
+        </div>
       </li>
     );
   }
 
   return (
-    <li className="flex items-center justify-between gap-2 text-sm">
+    <li className="flex items-start justify-between gap-2 text-sm">
       <button
         type="button"
-        className="flex-1 text-left hover:text-primary truncate"
+        className="min-w-0 flex-1 text-left hover:text-primary"
         onClick={() =>
           navigate({ to: "/lessons/$id", params: { id: lesson.id } })
         }
       >
-        {lesson.order_index}. {lesson.title}
+        <span className="block truncate">
+          {lesson.order_index}. {lesson.title}
+        </span>
+        {lesson.description && (
+          <span className="block truncate text-xs text-muted-foreground">
+            {lesson.description}
+          </span>
+        )}
       </button>
       {isEditor && (
         <div className="flex gap-1">

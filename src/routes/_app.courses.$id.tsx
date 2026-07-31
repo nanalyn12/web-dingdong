@@ -9,6 +9,7 @@ import {
   listCoursesWithLessons,
 } from "@/lib/courses.functions";
 import { listMyLessonProgress } from "@/lib/lesson-progress.functions";
+import { levelLabelHsk } from "@/lib/levels";
 
 export const Route = createFileRoute("/_app/courses/$id")({
   head: () => ({
@@ -16,12 +17,6 @@ export const Route = createFileRoute("/_app/courses/$id")({
   }),
   component: CourseDetail,
 });
-
-const LEVEL_LABEL: Record<string, string> = {
-  beginner: "입문 (HSK 1~3)",
-  intermediate: "중급 (HSK 4~6)",
-  advanced: "고급 (HSK 7~9)",
-};
 
 const LEVEL_PILL: Record<string, string> = {
   beginner: "bg-emerald-500/15 text-emerald-700",
@@ -100,7 +95,7 @@ function CourseDetail() {
               LEVEL_PILL[level] ?? LEVEL_PILL.beginner
             }`}
           >
-            {LEVEL_LABEL[level] ?? level}
+            {levelLabelHsk(level)}
           </span>
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/50">
             {course.weeks}주차 과정
@@ -155,8 +150,15 @@ function CourseDetail() {
                     <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent/60 text-xs font-bold">
                       {i + 1}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {l.title}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">
+                        {l.title}
+                      </span>
+                      {l.description && (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {l.description}
+                        </span>
+                      )}
                     </span>
                     {p?.completed ? (
                       <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-emerald-600">
