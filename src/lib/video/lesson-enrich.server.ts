@@ -19,7 +19,8 @@ import { createTextProvider } from "@/lib/ai-gateway.server";
 import { extractJsonObject } from "@/lib/generate-lesson.functions";
 import { normalizeQuiz, normalizeQuizForStorage, QUIZ_PROMPT_SPEC } from "@/lib/quiz-normalize";
 import { pinyinFor } from "./pinyin";
-import { levelFromAudience } from "./config";
+import { LEVEL_LABEL_HSK } from "@/lib/levels";
+import { levelOf } from "./config";
 import type { VideoJobConfig, VideoScript } from "./config";
 
 // Shallow on purpose, like the lesson generator: Gemini satisfies this
@@ -59,13 +60,8 @@ function scriptDigest(script: VideoScript): string {
 }
 
 function buildPrompt(cfg: VideoJobConfig, script: VideoScript): string {
-  const level = levelFromAudience(cfg.audience);
-  const levelKo =
-    level === "beginner"
-      ? "입문 (HSK 1~3급)"
-      : level === "intermediate"
-        ? "중급 (HSK 4~6급)"
-        : "고급 (HSK 7~9급)";
+  const level = levelOf(cfg);
+  const levelKo = LEVEL_LABEL_HSK[level];
 
   // Same rule as the lesson generator: beginners see pinyin everywhere,
   // higher levels only in structured vocab/example fields.

@@ -16,7 +16,8 @@ import type { Json } from "@/db/schema";
 import { getMediaDir } from "@/lib/suno.server";
 import { pinyinFor } from "./pinyin";
 import { ensureSceneKorean } from "./translate.server";
-import { FOCUS_LABEL, levelFromAudience } from "./config";
+import { LEVEL_LABEL_HSK } from "@/lib/levels";
+import { FOCUS_LABEL, levelOf, type VideoLevel } from "./config";
 import type { SceneSegment, ScriptScene, VideoJobConfig, VideoScript } from "./config";
 import type { LessonEnrichment } from "./lesson-enrich.server";
 
@@ -209,6 +210,24 @@ function tryParseScript(text: string): VideoScript | null {
   return null;
 }
 
+/** Pin the job's difficulty before anything reads it.
+ *
+ * A video filed into an existing course inherits that course's level: putting
+ * it on the "HSK 고급 강좌" shelf is a clearer statement of intent than a
+ * dropdown left on its default, and the mismatch is what buried 25 HSK 6급
+ * lessons under "입문". The wizard's own level still governs standalone videos
+ * and brand-new courses. */
+async function resolveLevel(cfg: VideoJobConfig): Promise<VideoJobConfig> {
+  if (!cfg.courseId) return { ...cfg, level: levelOf(cfg) };
+  const { eq } = await import("drizzle-orm");
+  const [course] = await db
+    .select({ level: tables.courses.level })
+    .from(tables.courses)
+    .where(eq(tables.courses.id, cfg.courseId))
+    .limit(1);
+  return { ...cfg, level: levelOf({ level: course?.level as VideoLevel, audience: cfg.audience }) };
+}
+
 async function generateScript(cfg: VideoJobConfig): Promise<VideoScript> {
   const { createTextProvider } = await import("@/lib/ai-gateway.server");
   const { generateText } = await import("ai");
@@ -223,6 +242,12 @@ async function generateScript(cfg: VideoJobConfig): Promise<VideoScript> {
   const perScene = Math.round(cfg.lengthSeconds / cfg.clipCount);
   const narrLang = cfg.language === "ko" ? "한국어" : "중국어(간체)";
 
+  // The script itself has to match the level the lesson gets filed under —
+  // otherwise a "고급" filter turns up HSK 1 sentences.
+  const level = levelOf(cfg);
+  const hskRange =
+    level === "beginner" ? "1~3" : level === "intermediate" ? "4~6" : "7~9";
+
   const topicLine = cfg.topic?.trim()
     ? `주제: "${cfg.topic}" — 반드시 이 주제를 그대로 다뤄. 키워드는 참고일 뿐, 주제를 바꾸지 마.`
     : `주제: (지정 없음 — 키워드 "${cfg.keyword}"에 딱 맞는 흥미로운 주제를 직접 정해)`;
@@ -231,6 +256,7 @@ async function generateScript(cfg: VideoJobConfig): Promise<VideoScript> {
 키워드: "${cfg.keyword}" / 중점: ${focusKo}
 ${topicLine}
 타겟 시청자: ${cfg.audience}
+난이도: ${LEVEL_LABEL_HSK[level]} — 가르치는 중국어 표현(zh)과 단어(vocab)는 HSK ${hskRange}급 수준에 맞춰. 이 범위보다 쉽거나 어려운 표현으로 채우지 마.
 영상 길이: 약 ${cfg.lengthSeconds}초, 장면 ${cfg.clipCount}개 (장면당 약 ${perScene}초)
 나레이션 언어: ${narrLang}
 
@@ -247,7 +273,7 @@ ${topicLine}
 - pinyin: zh의 병음 (성조 기호)
 - ko: zh의 한국어 번역
 - pexels_query: 이 장면에 어울리는 스톡 영상 검색어 (영어 2~4단어, 구체적 사물/풍경/행동)
-- vocab: 이 장면에서 배우는 중국어 단어 3~5개. 각 항목 { "zh": 한자, "pinyin": 성조 병음, "ko": 뜻, "hsk": 1~9 }
+- vocab: 이 장면에서 배우는 중국어 단어 3~5개. 각 항목 { "zh": 한자, "pinyin": 성조 병음, "ko": 뜻, "hsk": ${hskRange} 범위의 숫자 }
 - quiz: 이 장면 내용 기반 문제 정확히 2개. 1개는 {"type":"choice","question":"...","options":["A안","B안","C안","D안"],"answer":"정답 옵션 텍스트 그대로","explanation":"..."}, 1개는 {"type":"fill","question":"빈칸이 ___인 중국어 문장","answer":"빈칸 한자","explanation":"..."}
 
 첫 장면은 주제 소개(훅), 마지막 장면은 요약+구독 유도.
@@ -464,7 +490,7 @@ export async function runVideoJob(jobId: string): Promise<void> {
     .limit(1);
   const job = rows[0];
   if (!job) return;
-  const cfg = job.config as unknown as VideoJobConfig;
+  const cfg = await resolveLevel(job.config as unknown as VideoJobConfig);
 
   const work = join(tmpdir(), `dingdong-video-${jobId.slice(0, 8)}`);
   await mkdir(work, { recursive: true });
@@ -739,7 +765,7 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
     .limit(1);
   const job = rows[0];
   if (!job?.video_path) throw new Error("업로드할 영상이 없습니다.");
-  const cfg = job.config as unknown as VideoJobConfig;
+  const cfg = await resolveLevel(job.config as unknown as VideoJobConfig);
   const script = job.script as unknown as VideoScript;
 
   try {
@@ -877,7 +903,7 @@ export async function finalizeWebOnly(jobId: string): Promise<void> {
     .limit(1);
   const job = rows[0];
   if (!job?.video_path) throw new Error("완성된 영상이 없습니다.");
-  const cfg = job.config as unknown as VideoJobConfig;
+  const cfg = await resolveLevel(job.config as unknown as VideoJobConfig);
   const script = job.script as unknown as VideoScript;
 
   try {
@@ -1026,7 +1052,9 @@ async function createLessonFromScript(
       .values({
         title: cfg.newCourseTitle.trim().slice(0, 80),
         description: `"${cfg.keyword}" 키워드로 생성된 영상 강의 모음`,
-        level: "beginner",
+        // Was hard-coded to "beginner", so a studio-created "HSK 고급 강좌"
+        // shelf was itself filed as 입문.
+        level: levelOf(cfg),
         weeks: 4,
         created_by: userId,
       })
@@ -1073,7 +1101,7 @@ async function createLessonFromScript(
       order_index: nextOrder,
       title: script.title.slice(0, 80),
       lesson_type: "video",
-      level: levelFromAudience(cfg.audience),
+      level: levelOf(cfg),
       content_md: contentMd,
       key_expressions: keyExpressions as unknown as Json,
       dialogues: enrichment.dialogues as unknown as Json,
@@ -1243,7 +1271,7 @@ async function createDramaFromScript(
       // The studio already knows what the video is about and who it is for;
       // hard-coding one genre and level made every drama identical and left
       // the library unfilterable.
-      level: levelFromAudience(cfg.audience),
+      level: levelOf(cfg),
       genre: FOCUS_LABEL[cfg.focus] ?? "AI 생성 영상",
       youtube_url: videoRef.youtubeVideoId
         ? `https://www.youtube.com/watch?v=${videoRef.youtubeVideoId}`

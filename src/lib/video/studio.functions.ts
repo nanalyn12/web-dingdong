@@ -10,7 +10,8 @@ import type { VideoJobConfig } from "./config";
 const ConfigInput = z.object({
   keyword: z.string().trim().min(1, "키워드를 입력하세요").max(60),
   topic: z.string().trim().min(1, "주제를 입력하거나 추천받으세요").max(120),
-  audience: z.string().trim().min(1).max(80).default("중국어 입문 성인 학습자"),
+  audience: z.string().trim().min(1).max(80).default("중국어 초급 성인 학습자"),
+  level: z.enum(["beginner", "intermediate", "advanced"]).default("beginner"),
   lengthSeconds: z.number().int().min(30).max(300),
   language: z.enum(["ko", "zh"]),
   focus: z.enum(["culture", "grammar", "entertainment", "daily"]),
@@ -301,7 +302,7 @@ export const runVideoScheduleNow = createServerFn({ method: "POST" })
 const SuggestInput = z.object({
   keyword: z.string().trim().min(1).max(60),
   focus: z.enum(["culture", "grammar", "entertainment", "daily"]),
-  audience: z.string().trim().max(80).default("중국어 입문 성인 학습자"),
+  audience: z.string().trim().max(80).default("중국어 초급 성인 학습자"),
 });
 
 export const suggestVideoTopics = createServerFn({ method: "POST" })

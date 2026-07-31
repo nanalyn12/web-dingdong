@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { levelFromAudience } from "@/lib/video/config";
+
 // Cron/scheduler entry point: creates a video job without a browser session.
 // Auth: shared secret header (same pattern as reengagement-push).
 // Body: partial VideoJobConfig — sensible defaults fill the rest.
@@ -42,7 +44,12 @@ export const Route = createFileRoute("/api/public/hooks/generate-video")({
         const config = {
           keyword: String(body.keyword),
           topic: String(body.topic ?? ""),
-          audience: String(body.audience ?? "중국어 입문 성인 학습자"),
+          audience: String(body.audience ?? "중국어 초급 성인 학습자"),
+          // Falls back to whatever the audience string says, so callers that
+          // only send `audience` keep working.
+          level: ["beginner", "intermediate", "advanced"].includes(String(body.level))
+            ? body.level
+            : levelFromAudience(String(body.audience ?? "")),
           lengthSeconds: Number(body.lengthSeconds ?? 60),
           language: (body.language as string) === "zh" ? "zh" : "ko",
           focus: ["culture", "grammar", "entertainment", "daily"].includes(

@@ -40,12 +40,15 @@ import type { VideoJob, VideoSchedule } from "@/db/schema";
 import {
   FOCUS_LABEL,
   LENGTHS,
+  LEVELS,
   RESOLUTIONS,
   SPEAKING_RATES,
   VOICES,
+  levelOf,
   type VideoFocus,
   type VideoJobConfig,
   type VideoLanguage,
+  type VideoLevel,
 } from "@/lib/video/config";
 import {
   approveVideoUpload,
@@ -321,7 +324,8 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
   const [count, setCount] = useState(1);
   const [topic, setTopic] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [audience, setAudience] = useState("중국어 입문 성인 학습자");
+  const [level, setLevel] = useState<VideoLevel>("beginner");
+  const [audience, setAudience] = useState(LEVELS[0].audience);
   const [lengthSeconds, setLengthSeconds] = useState(60);
   const [language, setLanguage] = useState<VideoLanguage>("ko");
   const [focus, setFocus] = useState<VideoFocus>("culture");
@@ -354,6 +358,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
             keyword: keyword.trim(),
             topic: topic.trim(),
             audience,
+            level,
             lengthSeconds,
             language,
             focus,
@@ -455,9 +460,34 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
         )}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-4 gap-4">
         <div className="space-y-2">
-          <Label>③ 타겟 시청자</Label>
+          <Label>③ 난이도 *</Label>
+          <Select
+            value={level}
+            onValueChange={(v) => {
+              const next = v as VideoLevel;
+              setLevel(next);
+              // Only rewrite the audience line while it is still a preset —
+              // a hand-written one is the editor's, not ours to overwrite.
+              if (LEVELS.some((l) => l.audience === audience)) {
+                setAudience(LEVELS.find((l) => l.value === next)!.audience);
+              }
+            }}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {LEVELS.map((l) => (
+                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            강의·드라마가 이 난이도로 저장되고, 대본 어휘도 여기에 맞춰져요.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label>타겟 시청자</Label>
           <Input value={audience} onChange={(e) => setAudience(e.target.value)} maxLength={80} />
         </div>
         <div className="space-y-2">
@@ -819,6 +849,7 @@ function SchedulePanel() {
   const [frequency, setFrequency] = useState<"daily" | "weekly">("weekly");
   const [weekdays, setWeekdays] = useState<number[]>([1, 4]);
   const [timeKst, setTimeKst] = useState("09:00");
+  const [level, setLevel] = useState<VideoLevel>("beginner");
   const [lengthSeconds, setLengthSeconds] = useState(60);
   const [language, setLanguage] = useState<VideoLanguage>("ko");
   const [focus, setFocus] = useState<VideoFocus>("culture");
@@ -836,6 +867,7 @@ function SchedulePanel() {
     setFrequency("weekly");
     setWeekdays([1, 4]);
     setTimeKst("09:00");
+    setLevel("beginner");
     setLengthSeconds(60);
     setLanguage("ko");
     setFocus("culture");
@@ -854,6 +886,7 @@ function SchedulePanel() {
     setFrequency(s.frequency === "daily" ? "daily" : "weekly");
     setWeekdays(s.weekdays?.length ? s.weekdays : [1, 4]);
     setTimeKst(s.time_kst);
+    setLevel(levelOf(cfg as { level?: VideoLevel; audience?: string }));
     setLengthSeconds(cfg.lengthSeconds ?? 60);
     setLanguage(cfg.language === "zh" ? "zh" : "ko");
     setFocus((cfg.focus as VideoFocus) ?? "culture");
@@ -882,7 +915,8 @@ function SchedulePanel() {
       weekdays: frequency === "weekly" ? weekdays : [],
       time_kst: timeKst,
       config: {
-        audience: "중국어 입문 성인 학습자",
+        audience: LEVELS.find((l) => l.value === level)!.audience,
+        level,
         lengthSeconds,
         language,
         focus,
@@ -1014,6 +1048,17 @@ function SchedulePanel() {
                 YouTube 업로드는 하루 약 6개 한도가 있어요 — [승인] 모드 권장.
               </p>
             )}
+          </div>
+          <div className="space-y-2">
+            <Label>난이도</Label>
+            <Select value={level} onValueChange={(v) => setLevel(v as VideoLevel)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {LEVELS.map((l) => (
+                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>영상 길이</Label>

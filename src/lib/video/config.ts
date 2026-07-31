@@ -1,13 +1,19 @@
 // Shared (client-safe) types + option lists for the video studio.
 
+import { LEVEL_LABEL, LEVEL_LABEL_HSK, LEVEL_ORDER, type Level } from "@/lib/levels";
+
 export type VideoLanguage = "ko" | "zh";
 export type VideoFocus = "culture" | "grammar" | "entertainment" | "daily";
 export type UploadMode = "auto" | "approval" | "web";
+export type VideoLevel = Level;
 
 export type VideoJobConfig = {
   keyword: string;
   topic: string; // resolved topic (typed or AI-suggested)
-  audience: string; // e.g. "중국어 입문 성인 학습자"
+  audience: string; // e.g. "중국어 초급 성인 학습자"
+  // Difficulty the script, lesson and drama are stored under. Optional so old
+  // jobs still load; `levelOf` falls back to reading the audience string.
+  level?: VideoLevel;
   lengthSeconds: number; // target total length (<= 300)
   language: VideoLanguage; // narration language
   focus: VideoFocus;
@@ -41,16 +47,35 @@ export const ZH_PAIR_VOICE: Record<string, string> = {
   "ko-KR-Standard-C": "cmn-CN-Standard-B",
 };
 
-/** The studio has no explicit level field — the audience string carries it
- * ("중국어 입문 성인 학습자"). Derive it so generated dramas and lessons are
- * filterable by difficulty instead of all landing on "beginner". */
-export function levelFromAudience(
-  audience: string | null | undefined,
-): "beginner" | "intermediate" | "advanced" {
+/** Studio level picker: the shared label plus the audience line each level
+ * writes into the script prompt. */
+export const LEVELS: { value: VideoLevel; label: string; audience: string }[] =
+  LEVEL_ORDER.map((value) => ({
+    value,
+    label: LEVEL_LABEL_HSK[value],
+    audience: `중국어 ${LEVEL_LABEL[value]} 성인 학습자`,
+  }));
+
+/** Older jobs (and the public hook) carry the level only inside the free-text
+ * audience string. Kept as the fallback for `levelOf`. */
+export function levelFromAudience(audience: string | null | undefined): VideoLevel {
   const a = audience ?? "";
   if (/고급|상급|advanced/i.test(a)) return "advanced";
   if (/중급|intermediate/i.test(a)) return "intermediate";
   return "beginner";
+}
+
+/** Difficulty for one job. Prefers the explicit field the studio now sets —
+ * inferring it from the audience text alone filed every video under "입문",
+ * because that default string was almost never edited. */
+export function levelOf(cfg: {
+  level?: VideoLevel | null;
+  audience?: string | null;
+}): VideoLevel {
+  if (cfg.level === "beginner" || cfg.level === "intermediate" || cfg.level === "advanced") {
+    return cfg.level;
+  }
+  return levelFromAudience(cfg.audience);
 }
 
 export const FOCUS_LABEL: Record<VideoFocus, string> = {
