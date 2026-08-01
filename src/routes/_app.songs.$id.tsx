@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import {
   AlertCircle,
   ArrowLeft,
+  BookmarkPlus,
   BookOpen,
+  Check,
   Download,
   Loader2,
   Music,
@@ -36,6 +38,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyProfile } from "@/lib/auth-client";
 import { useSongProgress } from "@/lib/song-progress";
+import { listVocabulary, saveVocabulary } from "@/lib/vocab.functions";
+import { addGuestVocab, guessEmoji, loadGuestVocab } from "@/lib/vocab";
 import type { PlayerAPI } from "@/lib/player-api";
 import { YouTubeMediaSurface } from "@/components/youtube-media-surface";
 import { TapSyncPanel } from "@/components/tap-sync-panel";
@@ -1251,6 +1255,25 @@ function SongLessonTabs({
   const isEditor = profile?.role === "teacher" || profile?.role === "admin";
   const hasTimes = lyricLines.some((l) => typeof l.time === "number");
 
+  // Words the learner already has, so a card opens showing "담김" instead of
+  // inviting a duplicate save. Signed-in users read their saved rows; guests
+  // read the localStorage list. Clicks add to this set live.
+  const { data: savedList } = useQuery({
+    queryKey: ["vocab", profile?.id ?? "guest"],
+    queryFn: () =>
+      profile?.id
+        ? listVocabulary()
+        : Promise.resolve(loadGuestVocab()),
+  });
+  const [savedZh, setSavedZh] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (savedList) setSavedZh(new Set(savedList.map((v) => v.zh)));
+  }, [savedList]);
+  const markSaved = useCallback(
+    (zh: string) => setSavedZh((prev) => new Set(prev).add(zh)),
+    [],
+  );
+
   const {
     progress,
     markVocab,
@@ -1379,6 +1402,8 @@ function SongLessonTabs({
                   learned={progress.vocab.includes(v.zh)}
                   onLearned={() => markVocab(v.zh)}
                   paletteIdx={i % 3}
+                  alreadySaved={savedZh.has(v.zh)}
+                  onSaved={markSaved}
                 />
               ))}
             </div>
@@ -1793,14 +1818,56 @@ function VocabCard({
   learned,
   onLearned,
   paletteIdx,
+  alreadySaved,
+  onSaved,
 }: {
   item: VocabItem;
   learned: boolean;
   onLearned: () => void;
   paletteIdx: number;
+  alreadySaved: boolean;
+  onSaved: (zh: string) => void;
 }) {
   const [flipped, setFlipped] = useState(false);
   const pastel = `song-pastel-${paletteIdx}`;
+  const { data: profile } = useMyProfile();
+  const qc = useQueryClient();
+  const emoji = guessEmoji(item.zh, item.ko);
+
+  // Same save path the drama/video vocab cards use: a signed-in learner gets a
+  // real row (source "song"), a guest gets a localStorage entry.
+  const save = useMutation({
+    mutationFn: async () => {
+      if (profile?.id) {
+        await saveVocabulary({
+          data: {
+            zh: item.zh,
+            pinyin: item.pinyin ?? null,
+            ko: item.ko ?? null,
+            emoji,
+            source: "song",
+          },
+        });
+      } else {
+        addGuestVocab({
+          zh: item.zh,
+          pinyin: item.pinyin,
+          ko: item.ko,
+          emoji,
+          source: "song",
+        });
+      }
+    },
+    onSuccess: () => {
+      onSaved(item.zh);
+      toast.success("단어장에 담았어요 📒");
+      qc.invalidateQueries({ queryKey: ["vocab"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "저장 실패"),
+  });
+
+  const saved = alreadySaved || save.isSuccess;
+
   return (
     <div
       className={[
@@ -1809,6 +1876,32 @@ function VocabCard({
       ].join(" ")}
       style={{ perspective: 900 }}
     >
+      {/* Save-to-vocab overlay. Kept outside the flip <button> — a button
+          nested in a button is invalid and swallows the click. */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!saved && !save.isPending) save.mutate();
+        }}
+        disabled={saved || save.isPending}
+        aria-label={saved ? "단어장에 담김" : "단어장에 담기"}
+        title={saved ? "이미 단어장에 있어요" : "단어장에 담기"}
+        className={[
+          "absolute bottom-2 right-2 z-20 size-7 rounded-full grid place-items-center shadow transition-colors",
+          saved
+            ? "bg-emerald-500 text-white cursor-default"
+            : "bg-white/85 text-primary hover:bg-white",
+        ].join(" ")}
+      >
+        {save.isPending ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : saved ? (
+          <Check className="size-3.5" />
+        ) : (
+          <BookmarkPlus className="size-3.5" />
+        )}
+      </button>
       <button
         type="button"
         onClick={() => {
