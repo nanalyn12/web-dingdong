@@ -97,7 +97,11 @@ function VocabularyPage() {
       else if (s === "new") fresh++;
       else if (s === "learned") learned++;
     }
-    return { due, fresh, learned };
+    // Today's session is what the review page actually studies under scope
+    // "due": words due again plus brand-new words being introduced. Counting
+    // only `due` here left the button dead for anyone who had just started
+    // saving words — every word is "new" until first reviewed.
+    return { due, fresh, learned, today: due + fresh };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.items]);
 
@@ -124,7 +128,7 @@ function VocabularyPage() {
             <BookOpen className="size-7 text-primary" /> 단어장
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            총 <b>{store.items.length}</b>개 · 오늘 복습 <b className="text-rose-500">{counts.due}</b> · 신규 <b>{counts.fresh}</b> · 암기 <b className="text-emerald-600">{counts.learned}</b>
+            총 <b>{store.items.length}</b>개 · 복습 예정 <b className="text-rose-500">{counts.due}</b> · 신규 <b>{counts.fresh}</b> · 암기 <b className="text-emerald-600">{counts.learned}</b>
             {store.authed === false && (
               <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-semibold">
                 게스트 — 이 브라우저에만 저장
@@ -132,13 +136,13 @@ function VocabularyPage() {
             )}
           </p>
         </div>
-        <Button asChild disabled={counts.due === 0} size="lg" className="gap-2">
+        <Button asChild disabled={counts.today === 0} size="lg" className="gap-2">
           <Link
             to="/vocabulary/review"
             search={{ mode: "flash", scope: "due", limit: 20 }}
           >
             <Play className="size-4" />
-            오늘 복습 {counts.due > 0 && `(${counts.due})`}
+            오늘 복습 {counts.today > 0 && `(${counts.today})`}
           </Link>
         </Button>
       </header>
