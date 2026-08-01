@@ -16,6 +16,7 @@ import { Route as MediaSplatRouteImport } from './routes/media.$'
 import { Route as AppVocabularyRouteImport } from './routes/_app.vocabulary'
 import { Route as AppStudioRouteImport } from './routes/_app.studio'
 import { Route as AppStudentsRouteImport } from './routes/_app.students'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -27,7 +28,7 @@ import { Route as AppCoursesIndexRouteImport } from './routes/_app.courses.index
 import { Route as ApiYoutubeConnectRouteImport } from './routes/api/youtube.connect'
 import { Route as ApiYoutubeCallbackRouteImport } from './routes/api/youtube.callback'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
-import { Route as AppVocabularyReviewRouteImport } from './routes/_app.vocabulary.review'
+import { Route as AppVocabularyReviewRouteImport } from './routes/_app.vocabulary_.review'
 import { Route as AppSongsIdRouteImport } from './routes/_app.songs.$id'
 import { Route as AppLessonsIdRouteImport } from './routes/_app.lessons.$id'
 import { Route as AppDramasIdRouteImport } from './routes/_app.dramas.$id'
@@ -68,6 +69,11 @@ const AppStudioRoute = AppStudioRouteImport.update({
 const AppStudentsRoute = AppStudentsRouteImport.update({
   id: '/students',
   path: '/students',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOnboardingRoute = AppOnboardingRouteImport.update({
@@ -126,9 +132,9 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppVocabularyReviewRoute = AppVocabularyReviewRouteImport.update({
-  id: '/review',
-  path: '/review',
-  getParentRoute: () => AppVocabularyRoute,
+  id: '/vocabulary_/review',
+  path: '/vocabulary/review',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSongsIdRoute = AppSongsIdRouteImport.update({
   id: '/songs/$id',
@@ -175,9 +181,10 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/integrations': typeof AppIntegrationsRoute
   '/onboarding': typeof AppOnboardingRoute
+  '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/studio': typeof AppStudioRoute
-  '/vocabulary': typeof AppVocabularyRouteWithChildren
+  '/vocabulary': typeof AppVocabularyRoute
   '/media/$': typeof MediaSplatRoute
   '/courses/$id': typeof AppCoursesIdRoute
   '/curriculum/$id': typeof AppCurriculumIdRoute
@@ -201,9 +208,10 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/integrations': typeof AppIntegrationsRoute
   '/onboarding': typeof AppOnboardingRoute
+  '/settings': typeof AppSettingsRoute
   '/students': typeof AppStudentsRoute
   '/studio': typeof AppStudioRoute
-  '/vocabulary': typeof AppVocabularyRouteWithChildren
+  '/vocabulary': typeof AppVocabularyRoute
   '/media/$': typeof MediaSplatRoute
   '/': typeof AppIndexRoute
   '/courses/$id': typeof AppCoursesIdRoute
@@ -230,9 +238,10 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/onboarding': typeof AppOnboardingRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/students': typeof AppStudentsRoute
   '/_app/studio': typeof AppStudioRoute
-  '/_app/vocabulary': typeof AppVocabularyRouteWithChildren
+  '/_app/vocabulary': typeof AppVocabularyRoute
   '/media/$': typeof MediaSplatRoute
   '/_app/': typeof AppIndexRoute
   '/_app/courses/$id': typeof AppCoursesIdRoute
@@ -240,7 +249,7 @@ export interface FileRoutesById {
   '/_app/dramas/$id': typeof AppDramasIdRoute
   '/_app/lessons/$id': typeof AppLessonsIdRoute
   '/_app/songs/$id': typeof AppSongsIdRoute
-  '/_app/vocabulary/review': typeof AppVocabularyReviewRoute
+  '/_app/vocabulary_/review': typeof AppVocabularyReviewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/youtube/callback': typeof ApiYoutubeCallbackRoute
   '/api/youtube/connect': typeof ApiYoutubeConnectRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/integrations'
     | '/onboarding'
+    | '/settings'
     | '/students'
     | '/studio'
     | '/vocabulary'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/integrations'
     | '/onboarding'
+    | '/settings'
     | '/students'
     | '/studio'
     | '/vocabulary'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/integrations'
     | '/_app/onboarding'
+    | '/_app/settings'
     | '/_app/students'
     | '/_app/studio'
     | '/_app/vocabulary'
@@ -324,7 +336,7 @@ export interface FileRouteTypes {
     | '/_app/dramas/$id'
     | '/_app/lessons/$id'
     | '/_app/songs/$id'
-    | '/_app/vocabulary/review'
+    | '/_app/vocabulary_/review'
     | '/api/auth/$'
     | '/api/youtube/callback'
     | '/api/youtube/connect'
@@ -396,6 +408,13 @@ declare module '@tanstack/react-router' {
       path: '/students'
       fullPath: '/students'
       preLoaderRoute: typeof AppStudentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/onboarding': {
@@ -475,12 +494,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/vocabulary/review': {
-      id: '/_app/vocabulary/review'
-      path: '/review'
+    '/_app/vocabulary_/review': {
+      id: '/_app/vocabulary_/review'
+      path: '/vocabulary/review'
       fullPath: '/vocabulary/review'
       preLoaderRoute: typeof AppVocabularyReviewRouteImport
-      parentRoute: typeof AppVocabularyRoute
+      parentRoute: typeof AppRoute
     }
     '/_app/songs/$id': {
       id: '/_app/songs/$id'
@@ -534,32 +553,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AppVocabularyRouteChildren {
-  AppVocabularyReviewRoute: typeof AppVocabularyReviewRoute
-}
-
-const AppVocabularyRouteChildren: AppVocabularyRouteChildren = {
-  AppVocabularyReviewRoute: AppVocabularyReviewRoute,
-}
-
-const AppVocabularyRouteWithChildren = AppVocabularyRoute._addFileChildren(
-  AppVocabularyRouteChildren,
-)
-
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppStudentsRoute: typeof AppStudentsRoute
   AppStudioRoute: typeof AppStudioRoute
-  AppVocabularyRoute: typeof AppVocabularyRouteWithChildren
+  AppVocabularyRoute: typeof AppVocabularyRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCoursesIdRoute: typeof AppCoursesIdRoute
   AppCurriculumIdRoute: typeof AppCurriculumIdRoute
   AppDramasIdRoute: typeof AppDramasIdRoute
   AppLessonsIdRoute: typeof AppLessonsIdRoute
   AppSongsIdRoute: typeof AppSongsIdRoute
+  AppVocabularyReviewRoute: typeof AppVocabularyReviewRoute
   AppCoursesIndexRoute: typeof AppCoursesIndexRoute
   AppCurriculumIndexRoute: typeof AppCurriculumIndexRoute
   AppDramasIndexRoute: typeof AppDramasIndexRoute
@@ -571,15 +580,17 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppOnboardingRoute: AppOnboardingRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppStudentsRoute: AppStudentsRoute,
   AppStudioRoute: AppStudioRoute,
-  AppVocabularyRoute: AppVocabularyRouteWithChildren,
+  AppVocabularyRoute: AppVocabularyRoute,
   AppIndexRoute: AppIndexRoute,
   AppCoursesIdRoute: AppCoursesIdRoute,
   AppCurriculumIdRoute: AppCurriculumIdRoute,
   AppDramasIdRoute: AppDramasIdRoute,
   AppLessonsIdRoute: AppLessonsIdRoute,
   AppSongsIdRoute: AppSongsIdRoute,
+  AppVocabularyReviewRoute: AppVocabularyReviewRoute,
   AppCoursesIndexRoute: AppCoursesIndexRoute,
   AppCurriculumIndexRoute: AppCurriculumIndexRoute,
   AppDramasIndexRoute: AppDramasIndexRoute,

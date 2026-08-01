@@ -31,7 +31,7 @@ const searchSchema = z.object({
   limit: fallback(z.number().int().min(4).max(50), 20).default(20),
 });
 
-export const Route = createFileRoute("/_app/vocabulary/review")({
+export const Route = createFileRoute("/_app/vocabulary_/review")({
   head: () => ({
     meta: [
       { title: "단어 복습 — DingDong" },
