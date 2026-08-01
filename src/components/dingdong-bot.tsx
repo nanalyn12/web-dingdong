@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Mic, MicOff, Send, Volume2, X, MessageSquare, HelpCircle } from "lucide-react";
 
 import { assistantChat } from "@/lib/assistant.functions";
+import { parseQuotaMessage } from "@/lib/ai-quota";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -110,6 +111,27 @@ function getSpeechRecognition(): any {
   return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 }
 
+/** Turn a SpeechRecognition error code into a message that tells the user what
+ * to actually do. `aborted` returns null — that is the user stopping on
+ * purpose, not a failure worth reporting. */
+function micErrorMessage(code: string | undefined): string | null {
+  switch (code) {
+    case "not-allowed":
+    case "service-not-allowed":
+      return "마이크 권한이 꺼져 있어요. 주소창 왼쪽의 🔒(자물쇠) 아이콘 → 마이크를 '허용'으로 바꾼 뒤 다시 눌러주세요.";
+    case "audio-capture":
+      return "마이크를 찾을 수 없어요. 마이크가 연결돼 있는지 확인해주세요.";
+    case "no-speech":
+      return "소리가 들리지 않았어요. 마이크에 가까이서 다시 말씀해주세요.";
+    case "network":
+      return "네트워크 문제로 음성 인식이 안 됐어요. 잠시 후 다시 시도해주세요.";
+    case "aborted":
+      return null;
+    default:
+      return "음성 인식에 실패했어요. 다시 시도해주세요.";
+  }
+}
+
 export function DingDongBot() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"chat" | "faq">("chat");
@@ -119,6 +141,7 @@ export function DingDongBot() {
   const [loading, setLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const [sttLang, setSttLang] = useState<"ko-KR" | "zh-CN">("ko-KR");
   const [blinking, setBlinking] = useState(false);
   const [mouthOpen, setMouthOpen] = useState(0); // 0..1
@@ -283,7 +306,13 @@ export function DingDongBot() {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "응답을 받지 못했어요.";
-      setMessages([...next, { role: "assistant", content: `미안! 잠깐 문제가 생겼어. (${msg})` }]);
+      // A spent daily quota is a normal outcome, not a malfunction — show
+      // 叮叮's own wording instead of dressing it up as a crash.
+      const quota = parseQuotaMessage(msg);
+      setMessages([
+        ...next,
+        { role: "assistant", content: quota ?? `미안! 잠깐 문제가 생겼어. (${msg})` },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -292,28 +321,40 @@ export function DingDongBot() {
   const toggleListening = () => {
     const SR = getSpeechRecognition();
     if (!SR) {
-      alert("이 브라우저는 음성 입력을 지원하지 않아요. Chrome을 권장합니다.");
+      setMicError(
+        "이 브라우저는 음성 입력을 지원하지 않아요. Chrome이나 Edge에서 열어주세요.",
+      );
       return;
     }
     if (listening) {
       recognitionRef.current?.stop();
       return;
     }
+    setMicError(null);
     const rec = new SR();
     rec.lang = sttLang;
     rec.interimResults = false;
     rec.maxAlternatives = 1;
     rec.onresult = (ev: any) => {
       const transcript = ev.results[0]?.[0]?.transcript ?? "";
-      if (transcript) send(transcript, true);
+      if (transcript) {
+        setMicError(null);
+        send(transcript, true);
+      }
     };
     rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    // A silent onerror was the whole problem: a blocked mic just stopped with
+    // no hint. Map the SpeechRecognition error code to something actionable.
+    rec.onerror = (ev: any) => {
+      setListening(false);
+      setMicError(micErrorMessage(ev?.error));
+    };
     recognitionRef.current = rec;
     setListening(true);
     try {
       rec.start();
     } catch {
+      // start() throws if called while already running; not user-facing.
       setListening(false);
     }
   };
@@ -622,6 +663,12 @@ export function DingDongBot() {
                     <span className="text-[10px] text-pink-500 animate-pulse">● 듣는 중…</span>
                   )}
                 </div>
+                {micError && (
+                  <div className="mb-2 mx-1 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-[11px] text-rose-700 flex items-start gap-1.5">
+                    <MicOff className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    <span className="leading-snug">{micError}</span>
+                  </div>
+                )}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
