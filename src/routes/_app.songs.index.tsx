@@ -138,6 +138,9 @@ function SongsPage() {
   const [creating, setCreating] = useState<
     null | "manual" | "ai" | "curated" | "schedule"
   >(null);
+  // Editors get a "작업 현황" tab like the video studio; students only ever see
+  // the library, so the tab bar and job panels stay hidden for them.
+  const [tab, setTab] = useState<"library" | "jobs">("library");
 
   const search = Route.useSearch();
   // 라우트 id는 "/songs/" — "/songs"로 적으면 검색 파라미터 타입이 never로
@@ -165,6 +168,7 @@ function SongsPage() {
   const failedSongs = (songs ?? []).filter(
     (s) => s.status === "failed_audio" || s.status === "failed_video",
   );
+  const activeCount = generatingSongs.length + failedSongs.length;
 
   // 선택지는 고정 목록이 아니라 실제 등록된 곡에서 뽑는다 — 아직 한 곡도 없는
   // 장르/주제를 고를 수 있게 두면 늘 빈 목록만 나온다. 순서는 SONG_GENRES /
@@ -272,6 +276,36 @@ function SongsPage() {
         )}
       </div>
 
+      {isEditor && (
+        <div className="flex gap-1 glass-soft rounded-full p-1 w-fit">
+          {(
+            [
+              { v: "library", label: "학습송" },
+              {
+                v: "jobs",
+                label: `작업 현황${activeCount > 0 ? ` (${activeCount})` : ""}`,
+              },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.v}
+              type="button"
+              onClick={() => setTab(t.v)}
+              className={[
+                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                tab === t.v
+                  ? "gradient-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              ].join(" ")}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {(!isEditor || tab === "library") && (
+      <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="glass rounded-2xl flex items-center gap-2 px-3 py-2 flex-1 min-w-0">
           <Search className="size-4 shrink-0 opacity-50" />
@@ -385,6 +419,8 @@ function SongsPage() {
           </Button>
         )}
       </div>
+      </div>
+      )}
 
       {creating === "manual" && isEditor && (
         <CreateSongForm onDone={() => setCreating(null)} />
@@ -397,6 +433,8 @@ function SongsPage() {
       )}
       {creating === "schedule" && isEditor && <SongSchedulePanel />}
 
+      {isEditor && tab === "jobs" && (
+      <div className="space-y-4">
       {isEditor && <FailedSongsPanel songs={songs ?? []} />}
 
       {generatingSongs.length > 0 && (
@@ -507,7 +545,17 @@ function SongsPage() {
           </p>
         </div>
       )}
+      {generatingSongs.length === 0 && failedSongs.length === 0 && (
+        <div className="glass rounded-3xl p-10 text-center text-muted-foreground">
+          <div className="text-4xl mb-2">✅</div>
+          진행 중이거나 실패한 작업이 없어요.
+        </div>
+      )}
+      </div>
+      )}
 
+      {(!isEditor || tab === "library") && (
+      <div className="space-y-6">
       {isLoading && (
         <div className="glass rounded-3xl p-8 text-center text-muted-foreground">불러오는 중…</div>
       )}
@@ -614,6 +662,8 @@ function SongsPage() {
             {pagedSongs.length} / {filteredSongs.length}곡
           </span>
         </div>
+      )}
+      </div>
       )}
     </div>
   );
