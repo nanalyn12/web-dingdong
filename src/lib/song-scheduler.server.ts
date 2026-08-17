@@ -11,7 +11,6 @@ const TICK_MS = 60_000;
 const POLL_MS = 20_000;
 
 declare global {
-  // eslint-disable-next-line no-var
   var __songSchedulerStarted: boolean | undefined;
 }
 
@@ -23,9 +22,7 @@ export function initSongScheduler() {
     void songTick().catch((e) => console.error("[song-sched] tick failed:", e));
   }, TICK_MS);
   setInterval(() => {
-    void pollGeneratingSongs().catch((e) =>
-      console.error("[song-sched] poll failed:", e),
-    );
+    void pollGeneratingSongs().catch((e) => console.error("[song-sched] poll failed:", e));
   }, POLL_MS);
   console.log("[song-sched] song scheduler + Suno poller started");
 }
@@ -44,12 +41,7 @@ async function songTick() {
   const schedules = await db
     .select()
     .from(tables.song_schedules)
-    .where(
-      and(
-        eq(tables.song_schedules.enabled, true),
-        eq(tables.song_schedules.time_kst, hhmm),
-      ),
-    );
+    .where(and(eq(tables.song_schedules.enabled, true), eq(tables.song_schedules.time_kst, hhmm)));
   for (const s of schedules) {
     if (s.frequency === "weekly" && !(s.weekdays ?? []).includes(weekday)) continue;
     if (s.last_run_at) {
@@ -90,18 +82,17 @@ export async function runSongScheduleOnce(
 
   const idx = s.next_keyword_index % keywords.length;
   const keyword = keywords[idx];
-  const level = (["beginner", "intermediate", "advanced"].includes(s.level)
-    ? s.level
-    : "beginner") as "beginner" | "intermediate" | "advanced";
+  const level = (
+    ["beginner", "intermediate", "advanced"].includes(s.level) ? s.level : "beginner"
+  ) as "beginner" | "intermediate" | "advanced";
 
-  const { draftSongInternal, submitSongToSuno } = await import(
-    "@/lib/songs.functions"
-  );
+  const { draftSongInternal, submitSongToSuno } = await import("@/lib/songs.functions");
   // Drafting runs before any songs row exists, so a Gemini failure here used
   // to leave nothing at all behind — no row, no notification, just a log line.
   let draft: Awaited<ReturnType<typeof draftSongInternal>>;
   try {
-    draft = await draftSongInternal({ keyword, level, style: s.style });
+    // 예약 실행에는 세션이 없다 — 예약을 만든 사람의 개인 키로 돈다.
+    draft = await draftSongInternal({ keyword, level, style: s.style, userId: s.created_by });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const { notifyAdmins } = await import("@/lib/notify.server");
@@ -117,8 +108,7 @@ export async function runSongScheduleOnce(
     style: s.style,
     topic: keyword,
     userId: s.created_by,
-    vocalGender:
-      s.vocal_gender === "m" || s.vocal_gender === "f" ? s.vocal_gender : undefined,
+    vocalGender: s.vocal_gender === "m" || s.vocal_gender === "f" ? s.vocal_gender : undefined,
   });
 
   // The run happened either way — advance the rotation. A Suno rejection
@@ -159,15 +149,11 @@ async function pollGeneratingSongs() {
     const songs = await db
       .select()
       .from(tables.songs)
-      .where(
-        inArray(tables.songs.status, ["generating_audio", "generating_video"]),
-      )
+      .where(inArray(tables.songs.status, ["generating_audio", "generating_video"]))
       .limit(10);
     if (songs.length === 0) return;
 
-    const { advanceSongAudio, advanceSongMp4 } = await import(
-      "@/lib/songs.functions"
-    );
+    const { advanceSongAudio, advanceSongMp4 } = await import("@/lib/songs.functions");
     for (const row of songs) {
       try {
         if (row.status === "generating_audio") {

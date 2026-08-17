@@ -15,9 +15,7 @@ import type { Json } from "@/db/schema";
 const AiLinkSchema = z.object({
   lesson_number: z.number().int().min(1),
   reason: z.string().min(1), // 연계성 (한국어 1~2문장)
-  shared: z
-    .array(z.object({ zh: z.string(), note: z.string().default("") }))
-    .default([]), // 공통/연관 표현
+  shared: z.array(z.object({ zh: z.string(), note: z.string().default("") })).default([]), // 공통/연관 표현
   difference: z.string().default(""), // 차이점 (형식·난이도·쓰임)
   order_tip: z.string().default(""), // 추천 학습 순서
 });
@@ -40,7 +38,12 @@ export type SongRelatedContent = {
   generated_at: string;
 };
 
-async function generateAndCache(songId: string): Promise<SongRelatedContent | null> {
+/** `userId`는 이 생성을 유발한 사용자 — 개인 Gemini 키가 있으면 그 키로 돈다.
+ *  결과는 노래 행에 캐시되어 모두가 함께 쓴다 (공용 키였을 때와 같은 구조). */
+async function generateAndCache(
+  songId: string,
+  userId: string | null,
+): Promise<SongRelatedContent | null> {
   const { db, tables } = await import("@/db");
   const songs = await db
     .select({
@@ -98,8 +101,8 @@ async function generateAndCache(songId: string): Promise<SongRelatedContent | nu
     .join("\n");
 
   const { generateText, Output } = await import("ai");
-  const { createTextProvider } = await import("@/lib/ai-gateway.server");
-  const gateway = createTextProvider();
+  const { createTextProviderFor } = await import("@/lib/ai-gateway.server");
+  const gateway = await createTextProviderFor(userId);
 
   const { experimental_output: parsed } = await generateText({
     model: gateway("google/gemini-3-flash-preview"),
@@ -170,7 +173,7 @@ export const getSongRelatedContent = createServerFn({ method: "GET" })
     if (cached?.links?.length) return cached;
     if (!context.userId) return null;
     try {
-      return await generateAndCache(data.songId);
+      return await generateAndCache(data.songId, context.userId);
     } catch (e) {
       console.warn("[content-links] 생성 실패:", e);
       return null;
@@ -183,7 +186,7 @@ export const regenerateSongRelatedContent = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ songId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<SongRelatedContent | null> => {
     await assertEditor(context.userId);
-    return generateAndCache(data.songId);
+    return generateAndCache(data.songId, context.userId);
   });
 
 export type LessonRelatedSong = {

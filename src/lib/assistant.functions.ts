@@ -40,7 +40,9 @@ const SYSTEM_PROMPT = `너는 [DingDong 중국어 학습 플랫폼]의 판다 �
 <<NAV:/경로>>
 
 사용 가능한 경로:
-${Object.entries(NAV_TARGETS).map(([p, l]) => `- ${p} → ${l}`).join("\n")}
+${Object.entries(NAV_TARGETS)
+  .map(([p, l]) => `- ${p} → ${l}`)
+  .join("\n")}
 
 예시)
 사용자: "학습송 페이지 열어줘"
@@ -54,11 +56,35 @@ const NAV_RE = /<<NAV:(\/[a-zA-Z0-9/_-]*)>>/;
 // Signed in only. This was the one AI entry point with neither authentication
 // nor a cache in front of it, so every message from every visitor was a fresh
 // model call chargeable to us.
+//
+// Two-tier cost control: a user who registered their own Gemini key runs on it
+// unmetered (their bill, their call), everyone else draws on the shared key
+// under a per-role daily cap.
 export const assistantChat = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
-  .handler(async ({ data }) => {
-    const gateway = createTextProvider();
+  .handler(async ({ data, context }) => {
+    const { resolveAiKey } = await import("@/lib/ai-gateway.server");
+    const { key, source } = await resolveAiKey(context.userId);
+
+    // 공용 키를 쓸 때만 한도를 깎는다 — 본인 키는 본인 요금이라 계량 대상이 아니다.
+    if (source === "shared") {
+      const { db, tables } = await import("@/db");
+      const { eq } = await import("drizzle-orm");
+      const rows = await db
+        .select({ role: tables.profiles.role })
+        .from(tables.profiles)
+        .where(eq(tables.profiles.id, context.userId))
+        .limit(1);
+      const { consumeAiQuota } = await import("@/lib/ai-quota.server");
+      await consumeAiQuota({
+        userId: context.userId,
+        role: rows[0]?.role ?? "student",
+        kind: "assistant",
+      });
+    }
+
+    const gateway = createTextProvider(key);
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-flash"),
       system: SYSTEM_PROMPT,

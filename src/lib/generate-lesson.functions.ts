@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { Json } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-middleware";
 import { normalizeQuizForStorage, QUIZ_PROMPT_SPEC } from "@/lib/quiz-normalize";
-import { createTextProvider } from "./ai-gateway.server";
+import { createTextProviderFor } from "./ai-gateway.server";
 import { assertEditor } from "./courses.functions";
 import { LEVEL_LABEL_HSK } from "@/lib/levels";
 
@@ -47,7 +47,11 @@ function coerceObject(v: unknown): Record<string, unknown> {
   if (typeof v === "string") {
     const s = v.trim();
     if (s.startsWith("{")) {
-      try { return JSON.parse(s); } catch { /* fall through */ }
+      try {
+        return JSON.parse(s);
+      } catch {
+        /* fall through */
+      }
     }
     return { text: v };
   }
@@ -62,7 +66,11 @@ function coerceLines(v: unknown): unknown[] {
   if (typeof v === "string") {
     const s = v.trim();
     if (s.startsWith("[") || s.startsWith("{")) {
-      try { return coerceLines(JSON.parse(s)); } catch { /* fall through */ }
+      try {
+        return coerceLines(JSON.parse(s));
+      } catch {
+        /* fall through */
+      }
     }
     return [];
   }
@@ -102,7 +110,11 @@ const toJson = (value: unknown): Json => value as Json;
 /** Exported so the video-lesson enrichment parses model output exactly the
  * same way — a second copy of this would drift from this one. */
 export function extractJsonObject(text: string) {
-  const trimmed = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  const trimmed = text
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
   if (start < 0 || end <= start) {
@@ -201,10 +213,9 @@ export const generateLesson = createServerFn({ method: "POST" })
       .where(eq(tables.lessons.course_id, data.courseId))
       .orderBy(asc(tables.lessons.order_index));
     const existingTitles = existing.map((r) => r.title);
-    const nextOrder =
-      existing.reduce((m, r) => Math.max(m, r.order_index), 0) + 1;
+    const nextOrder = existing.reduce((m, r) => Math.max(m, r.order_index), 0) + 1;
 
-    const gateway = createTextProvider();
+    const gateway = await createTextProviderFor(context.userId);
     const model = gateway("google/gemini-2.5-flash");
 
     const system =
@@ -242,11 +253,10 @@ export const generateLesson = createServerFn({ method: "POST" })
       throw new Error(`강의 생성 실패 — ${friendly}`);
     }
 
-    const finalTitle =
-      (data.lessonTitle?.trim() || parsed.title || `${nextOrder}차시 학습`).slice(
-        0,
-        80,
-      );
+    const finalTitle = (data.lessonTitle?.trim() || parsed.title || `${nextOrder}차시 학습`).slice(
+      0,
+      80,
+    );
 
     const [inserted] = await db
       .insert(tables.lessons)
@@ -282,4 +292,3 @@ export const generateLesson = createServerFn({ method: "POST" })
 
     return { lessonId: inserted.id };
   });
-

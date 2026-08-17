@@ -40,6 +40,14 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // One readable summary of what is configured, instead of discovering a
+      // missing key later as a 500 inside some feature.
+      if (!globalThis.__serverEnvReported) {
+        globalThis.__serverEnvReported = true;
+        import("@/lib/env.server")
+          .then((m) => m.reportServerEnv())
+          .catch((e) => console.error("[env] report failed:", e));
+      }
       // Lazy one-time start of the video schedule ticker (needs DB env,
       // so we start it on the first request rather than at module load).
       if (!globalThis.__videoSchedulerStarted) {
@@ -47,10 +55,10 @@ export default {
           .then((m) => m.initVideoScheduler())
           .catch((e) => console.error("[scheduler] init failed:", e));
       }
-      if (!globalThis.__supabaseMediaMigrationStarted) {
-        import("@/lib/media-migration.server")
-          .then((m) => m.migrateSupabaseMedia().then(() => m.cleanupOrphanVideoFiles()))
-          .catch((e) => console.error("[media-migration] failed:", e));
+      if (!globalThis.__mediaCleanupStarted) {
+        import("@/lib/media-cleanup.server")
+          .then((m) => m.cleanupOrphanVideoFiles())
+          .catch((e) => console.error("[media-cleanup] failed:", e));
       }
       if (!globalThis.__dailyBackupBootChecked) {
         import("@/lib/backup.server")

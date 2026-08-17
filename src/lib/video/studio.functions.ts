@@ -121,7 +121,10 @@ export const deleteVideoJob = createServerFn({ method: "POST" })
     await assertEditor(context.userId);
     const { db, tables } = await import("@/db");
     const rows = await db
-      .select({ video_path: tables.video_jobs.video_path, thumbnail_path: tables.video_jobs.thumbnail_path })
+      .select({
+        video_path: tables.video_jobs.video_path,
+        thumbnail_path: tables.video_jobs.thumbnail_path,
+      })
       .from(tables.video_jobs)
       .where(eq(tables.video_jobs.id, data.id))
       .limit(1);
@@ -283,9 +286,7 @@ export const deleteVideoSchedule = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const { db, tables } = await import("@/db");
-    await db
-      .delete(tables.video_schedules)
-      .where(eq(tables.video_schedules.id, data.id));
+    await db.delete(tables.video_schedules).where(eq(tables.video_schedules.id, data.id));
     return { ok: true };
   });
 
@@ -310,10 +311,15 @@ export const suggestVideoTopics = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => SuggestInput.parse(i))
   .handler(async ({ data, context }): Promise<string[]> => {
     await assertEditor(context.userId);
-    const { createTextProvider } = await import("@/lib/ai-gateway.server");
+    const { createTextProviderFor } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createTextProvider();
-    const focusKo = { culture: "중국 문화", grammar: "중국어 어법", entertainment: "중국 연예/트렌드", daily: "일상 회화" }[data.focus];
+    const gateway = await createTextProviderFor(context.userId);
+    const focusKo = {
+      culture: "중국 문화",
+      grammar: "중국어 어법",
+      entertainment: "중국 연예/트렌드",
+      daily: "일상 회화",
+    }[data.focus];
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-flash"),
       prompt: `키워드 "${data.keyword}", 분야 "${focusKo}", 타겟 "${data.audience}"에 맞는 유튜브 교육 영상 주제 5개를 제안해줘. 클릭하고 싶은 구체적인 제목형 주제로. JSON 배열만 출력: ["주제1","주제2","주제3","주제4","주제5"]`,

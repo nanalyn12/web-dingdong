@@ -5,23 +5,14 @@ import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
 import type { SunoAlignedWord } from "@/lib/suno.server";
-import { createTextProvider } from "@/lib/ai-gateway.server";
+import { createTextProviderFor } from "@/lib/ai-gateway.server";
 import { assertEditor } from "@/lib/courses.functions";
-import {
-  SONG_GENRES,
-  SONG_THEMES,
-  genreFromStyle,
-  themeFromKeywords,
-} from "@/lib/song-taxonomy";
+import { SONG_GENRES, SONG_THEMES, genreFromStyle, themeFromKeywords } from "@/lib/song-taxonomy";
 import type { Json } from "@/db/schema";
 
 const LevelEnum = z.enum(["beginner", "intermediate", "advanced"]);
-const GenreEnum = z.enum(
-  SONG_GENRES.map((g) => g.value) as [string, ...string[]],
-);
-const ThemeEnum = z.enum(
-  SONG_THEMES.map((t) => t.value) as [string, ...string[]],
-);
+const GenreEnum = z.enum(SONG_GENRES.map((g) => g.value) as [string, ...string[]]);
+const ThemeEnum = z.enum(SONG_THEMES.map((t) => t.value) as [string, ...string[]]);
 
 const LyricLineSchema = z.object({
   zh: z.string().min(1),
@@ -84,6 +75,8 @@ export type SongRow = {
   artist: string | null;
   pinyin: string[];
   translation: string[];
+  /** 이 곡을 만든 사람. 세션 없는 배경 작업이 "누구의 AI 키로 돌지"를 정할 때 쓴다. */
+  created_by: string | null;
   created_at: string;
 };
 
@@ -100,19 +93,12 @@ function withTaxonomy(row: SongRow): SongRow {
 
 async function fetchSong(songId: string): Promise<SongRow> {
   const { db, tables } = await import("@/db");
-  const rows = await db
-    .select()
-    .from(tables.songs)
-    .where(eq(tables.songs.id, songId))
-    .limit(1);
+  const rows = await db.select().from(tables.songs).where(eq(tables.songs.id, songId)).limit(1);
   if (!rows[0]) throw new Error("노래를 찾을 수 없습니다.");
   return withTaxonomy(rows[0] as unknown as SongRow);
 }
 
-async function updateSong(
-  songId: string,
-  patch: Record<string, unknown>,
-): Promise<SongRow> {
+async function updateSong(songId: string, patch: Record<string, unknown>): Promise<SongRow> {
   const { db, tables } = await import("@/db");
   const [row] = await db
     .update(tables.songs)
@@ -122,21 +108,14 @@ async function updateSong(
   return withTaxonomy(row as unknown as SongRow);
 }
 
-export const listSongs = createServerFn({ method: "GET" }).handler(
-  async (): Promise<SongRow[]> => {
-    const { db, tables } = await import("@/db");
-    const rows = await db
-      .select()
-      .from(tables.songs)
-      .orderBy(desc(tables.songs.created_at));
-    return (rows as unknown as SongRow[]).map(withTaxonomy);
-  },
-);
+export const listSongs = createServerFn({ method: "GET" }).handler(async (): Promise<SongRow[]> => {
+  const { db, tables } = await import("@/db");
+  const rows = await db.select().from(tables.songs).orderBy(desc(tables.songs.created_at));
+  return (rows as unknown as SongRow[]).map(withTaxonomy);
+});
 
 export const getSong = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) =>
-    z.object({ id: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }): Promise<SongRow> => fetchSong(data.id));
 
 export const createSong = createServerFn({ method: "POST" })
@@ -176,10 +155,7 @@ const GenerateWithSunoInput = z.object({
   lyrics: z.string().min(10, "가사 본문이 너무 짧습니다"),
   parsedLyrics: z.array(LyricLineSchema).default([]),
   vocalGender: z.enum(["m", "f"]).optional(),
-  model: z
-    .enum(["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5"])
-    .optional()
-    .default("V4_5"),
+  model: z.enum(["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5"]).optional().default("V4_5"),
 });
 
 export const generateSongWithSuno = createServerFn({ method: "POST" })
@@ -198,6 +174,7 @@ export const generateSongWithSuno = createServerFn({ method: "POST" })
         prompt: data.lyrics,
         model: data.model,
         vocalGender: data.vocalGender,
+        userId: context.userId,
       });
       taskId = res.taskId;
     } catch (e) {
@@ -214,10 +191,12 @@ export const generateSongWithSuno = createServerFn({ method: "POST" })
     // Safety net: if parsedLyrics have no pinyin/ko yet, annotate now.
     let finalLyrics = data.parsedLyrics;
     const needsAnn =
-      finalLyrics.length > 0 &&
-      finalLyrics.every((l) => !l.pinyin?.trim() && !l.ko?.trim());
+      finalLyrics.length > 0 && finalLyrics.every((l) => !l.pinyin?.trim() && !l.ko?.trim());
     if (needsAnn) {
-      const ann = await annotateLyricsInternal(finalLyrics.map((l) => l.zh));
+      const ann = await annotateLyricsInternal(
+        finalLyrics.map((l) => l.zh),
+        context.userId,
+      );
       if (!ann.error) {
         finalLyrics = finalLyrics.map((l, i) => ({
           ...l,
@@ -271,9 +250,7 @@ function significantChars(text: string): string[] {
 /** Flatten aligned words into one char-per-entry stream. Suno returns whole
  * words (and sometimes whole lines) per entry, so a multi-char entry gets its
  * duration split evenly across its characters. */
-function flattenAlignedChars(
-  words: SunoAlignedWord[],
-): { ch: string; t: number }[] {
+function flattenAlignedChars(words: SunoAlignedWord[]): { ch: string; t: number }[] {
   const out: { ch: string; t: number }[] = [];
   for (const w of words) {
     if (w.success === false) continue;
@@ -355,6 +332,7 @@ async function syncLyricTimesFromSuno(row: SongRow): Promise<LyricLine[] | null>
   const res = await sunoGetTimestampedLyrics({
     taskId: row.suno_audio_task_id,
     audioId: row.suno_audio_id,
+    userId: row.created_by,
   });
   const words = res.alignedWords ?? [];
   if (words.length === 0) return null;
@@ -363,9 +341,7 @@ async function syncLyricTimesFromSuno(row: SongRow): Promise<LyricLine[] | null>
   // A handful of matched lines usually means the alignment landed on a
   // different take — the estimate is better than a half-wrong sync.
   if (total > 0 && matched / total < 0.5) {
-    console.warn(
-      `[suno sync] weak alignment for ${row.id}: ${matched}/${total} lines`,
-    );
+    console.warn(`[suno sync] weak alignment for ${row.id}: ${matched}/${total} lines`);
     return null;
   }
   return lyrics;
@@ -409,31 +385,23 @@ export const setSongLyricTimes = createServerFn({ method: "POST" })
  * audio first landed. */
 export const resyncSongLyrics = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ songId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ songId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
     const row = await fetchSong(data.songId);
     if (!row.suno_audio_task_id || !row.suno_audio_id) {
-      throw new Error(
-        "이 노래는 Suno로 생성된 곡이 아니라 자동 싱크를 받을 수 없어요.",
-      );
+      throw new Error("이 노래는 Suno로 생성된 곡이 아니라 자동 싱크를 받을 수 없어요.");
     }
     const synced = await syncLyricTimesFromSuno(row);
     if (!synced) {
-      throw new Error(
-        "Suno에서 가사 싱크 정보를 받지 못했어요. 잠시 후 다시 시도해주세요.",
-      );
+      throw new Error("Suno에서 가사 싱크 정보를 받지 못했어요. 잠시 후 다시 시도해주세요.");
     }
     return updateSong(row.id, { lyrics: synced as unknown as Json });
   });
 
 export const pollSongGeneration = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ songId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ songId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
     const row = await fetchSong(data.songId);
@@ -444,122 +412,117 @@ export const pollSongGeneration = createServerFn({ method: "POST" })
  * No auth — used by both the client poller and the background scheduler.
  * Returns the (possibly updated) row; throws on a hard Suno failure. */
 export async function advanceSongAudio(row: SongRow): Promise<SongRow> {
-    const { sunoGetMusic, downloadAndStore } = await import("@/lib/suno.server");
+  const { sunoGetMusic, downloadAndStore } = await import("@/lib/suno.server");
 
-    // Already finished — return as-is.
-    if (row.status === "ready" || row.status === "failed_audio") return row;
-    if (!row.suno_audio_task_id) {
-      throw new Error("Suno taskId가 비어 있습니다.");
-    }
+  // Already finished — return as-is.
+  if (row.status === "ready" || row.status === "failed_audio") return row;
+  if (!row.suno_audio_task_id) {
+    throw new Error("Suno taskId가 비어 있습니다.");
+  }
 
-    const rec = await sunoGetMusic(row.suno_audio_task_id);
+  const rec = await sunoGetMusic(row.suno_audio_task_id, row.created_by);
 
-    const AUDIO_FAIL_HINT: Record<string, string> = {
-      CREATE_TASK_FAILED: "Suno 작업 생성에 실패했어요. 가사/스타일 값을 확인해주세요.",
-      GENERATE_AUDIO_FAILED: "Suno 음원 합성이 실패했어요. 가사가 너무 길거나 모델 한도 문제일 수 있어요.",
-      SENSITIVE_WORD_ERROR: "가사에 Suno가 거부한 민감 표현이 포함되었어요. 단어를 바꿔 다시 시도해주세요.",
-      CALLBACK_EXCEPTION: "Suno 콜백 처리 중 예외가 발생했어요. 잠시 후 다시 시도해주세요.",
-    };
-    if (
-      rec.status === "CREATE_TASK_FAILED" ||
-      rec.status === "GENERATE_AUDIO_FAILED" ||
-      rec.status === "SENSITIVE_WORD_ERROR" ||
-      rec.status === "CALLBACK_EXCEPTION"
-    ) {
-      const hint = AUDIO_FAIL_HINT[rec.status];
-      const detail = rec.errorMessage ? ` — ${rec.errorMessage}` : "";
-      const message = `${hint ?? `Suno 생성 실패: ${rec.status}`}${detail}`;
-      // Persist the reason so the editor can see why and fix the lyrics.
-      await updateSong(row.id, { status: "failed_audio", error: message });
-      throw new Error(message);
-    }
+  const AUDIO_FAIL_HINT: Record<string, string> = {
+    CREATE_TASK_FAILED: "Suno 작업 생성에 실패했어요. 가사/스타일 값을 확인해주세요.",
+    GENERATE_AUDIO_FAILED:
+      "Suno 음원 합성이 실패했어요. 가사가 너무 길거나 모델 한도 문제일 수 있어요.",
+    SENSITIVE_WORD_ERROR:
+      "가사에 Suno가 거부한 민감 표현이 포함되었어요. 단어를 바꿔 다시 시도해주세요.",
+    CALLBACK_EXCEPTION: "Suno 콜백 처리 중 예외가 발생했어요. 잠시 후 다시 시도해주세요.",
+  };
+  if (
+    rec.status === "CREATE_TASK_FAILED" ||
+    rec.status === "GENERATE_AUDIO_FAILED" ||
+    rec.status === "SENSITIVE_WORD_ERROR" ||
+    rec.status === "CALLBACK_EXCEPTION"
+  ) {
+    const hint = AUDIO_FAIL_HINT[rec.status];
+    const detail = rec.errorMessage ? ` — ${rec.errorMessage}` : "";
+    const message = `${hint ?? `Suno 생성 실패: ${rec.status}`}${detail}`;
+    // Persist the reason so the editor can see why and fix the lyrics.
+    await updateSong(row.id, { status: "failed_audio", error: message });
+    throw new Error(message);
+  }
 
-    if (rec.status !== "SUCCESS" && rec.status !== "FIRST_SUCCESS") {
-      // Still in progress.
-      return row;
-    }
+  if (rec.status !== "SUCCESS" && rec.status !== "FIRST_SUCCESS") {
+    // Still in progress.
+    return row;
+  }
 
-    const track = rec.response?.sunoData?.[0];
-    // Suno returns camelCase (audioUrl/imageUrl); tolerate snake_case too.
-    const audioUrl = track?.audioUrl ?? track?.audio_url;
-    const imageUrl = track?.imageUrl ?? track?.image_url;
-    if (!track || !audioUrl) {
-      return row; // Wait for audio URL to appear (FIRST_SUCCESS may precede it).
-    }
+  const track = rec.response?.sunoData?.[0];
+  // Suno returns camelCase (audioUrl/imageUrl); tolerate snake_case too.
+  const audioUrl = track?.audioUrl ?? track?.audio_url;
+  const imageUrl = track?.imageUrl ?? track?.image_url;
+  if (!track || !audioUrl) {
+    return row; // Wait for audio URL to appear (FIRST_SUCCESS may precede it).
+  }
 
-    // Copy assets onto the persistent disk.
-    const base = `songs/${row.id}/${track.id}`;
-    const audio = await downloadAndStore(
-      audioUrl,
-      `${base}.mp3`,
-      "audio/mpeg",
-    );
-    let coverUrl: string | null = row.cover_url;
-    if (imageUrl) {
-      try {
-        const cover = await downloadAndStore(
-          imageUrl,
-          `${base}.jpg`,
-          "image/jpeg",
-        );
-        coverUrl = cover.url;
-      } catch (e) {
-        console.warn("[suno] cover copy failed:", e);
-      }
-    }
-
-    // Karaoke sync: ask Suno where each word actually lands in the vocal.
-    // Without this the player falls back to guessing line times from character
-    // counts, which drifts badly over a 2-minute song.
-    let lyricsPatch: { lyrics?: Json } = {};
+  // Copy assets onto the persistent disk.
+  const base = `songs/${row.id}/${track.id}`;
+  const audio = await downloadAndStore(audioUrl, `${base}.mp3`, "audio/mpeg");
+  let coverUrl: string | null = row.cover_url;
+  if (imageUrl) {
     try {
-      const synced = await syncLyricTimesFromSuno({
-        ...row,
-        suno_audio_id: track.id,
-      });
-      if (synced) lyricsPatch = { lyrics: synced as unknown as Json };
+      const cover = await downloadAndStore(imageUrl, `${base}.jpg`, "image/jpeg");
+      coverUrl = cover.url;
     } catch (e) {
-      console.warn("[suno] lyric time sync failed:", e);
+      console.warn("[suno] cover copy failed:", e);
     }
+  }
 
-    // Auto-generate lesson content (vocab + grammar notes) on first success.
-    // Failures are non-fatal; the song still transitions to `ready`.
-    let lessonPatch: { vocab?: VocabItem[]; grammar_notes?: GrammarNote[] } = {};
-    try {
-      const hasVocab = Array.isArray(row.vocab) && row.vocab.length > 0;
-      const hasNotes =
-        Array.isArray(row.grammar_notes) && row.grammar_notes.length > 0;
-      if (!hasVocab || !hasNotes) {
-        lessonPatch = await buildSongLessonContent({
-          title: row.title,
-          titleZh: row.title_zh,
-          level: row.level,
-          lyrics: row.lyrics,
-        });
-      }
-    } catch (e) {
-      console.warn("[song lesson] auto-generate failed:", e);
-    }
-
-    // MP4 video is opt-in, not automatic. Every song used to kick one off, at
-    // 2 credits and ~8MB of volume each (~2.2GB/month at the current schedule
-    // load) — for a video most songs never needed. Editors start one from the
-    // song page (generateSongMp4) when they actually want it.
-    //
-    // It also removed a race: the client poller and the background poller both
-    // reach this point for the same song, and the loser used to create a second
-    // paid task, get a 409, and write status = ready — which hid the song from
-    // the poller so the video the winner paid for was never downloaded.
-    const mp4Patch = { status: "ready" };
-
-    return updateSong(row.id, {
-      media_url: audio.url,
-      cover_url: coverUrl,
+  // Karaoke sync: ask Suno where each word actually lands in the vocal.
+  // Without this the player falls back to guessing line times from character
+  // counts, which drifts badly over a 2-minute song.
+  let lyricsPatch: { lyrics?: Json } = {};
+  try {
+    const synced = await syncLyricTimesFromSuno({
+      ...row,
       suno_audio_id: track.id,
-      ...lyricsPatch,
-      ...lessonPatch,
-      ...mp4Patch,
     });
+    if (synced) lyricsPatch = { lyrics: synced as unknown as Json };
+  } catch (e) {
+    console.warn("[suno] lyric time sync failed:", e);
+  }
+
+  // Auto-generate lesson content (vocab + grammar notes) on first success.
+  // Failures are non-fatal; the song still transitions to `ready`.
+  let lessonPatch: { vocab?: VocabItem[]; grammar_notes?: GrammarNote[] } = {};
+  try {
+    const hasVocab = Array.isArray(row.vocab) && row.vocab.length > 0;
+    const hasNotes = Array.isArray(row.grammar_notes) && row.grammar_notes.length > 0;
+    if (!hasVocab || !hasNotes) {
+      lessonPatch = await buildSongLessonContent({
+        title: row.title,
+        titleZh: row.title_zh,
+        level: row.level,
+        lyrics: row.lyrics,
+        // 배경 폴러라 세션이 없다 — 이 곡을 만든 사람의 키로 돈다.
+        userId: row.created_by,
+      });
+    }
+  } catch (e) {
+    console.warn("[song lesson] auto-generate failed:", e);
+  }
+
+  // MP4 video is opt-in, not automatic. Every song used to kick one off, at
+  // 2 credits and ~8MB of volume each (~2.2GB/month at the current schedule
+  // load) — for a video most songs never needed. Editors start one from the
+  // song page (generateSongMp4) when they actually want it.
+  //
+  // It also removed a race: the client poller and the background poller both
+  // reach this point for the same song, and the loser used to create a second
+  // paid task, get a 409, and write status = ready — which hid the song from
+  // the poller so the video the winner paid for was never downloaded.
+  const mp4Patch = { status: "ready" };
+
+  return updateSong(row.id, {
+    media_url: audio.url,
+    cover_url: coverUrl,
+    suno_audio_id: track.id,
+    ...lyricsPatch,
+    ...lessonPatch,
+    ...mp4Patch,
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -591,8 +554,9 @@ async function buildSongLessonContent(args: {
   titleZh: string | null;
   level: "beginner" | "intermediate" | "advanced";
   lyrics: LyricLine[];
+  /** 이 생성을 유발한 사용자 — 개인 Gemini 키가 있으면 그 키로 돈다. */
+  userId?: string | null;
 }): Promise<{ vocab: VocabItem[]; grammar_notes: GrammarNote[] }> {
-
   const targets = {
     beginner: { vocab: 6, grammar: 3 },
     intermediate: { vocab: 8, grammar: 4 },
@@ -605,7 +569,7 @@ async function buildSongLessonContent(args: {
     .join("\n");
 
   const { generateText, Output } = await import("ai");
-  const gateway = createTextProvider();
+  const gateway = await createTextProviderFor(args.userId);
   const model = gateway("google/gemini-3-flash-preview");
 
   const systemMsg =
@@ -647,9 +611,7 @@ async function buildSongLessonContent(args: {
 
 export const generateSongLessonContent = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ songId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ songId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
     const row = await fetchSong(data.songId);
@@ -659,6 +621,7 @@ export const generateSongLessonContent = createServerFn({ method: "POST" })
       titleZh: row.title_zh,
       level: row.level,
       lyrics: row.lyrics,
+      userId: context.userId,
     });
 
     return updateSong(row.id, patch as unknown as Record<string, unknown>);
@@ -667,9 +630,7 @@ export const generateSongLessonContent = createServerFn({ method: "POST" })
 // Kick off MP4 video generation for a Suno-generated song.
 export const generateSongMp4 = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ songId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ songId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const { sunoCreateMp4 } = await import("@/lib/suno.server");
@@ -684,6 +645,7 @@ export const generateSongMp4 = createServerFn({ method: "POST" })
       audioId: row.suno_audio_id,
       author: "DingDong",
       domainName: "dingdong.lms",
+      userId: row.created_by,
     });
 
     await updateSong(row.id, {
@@ -696,9 +658,7 @@ export const generateSongMp4 = createServerFn({ method: "POST" })
 // Poll MP4 task; on SUCCESS copy the file onto the media disk and save the URL.
 export const pollSongMp4 = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ songId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ songId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
     const row = await fetchSong(data.songId);
@@ -708,54 +668,54 @@ export const pollSongMp4 = createServerFn({ method: "POST" })
 /** Advance a song whose MP4 is still generating. No auth — shared by the
  * client poller and the background scheduler. */
 export async function advanceSongMp4(row: SongRow): Promise<SongRow> {
-    const { sunoGetMp4, downloadAndStore } = await import("@/lib/suno.server");
+  const { sunoGetMp4, downloadAndStore } = await import("@/lib/suno.server");
 
-    if (row.video_url) return row; // already done
-    if (!row.suno_mp4_task_id) throw new Error("MP4 taskId가 없습니다.");
+  if (row.video_url) return row; // already done
+  if (!row.suno_mp4_task_id) throw new Error("MP4 taskId가 없습니다.");
 
-    const rec = await sunoGetMp4(row.suno_mp4_task_id);
-    const MP4_FAIL_HINT: Record<string, string> = {
-      CREATE_TASK_FAILED: "MP4 작업 생성 실패. 원본 음원이 만료되었을 수 있어요.",
-      GENERATE_MP4_FAILED: "Suno MP4 합성 실패. 잠시 후 다시 시도해주세요.",
-      CALLBACK_EXCEPTION: "Suno MP4 콜백 예외. 다시 시도해주세요.",
-    };
-    if (
-      rec.status === "CREATE_TASK_FAILED" ||
-      rec.status === "GENERATE_MP4_FAILED" ||
-      rec.status === "CALLBACK_EXCEPTION"
-    ) {
-      await updateSong(row.id, { status: "failed_video" });
-      const hint = MP4_FAIL_HINT[rec.status];
-      const detail = rec.errorMessage ? ` — ${rec.errorMessage}` : "";
-      throw new Error(`${hint ?? `MP4 생성 실패: ${rec.status}`}${detail}`);
+  const rec = await sunoGetMp4(row.suno_mp4_task_id, row.created_by);
+  const MP4_FAIL_HINT: Record<string, string> = {
+    CREATE_TASK_FAILED: "MP4 작업 생성 실패. 원본 음원이 만료되었을 수 있어요.",
+    GENERATE_MP4_FAILED: "Suno MP4 합성 실패. 잠시 후 다시 시도해주세요.",
+    CALLBACK_EXCEPTION: "Suno MP4 콜백 예외. 다시 시도해주세요.",
+  };
+  if (
+    rec.status === "CREATE_TASK_FAILED" ||
+    rec.status === "GENERATE_MP4_FAILED" ||
+    rec.status === "CALLBACK_EXCEPTION"
+  ) {
+    await updateSong(row.id, { status: "failed_video" });
+    const hint = MP4_FAIL_HINT[rec.status];
+    const detail = rec.errorMessage ? ` — ${rec.errorMessage}` : "";
+    throw new Error(`${hint ?? `MP4 생성 실패: ${rec.status}`}${detail}`);
+  }
+  if (rec.status !== "SUCCESS" || !rec.response?.videoUrl) {
+    return row; // still pending
+  }
+
+  let video: { url: string };
+  try {
+    video = await downloadAndStore(
+      rec.response.videoUrl,
+      `songs/${row.id}/${row.suno_audio_id ?? "track"}.mp4`,
+      "video/mp4",
+    );
+  } catch (e) {
+    // Suno keeps the file ~15 days but the task still reports SUCCESS after
+    // it is swept, so the URL 404s forever. Retrying every 20s never
+    // succeeds — record it as failed so the poller lets go and the editor
+    // can decide whether the video is worth regenerating.
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/\((?:404|410|451)\)/.test(msg)) {
+      await updateSong(row.id, {
+        status: "failed_video",
+        error: `Suno 임시 파일이 만료되어 영상을 가져올 수 없어요 (${msg}). 필요하면 MP4를 다시 만들어주세요.`,
+      });
     }
-    if (rec.status !== "SUCCESS" || !rec.response?.videoUrl) {
-      return row; // still pending
-    }
+    throw e;
+  }
 
-    let video: { url: string };
-    try {
-      video = await downloadAndStore(
-        rec.response.videoUrl,
-        `songs/${row.id}/${row.suno_audio_id ?? "track"}.mp4`,
-        "video/mp4",
-      );
-    } catch (e) {
-      // Suno keeps the file ~15 days but the task still reports SUCCESS after
-      // it is swept, so the URL 404s forever. Retrying every 20s never
-      // succeeds — record it as failed so the poller lets go and the editor
-      // can decide whether the video is worth regenerating.
-      const msg = e instanceof Error ? e.message : String(e);
-      if (/\((?:404|410|451)\)/.test(msg)) {
-        await updateSong(row.id, {
-          status: "failed_video",
-          error: `Suno 임시 파일이 만료되어 영상을 가져올 수 없어요 (${msg}). 필요하면 MP4를 다시 만들어주세요.`,
-        });
-      }
-      throw e;
-    }
-
-    return updateSong(row.id, { video_url: video.url, status: "ready" });
+  return updateSong(row.id, { video_url: video.url, status: "ready" });
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -786,6 +746,7 @@ function isSectionMarker(line: string): boolean {
 // Never throws — returns empty arrays on failure so callers can continue.
 async function annotateLyricsInternal(
   zhLines: string[],
+  userId?: string | null,
 ): Promise<{ pinyin: string[]; ko: string[]; error?: string }> {
   const empty = zhLines.map(() => "");
   if (zhLines.length === 0) return { pinyin: [], ko: [] };
@@ -796,7 +757,7 @@ async function annotateLyricsInternal(
     .filter((x) => !x.skip);
   if (numbered.length === 0) return { pinyin: empty, ko: empty };
 
-  const gateway = createTextProvider();
+  const gateway = await createTextProviderFor(userId);
   const prompt = `아래 중국어 학습송 가사의 각 라인에 성조 기호가 포함된 한어병음과 자연스러운 한국어 번역을 붙여주세요.
 반드시 아래 JSON만 출력하세요 (코드펜스 없이). "lines" 배열의 각 항목은 { "n": 라인번호, "pinyin": "...", "ko": "..." } 형식이고, 입력 라인 번호를 그대로 사용하세요.
 
@@ -854,7 +815,7 @@ export const draftSongFromKeyword = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => DraftSongInput.parse(input))
   .handler(async ({ data, context }): Promise<DraftedSong> => {
     await assertEditor(context.userId);
-    return draftSongInternal(data);
+    return draftSongInternal({ ...data, userId: context.userId });
   });
 
 /** Submit a drafted song to Suno and create the song row (status
@@ -893,11 +854,7 @@ export async function submitSongToSuno(args: {
       level: args.level,
       style: args.style,
       genre: genreFromStyle(args.style),
-      theme: themeFromKeywords(
-        args.topic,
-        args.draft.title,
-        args.draft.title_zh,
-      ),
+      theme: themeFromKeywords(args.topic, args.draft.title, args.draft.title_zh),
       topic: args.topic || null,
       lyrics: parsedLyrics as unknown as Json,
       status: "generating_audio",
@@ -912,6 +869,7 @@ export async function submitSongToSuno(args: {
       prompt: args.draft.lyrics,
       model: args.model ?? "V4_5",
       vocalGender: args.vocalGender,
+      userId: args.userId,
     });
     await updateSong(row.id, { suno_audio_task_id: taskId, error: null });
     return { songId: row.id, ok: true };
@@ -950,7 +908,7 @@ export const retrySongGeneration = createServerFn({ method: "POST" })
         .split(/\r?\n/)
         .map((l) => l.trim())
         .filter(Boolean);
-      const ann = await annotateLyricsInternal(zhLines);
+      const ann = await annotateLyricsInternal(zhLines, context.userId);
       parsedLyrics = zhLines.map((zh, i) => ({
         zh,
         pinyin: ann.pinyin[i] ?? "",
@@ -970,6 +928,7 @@ export const retrySongGeneration = createServerFn({ method: "POST" })
         prompt: lyricsForSuno,
         model: "V4_5",
         vocalGender: data.vocalGender,
+        userId: row.created_by,
       });
       return updateSong(row.id, {
         lyrics: parsedLyrics as unknown as Json,
@@ -998,16 +957,18 @@ export async function draftSongInternal(data: {
   keyword: string;
   level: "beginner" | "intermediate" | "advanced";
   style: string;
+  /** 이 생성을 유발한 사용자, 또는 배경 작업이면 예약의 소유자(created_by). */
+  userId?: string | null;
 }): Promise<DraftedSong> {
-    const gateway = createTextProvider();
-    const levelHint =
-      data.level === "beginner"
-        ? "HSK 1~2 수준의 아주 쉬운 단어와 짧은 문장 (4~7자)"
-        : data.level === "intermediate"
-          ? "HSK 3~4 수준의 일상 어휘"
-          : "HSK 5 이상, 표현이 풍부하게";
+  const gateway = await createTextProviderFor(data.userId);
+  const levelHint =
+    data.level === "beginner"
+      ? "HSK 1~2 수준의 아주 쉬운 단어와 짧은 문장 (4~7자)"
+      : data.level === "intermediate"
+        ? "HSK 3~4 수준의 일상 어휘"
+        : "HSK 5 이상, 표현이 풍부하게";
 
-    const prompt = `너는 한국인 중국어 학습자를 위한 학습송 작사가야.
+  const prompt = `너는 한국인 중국어 학습자를 위한 학습송 작사가야.
 주제 키워드: "${data.keyword}"
 난이도: ${levelHint}
 음악 스타일: ${data.style}
@@ -1022,61 +983,57 @@ export async function draftSongInternal(data: {
 반드시 아래 JSON만 출력 (코드펜스 없이):
 {"title":"한국어 제목","title_zh":"中文标题","lyrics":"[Verse 1]\\n...\\n[Chorus]\\n...\\n[Verse 2]\\n...\\n[Chorus]\\n..."}`;
 
-    let text = "";
-    try {
-      const result = await generateText({
-        model: gateway("google/gemini-3-flash-preview"),
-        prompt,
-      });
-      text = result.text;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const friendly = /429|rate.?limit|quota/i.test(msg)
-        ? "Gemini 요청 한도를 초과했어요. 잠시 후 다시 시도해주세요."
-        : /402|credit|insufficient/i.test(msg)
-          ? "AI 크레딧이 부족해요. 관리자에게 문의하거나 충전 후 다시 시도해주세요."
-          : /401|unauthor|api.?key/i.test(msg)
-            ? "Gemini API 키 인증 실패. GEMINI_API_KEY 시크릿을 확인해주세요."
-            : null;
-      throw new Error(`Gemini 호출 실패 — ${friendly ?? msg}`);
-    }
+  let text = "";
+  try {
+    const result = await generateText({
+      model: gateway("google/gemini-3-flash-preview"),
+      prompt,
+    });
+    text = result.text;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const friendly = /429|rate.?limit|quota/i.test(msg)
+      ? "Gemini 요청 한도를 초과했어요. 잠시 후 다시 시도해주세요."
+      : /402|credit|insufficient/i.test(msg)
+        ? "AI 크레딧이 부족해요. 관리자에게 문의하거나 충전 후 다시 시도해주세요."
+        : /401|unauthor|api.?key/i.test(msg)
+          ? "Gemini API 키 인증 실패. GEMINI_API_KEY 시크릿을 확인해주세요."
+          : null;
+    throw new Error(`Gemini 호출 실패 — ${friendly ?? msg}`);
+  }
 
-    const cleaned = text
-      .trim()
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "");
-    const jsonStart = cleaned.indexOf("{");
-    const jsonEnd = cleaned.lastIndexOf("}");
-    if (jsonStart < 0 || jsonEnd < 0) {
-      const preview = cleaned.slice(0, 200) || "(빈 응답)";
-      throw new Error(
-        `AI가 JSON 형식으로 응답하지 않았어요. 응답 앞부분: "${preview}"`,
-      );
-    }
-    let parsed: DraftedSong;
-    try {
-      parsed = JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1)) as DraftedSong;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(
-        `AI 응답 JSON 파싱 실패 (${msg}). 다시 시도해주세요.`,
-      );
-    }
-    const lyricsStr = String(parsed.lyrics || "");
-    // Annotate the drafted lyrics with pinyin + Korean in the same call.
-    const zhLines = lyricsStr
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const ann = await annotateLyricsInternal(zhLines);
-    if (ann.error) console.warn("[draftSong] annotate failed:", ann.error);
-    return {
-      title: String(parsed.title || data.keyword),
-      title_zh: String(parsed.title_zh || ""),
-      lyrics: lyricsStr,
-      pinyin: ann.pinyin,
-      translation: ann.ko,
-    };
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "");
+  const jsonStart = cleaned.indexOf("{");
+  const jsonEnd = cleaned.lastIndexOf("}");
+  if (jsonStart < 0 || jsonEnd < 0) {
+    const preview = cleaned.slice(0, 200) || "(빈 응답)";
+    throw new Error(`AI가 JSON 형식으로 응답하지 않았어요. 응답 앞부분: "${preview}"`);
+  }
+  let parsed: DraftedSong;
+  try {
+    parsed = JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1)) as DraftedSong;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`AI 응답 JSON 파싱 실패 (${msg}). 다시 시도해주세요.`);
+  }
+  const lyricsStr = String(parsed.lyrics || "");
+  // Annotate the drafted lyrics with pinyin + Korean in the same call.
+  const zhLines = lyricsStr
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const ann = await annotateLyricsInternal(zhLines, data.userId);
+  if (ann.error) console.warn("[draftSong] annotate failed:", ann.error);
+  return {
+    title: String(parsed.title || data.keyword),
+    title_zh: String(parsed.title_zh || ""),
+    lyrics: lyricsStr,
+    pinyin: ann.pinyin,
+    translation: ann.ko,
+  };
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -1084,16 +1041,14 @@ export async function draftSongInternal(data: {
 // ──────────────────────────────────────────────────────────────────────────
 export const reannotateSong = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ songId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ songId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<SongRow> => {
     await assertEditor(context.userId);
     const row = await fetchSong(data.songId);
 
     const lines = row.lyrics ?? [];
     const zhLines = lines.map((l) => l.zh ?? "");
-    const ann = await annotateLyricsInternal(zhLines);
+    const ann = await annotateLyricsInternal(zhLines, context.userId);
     if (ann.error) throw new Error(ann.error);
 
     const nextLyrics: LyricLine[] = lines.map((l, i) => ({
@@ -1114,14 +1069,11 @@ export const reannotateSong = createServerFn({ method: "POST" })
 // ──────────────────────────────────────────────────────────────────────────
 export const cancelSongGeneration = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ songId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ songId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const row = await fetchSong(data.songId);
-    const nextStatus =
-      row.status === "generating_video" ? "failed_video" : "failed_audio";
+    const nextStatus = row.status === "generating_video" ? "failed_video" : "failed_audio";
     await updateSong(row.id, { status: nextStatus });
     return { ok: true, status: nextStatus } as const;
   });
@@ -1152,9 +1104,7 @@ export const setSongTaxonomy = createServerFn({ method: "POST" })
 // Delete a song row (editor only).
 export const deleteSong = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ songId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ songId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const { db, tables } = await import("@/db");

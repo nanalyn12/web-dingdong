@@ -31,9 +31,7 @@ async function videoHasCaptions(videoId: string): Promise<boolean> {
 // timestamps. Only overwrites scenes when captions are actually found.
 export const resyncDramaCaptions = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ id: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { db, tables } = await import("@/db");
@@ -51,7 +49,9 @@ export const resyncDramaCaptions = createServerFn({ method: "POST" })
     const row = rows[0];
     if (!row) throw new Error("드라마를 찾을 수 없습니다.");
     if (!row.youtube_url) {
-      throw new Error("유튜브 기반 드라마가 아니에요 (웹 전용 영상은 자막 재동기화 대상이 아닙니다).");
+      throw new Error(
+        "유튜브 기반 드라마가 아니에요 (웹 전용 영상은 자막 재동기화 대상이 아닙니다).",
+      );
     }
 
     const result = await generateSceneData({
@@ -59,6 +59,7 @@ export const resyncDramaCaptions = createServerFn({ method: "POST" })
       level: row.level as "beginner" | "intermediate" | "advanced",
       genre: row.genre ?? "",
       title: row.title ?? "",
+      userId: context.userId,
     });
     if (!result.hasCaptions) {
       return { id: data.id, updated: false, reason: "no-captions" as const };
@@ -118,6 +119,7 @@ export const resyncAllDramasWithoutCaptions = createServerFn({ method: "POST" })
           level: r.level as "beginner" | "intermediate" | "advanced",
           genre: r.genre ?? "",
           title,
+          userId: context.userId,
         });
         if (!gen.hasCaptions) {
           results.push({ id: r.id, title, status: "no-captions" });

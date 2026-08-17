@@ -5,6 +5,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   real,
   text,
   timestamp,
@@ -12,13 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 // ── better-auth tables (camelCase keys as the drizzle adapter expects) ──────
 
@@ -85,19 +80,16 @@ export const profileJob = pgEnum("profile_job", [
   "worker",
   "other",
 ]);
-export const teacherStatus = pgEnum("teacher_status", [
-  "none",
-  "pending",
-  "approved",
-  "rejected",
-]);
+export const teacherStatus = pgEnum("teacher_status", ["none", "pending", "approved", "rejected"]);
 
 // ── App tables (snake_case keys — ported code and UI expect these shapes) ───
-// Timestamps use mode "string" so rows serialize exactly like the old
-// supabase-js payloads (ISO strings), keeping route components unchanged.
+// Timestamps use mode "string" on purpose: every route component and server
+// function downstream reads these as ISO strings (`new Date(row.created_at)`,
+// `.slice(0, 10)`, direct JSON round-trips). Switching to Date objects would
+// compile fine and break date handling across the whole app at runtime, so
+// leave the mode alone unless you are changing those call sites too.
 
-const ts = (name: string) =>
-  timestamp(name, { withTimezone: true, mode: "string" });
+const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "string" });
 
 export const profiles = pgTable("profiles", {
   id: text("id")
@@ -138,33 +130,33 @@ export const courses = pgTable("courses", {
 export const lessons = pgTable(
   "lessons",
   {
-  id: uuid("id").primaryKey().defaultRandom(),
-  course_id: uuid("course_id")
-    .notNull()
-    .references(() => courses.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  // One-line summary shown under the title in course/lesson lists. Nullable —
-  // every lesson created before this column existed has none.
-  description: text("description"),
-  order_index: integer("order_index").notNull(),
-  lesson_type: text("lesson_type"),
-  level: text("level"),
-  content_md: text("content_md"),
-  dialogue_scene: text("dialogue_scene"),
-  dialogues: jsonb("dialogues").$type<Json>().notNull().default([]),
-  key_expressions: jsonb("key_expressions").$type<Json>().notNull().default([]),
-  vocab_comparison: jsonb("vocab_comparison").$type<Json>().notNull().default([]),
-  cultural_note: jsonb("cultural_note").$type<Json>().notNull().default({}),
-  cultural_snippet: jsonb("cultural_snippet").$type<Json>().notNull().default({}),
-  comic_panels: jsonb("comic_panels").$type<Json>().notNull().default([]),
-  storybook_pages: jsonb("storybook_pages").$type<Json>().notNull().default([]),
-  slides: jsonb("slides").$type<Json>().notNull().default([]),
-  quiz: jsonb("quiz").$type<Json>().notNull().default([]),
-  video: jsonb("video").$type<Json>().notNull().default({}),
-  video_keywords: jsonb("video_keywords").$type<Json>().notNull().default([]),
-  created_by: text("created_by"),
-  created_at: ts("created_at").notNull().defaultNow(),
-  updated_at: ts("updated_at").notNull().defaultNow(),
+    id: uuid("id").primaryKey().defaultRandom(),
+    course_id: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    // One-line summary shown under the title in course/lesson lists. Nullable —
+    // every lesson created before this column existed has none.
+    description: text("description"),
+    order_index: integer("order_index").notNull(),
+    lesson_type: text("lesson_type"),
+    level: text("level"),
+    content_md: text("content_md"),
+    dialogue_scene: text("dialogue_scene"),
+    dialogues: jsonb("dialogues").$type<Json>().notNull().default([]),
+    key_expressions: jsonb("key_expressions").$type<Json>().notNull().default([]),
+    vocab_comparison: jsonb("vocab_comparison").$type<Json>().notNull().default([]),
+    cultural_note: jsonb("cultural_note").$type<Json>().notNull().default({}),
+    cultural_snippet: jsonb("cultural_snippet").$type<Json>().notNull().default({}),
+    comic_panels: jsonb("comic_panels").$type<Json>().notNull().default([]),
+    storybook_pages: jsonb("storybook_pages").$type<Json>().notNull().default([]),
+    slides: jsonb("slides").$type<Json>().notNull().default([]),
+    quiz: jsonb("quiz").$type<Json>().notNull().default([]),
+    video: jsonb("video").$type<Json>().notNull().default({}),
+    video_keywords: jsonb("video_keywords").$type<Json>().notNull().default([]),
+    created_by: text("created_by"),
+    created_at: ts("created_at").notNull().defaultNow(),
+    updated_at: ts("updated_at").notNull().defaultNow(),
   },
   (t) => [unique("lessons_course_order_unique").on(t.course_id, t.order_index)],
 );
@@ -439,6 +431,95 @@ export const lesson_progress = pgTable(
   (t) => [unique("lesson_progress_user_lesson").on(t.user_id, t.lesson_id)],
 );
 
+// Bring-your-own-key: any user (student included) can supply a personal
+// Gemini key and then run on their own Google billing instead of ours, which
+// is also what lifts them out of the shared daily quota. The key is stored
+// sealed by secret-box.server.ts and is never sent back to the browser — the
+// UI only ever gets `hint`.
+export const user_api_keys = pgTable(
+  "user_api_keys",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(), // "gemini"
+    ciphertext: text("ciphertext").notNull(),
+    hint: text("hint").notNull(), // last 4 characters, e.g. "…9fTa"
+    created_at: ts("created_at").notNull().defaultNow(),
+    updated_at: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.user_id, t.provider] })],
+);
+
+// Daily AI call counters keyed by the KST date. Only calls that spend the
+// shared app key land here; a user running on their own key is never counted.
+export const ai_usage_daily = pgTable(
+  "ai_usage_daily",
+  {
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    day: text("day").notNull(), // KST YYYY-MM-DD
+    kind: text("kind").notNull(), // "assistant", …
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.user_id, t.day, t.kind] })],
+);
+
+// Per-owner data backups (관리자별 데이터 백업). One row per backup file; the
+// file itself lives on the Railway volume next to the nightly full dump, under
+// /data/backups/tenants/**, never under the public /media/* route.
+//
+// owner_id is always the authenticated user — every read/write path filters on
+// it, so one admin's backups are invisible to another.
+export const tenant_backups = pgTable(
+  "tenant_backups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    owner_id: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // manual | pre_restore (복원 직전 자동 안전 백업) | imported (업로드)
+    kind: text("kind").notNull().default("manual"),
+    // pending | running | completed | failed
+    status: text("status").notNull().default("pending"),
+    label: text("label"),
+    backup_version: integer("backup_version").notNull().default(1),
+    app_version: text("app_version"),
+    /** File name relative to the owner's backup directory. */
+    file_name: text("file_name"),
+    bytes: integer("bytes").notNull().default(0),
+    total_rows: integer("total_rows").notNull().default(0),
+    row_counts: jsonb("row_counts").$type<Json>().notNull().default({}),
+    checksum: text("checksum"),
+    error: text("error"),
+    created_at: ts("created_at").notNull().defaultNow(),
+    updated_at: ts("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("idx_tenant_backups_owner").on(t.owner_id, t.created_at)],
+);
+
+// Audit trail for backup/restore actions. backup_id deliberately has no foreign
+// key: deleting a backup must not erase the record that it once existed.
+export const backup_audit_log = pgTable(
+  "backup_audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    backup_id: uuid("backup_id"),
+    // backup_created | backup_downloaded | backup_deleted | backup_imported |
+    // restore_started | restore_completed | restore_failed
+    action: text("action").notNull(),
+    result: text("result").notNull().default("ok"), // ok | error
+    /** Counts and error messages only — never backup contents. */
+    detail: jsonb("detail").$type<Json>(),
+    created_at: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("idx_backup_audit_user").on(t.user_id, t.created_at)],
+);
+
 // Single-row style credential store (e.g. YouTube OAuth refresh token).
 export const app_credentials = pgTable("app_credentials", {
   key: text("key").primaryKey(),
@@ -446,7 +527,7 @@ export const app_credentials = pgTable("app_credentials", {
   updated_at: ts("updated_at").notNull().defaultNow(),
 });
 
-// Row types (drop-in replacements for the old supabase Row types)
+// Row types
 export type Profile = typeof profiles.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Lesson = typeof lessons.$inferSelect;
@@ -459,3 +540,5 @@ export type VideoJob = typeof video_jobs.$inferSelect;
 export type VideoSchedule = typeof video_schedules.$inferSelect;
 export type LearningActivity = typeof learning_activity.$inferSelect;
 export type LessonProgress = typeof lesson_progress.$inferSelect;
+export type TenantBackup = typeof tenant_backups.$inferSelect;
+export type BackupAuditLog = typeof backup_audit_log.$inferSelect;

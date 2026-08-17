@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { createTextProvider } from "./ai-gateway.server";
+import { createTextProviderFor } from "./ai-gateway.server";
 import { requireAuth } from "@/lib/auth-middleware";
 import { assertEditor } from "@/lib/courses.functions";
 import type { Json } from "@/db/schema";
@@ -26,7 +26,11 @@ export type CulturalUsage = {
 };
 
 function extractJson(text: string): unknown {
-  const t = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  const t = text
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
   const s = t.indexOf("{");
   const e = t.lastIndexOf("}");
   if (s < 0 || e <= s) throw new Error("JSON을 찾지 못했습니다.");
@@ -49,8 +53,10 @@ export async function buildCulturalCards(input: {
   title: string;
   level?: string | null;
   contentExcerpt?: string | null;
+  /** 생성을 요청한 사용자 — 개인 Gemini 키가 있으면 그 키로 돈다. */
+  userId?: string | null;
 }): Promise<{ cards: CulturalCards; usage: CulturalUsage }> {
-  const gateway = createTextProvider();
+  const gateway = await createTextProviderFor(input.userId);
   const levelKo = levelLabelHsk(input.level) || LEVEL_LABEL_HSK.beginner;
 
   const system = [
@@ -102,9 +108,7 @@ export async function buildCulturalCards(input: {
  * overwrites what learners see. */
 export const generateLessonCulturalCards = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ lessonId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ lessonId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<CulturalCards> => {
     await assertEditor(context.userId);
     const { db, tables } = await import("@/db");
@@ -120,6 +124,7 @@ export const generateLessonCulturalCards = createServerFn({ method: "POST" })
       title: lesson.title,
       level: lesson.level,
       contentExcerpt: lesson.content_md,
+      userId: context.userId,
     });
 
     await db

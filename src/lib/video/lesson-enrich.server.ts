@@ -15,7 +15,7 @@
 import { generateText } from "ai";
 import { z } from "zod";
 
-import { createTextProvider } from "@/lib/ai-gateway.server";
+import { createTextProviderFor } from "@/lib/ai-gateway.server";
 import { extractJsonObject } from "@/lib/generate-lesson.functions";
 import { normalizeQuiz, normalizeQuizForStorage, QUIZ_PROMPT_SPEC } from "@/lib/quiz-normalize";
 import { pinyinFor } from "./pinyin";
@@ -102,8 +102,10 @@ ${QUIZ_PROMPT_SPEC}
 export async function buildLessonEnrichment(
   cfg: VideoJobConfig,
   script: VideoScript,
+  /** 영상 작업의 소유자(video_jobs.created_by). */
+  userId: string | null = null,
 ): Promise<LessonEnrichment> {
-  const gateway = createTextProvider();
+  const gateway = await createTextProviderFor(userId);
   const model = gateway("google/gemini-2.5-flash");
 
   const result = await generateText({

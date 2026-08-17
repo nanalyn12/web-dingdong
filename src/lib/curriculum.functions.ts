@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { Json } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-middleware";
-import { createTextProvider } from "./ai-gateway.server";
+import { createTextProviderFor } from "./ai-gateway.server";
 import { assertEditor, getRole } from "./courses.functions";
 import { levelLabel } from "@/lib/levels";
 
@@ -35,7 +35,11 @@ const OutputSchema = z.object({
 const toJson = (v: unknown): Json => v as Json;
 
 function extractJsonObject(text: string) {
-  const trimmed = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  const trimmed = text
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error(`JSON 없음: ${trimmed.slice(0, 300)}`);
@@ -141,7 +145,7 @@ export const generateCurriculum = createServerFn({ method: "POST" })
       lessonName = l[0]?.title ?? null;
     }
 
-    const gateway = createTextProvider();
+    const gateway = await createTextProviderFor(context.userId);
     const model = gateway("google/gemini-2.5-flash");
 
     let parsed: z.infer<typeof OutputSchema>;
@@ -176,8 +180,9 @@ export const generateCurriculum = createServerFn({ method: "POST" })
       throw new Error(`커리큘럼 생성 실패 — ${friendly}`);
     }
 
-    const finalTitle =
-      (parsed.title || `${data.studentGrade} · ${data.durationMinutes}분 수업`).slice(0, 100);
+    const finalTitle = (
+      parsed.title || `${data.studentGrade} · ${data.durationMinutes}분 수업`
+    ).slice(0, 100);
 
     const [inserted] = await db
       .insert(tables.curriculum_plans)
@@ -247,8 +252,10 @@ function fmtDuration(seconds: number | null) {
   return `${m}분`;
 }
 
+/** `userId`는 생성을 유발한 사용자 — 개인 Gemini 키가 있으면 그 키로 돈다. */
 async function generateAndCacheLinks(
   planId: string,
+  userId: string | null,
 ): Promise<CurriculumLinkedContent | null> {
   const { db, tables } = await import("@/db");
 
@@ -346,7 +353,7 @@ async function generateAndCacheLinks(
     .join(" | ");
 
   const { generateText, Output } = await import("ai");
-  const gateway = createTextProvider();
+  const gateway = await createTextProviderFor(userId);
 
   const { experimental_output: parsed } = await generateText({
     model: gateway("google/gemini-3-flash-preview"),
@@ -397,9 +404,7 @@ async function generateAndCacheLinks(
       return {
         id: row.id,
         title: row.title,
-        subtitle: [row.genre, fmtDuration(row.duration_seconds)]
-          .filter(Boolean)
-          .join(" · "),
+        subtitle: [row.genre, fmtDuration(row.duration_seconds)].filter(Boolean).join(" · "),
         reason: d.reason,
         block_hint: d.block_hint,
       };
@@ -412,11 +417,7 @@ async function generateAndCacheLinks(
         id: row.id,
         title: row.title,
         // topic is often just the title again — only show it when it adds something.
-        subtitle: [
-          levelLabel(row.level),
-          row.artist,
-          row.topic !== row.title ? row.topic : null,
-        ]
+        subtitle: [levelLabel(row.level), row.artist, row.topic !== row.title ? row.topic : null]
           .filter(Boolean)
           .join(" · "),
         reason: s.reason,
@@ -546,7 +547,7 @@ export const getCurriculumLinks = createServerFn({ method: "POST" })
       return cached;
     }
     try {
-      return await generateAndCacheLinks(data.id);
+      return await generateAndCacheLinks(data.id, context.userId);
     } catch (e) {
       console.warn("[curriculum-links] 생성 실패:", e);
       return null;
@@ -570,7 +571,7 @@ export const regenerateCurriculumLinks = createServerFn({ method: "POST" })
     if (!isAdmin && rows[0].created_by !== context.userId) {
       throw new Error("접근 권한이 없습니다.");
     }
-    return generateAndCacheLinks(data.id);
+    return generateAndCacheLinks(data.id, context.userId);
   });
 
 export const deleteCurriculum = createServerFn({ method: "POST" })
@@ -589,8 +590,6 @@ export const deleteCurriculum = createServerFn({ method: "POST" })
     if (!isAdmin && rows[0].created_by !== context.userId) {
       throw new Error("본인이 만든 커리큘럼만 삭제할 수 있어요.");
     }
-    await db
-      .delete(tables.curriculum_plans)
-      .where(eq(tables.curriculum_plans.id, data.id));
+    await db.delete(tables.curriculum_plans).where(eq(tables.curriculum_plans.id, data.id));
     return { ok: true as const };
   });

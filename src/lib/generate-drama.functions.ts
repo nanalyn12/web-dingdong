@@ -42,17 +42,18 @@ async function fetchOEmbed(url: string): Promise<{
 }
 
 function extractJson(text: string): unknown {
-  const trimmed = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  const trimmed = text
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
   const s = trimmed.indexOf("{");
   const e = trimmed.lastIndexOf("}");
   if (s < 0 || e <= s) throw new Error(`JSON 객체를 찾지 못함: ${trimmed.slice(0, 400)}`);
   return JSON.parse(trimmed.slice(s, e + 1));
 }
 
-function buildPrompt(args: {
-  level: "beginner" | "intermediate" | "advanced";
-  genre: string;
-}) {
+function buildPrompt(args: { level: "beginner" | "intermediate" | "advanced"; genre: string }) {
   const levelKo = LEVEL_LABEL_HSK[args.level];
   return `너는 한국인 성인 중국어 학습자를 위한 드라마 학습 콘텐츠 디자이너야.
 첨부된 YouTube 영상(중국어 드라마/콘텐츠)을 시청한 뒤, 학습용 장면(scene) 4~8개로 분할하고 각 장면별 학습 자료를 만들어줘.
@@ -116,6 +117,8 @@ export async function generateSceneData(args: {
   genre: string;
   title?: string;
   lang?: "auto" | "zh-CN" | "zh-TW" | "en";
+  /** 생성을 요청한 사용자 — 개인 Gemini 키가 있으면 그 키로 돈다. */
+  userId?: string | null;
 }): Promise<GenerateSceneResult> {
   const videoId = extractVideoId(args.youtubeUrl);
   if (!videoId) throw new Error("올바른 YouTube URL이 아닙니다.");
@@ -142,9 +145,7 @@ export async function generateSceneData(args: {
   const captionsBlock =
     `\n\n[실제 자막 트랙 — 이 timestamp를 반드시 그대로 사용]\n` +
     `언어: ${caps.languageCode}${
-      isChineseCaptions
-        ? " (원문 중국어)"
-        : " (번역 자막 — 타임스탬프는 실제 발화 시점과 동일)"
+      isChineseCaptions ? " (원문 중국어)" : " (번역 자막 — 타임스탬프는 실제 발화 시점과 동일)"
     }\n` +
     segs.map((s) => `${s.start.toFixed(1)}: ${s.text}`).join("\n");
 
@@ -172,8 +173,8 @@ export async function generateSceneData(args: {
   // Note: we intentionally send captions as the primary source — the
   // OpenAI-compatible endpoints don't accept a YouTube URL as a native video
   // part, so we surface the URL prominently in the prompt.
-  const { createTextProvider } = await import("@/lib/ai-gateway.server");
-  const gateway = createTextProvider();
+  const { createTextProviderFor } = await import("@/lib/ai-gateway.server");
+  const gateway = await createTextProviderFor(args.userId);
   let text = "";
   try {
     const result = await generateText({
@@ -219,9 +220,12 @@ export const generateDrama = createServerFn({ method: "POST" })
       genre: data.genre,
       title: data.title,
       lang: data.lang,
+      userId: context.userId,
     });
-    const finalTitle =
-      (data.title?.trim() || parsed.title || oembed.title || "영상 학습").slice(0, 80);
+    const finalTitle = (data.title?.trim() || parsed.title || oembed.title || "영상 학습").slice(
+      0,
+      80,
+    );
 
     const { db, tables } = await import("@/db");
     const [row] = await db
@@ -244,4 +248,3 @@ export const generateDrama = createServerFn({ method: "POST" })
       .returning({ id: tables.dramas.id });
     return { dramaId: row.id };
   });
-

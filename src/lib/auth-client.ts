@@ -5,20 +5,21 @@ import { usernameClient } from "better-auth/client/plugins";
 import { useEffect, useRef } from "react";
 
 import { ensureProfile, getMyProfile } from "@/lib/profile.functions";
+import { isEditorRole } from "@/lib/roles";
 
 export const authClient = createAuthClient({
   plugins: [usernameClient()],
 });
 
-type SessionData = ReturnType<typeof authClient.useSession> extends {
-  data: infer D;
-}
-  ? NonNullable<D>
-  : never;
+type SessionData =
+  ReturnType<typeof authClient.useSession> extends {
+    data: infer D;
+  }
+    ? NonNullable<D>
+    : never;
 
 export type SessionUser = SessionData["user"];
 
-/** Drop-in replacement for the old Supabase useSession hook. */
 export function useSession(): {
   session: SessionData | null;
   user: SessionUser | null;
@@ -77,5 +78,5 @@ export function useMyProfile() {
 
 export function useIsEditor() {
   const { data } = useMyProfile();
-  return data?.role === "teacher" || data?.role === "admin";
+  return isEditorRole(data?.role);
 }

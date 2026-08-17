@@ -11,11 +11,15 @@ const InputSchema = z.object({
 const STYLE_SUFFIX =
   ", warm pastel watercolor illustration, cute friendly chibi style, soft lighting, no text, no characters, no captions, no letters, no words, no logos, no signs";
 
-// Image generation via the Gemini native API (GEMINI_API_KEY). Returns base64 PNG.
-async function generateImageBase64(prompt: string): Promise<string> {
-  const gemini = process.env.GEMINI_API_KEY;
-  if (gemini) return generateImageGemini(prompt, gemini);
-  throw new Error("이미지 생성 키가 없습니다 — GEMINI_API_KEY 필요");
+// Image generation via the Gemini native API. Returns base64 PNG.
+//
+// 이 엔드포인트는 OpenAI 호환이 아니라 ai-gateway의 provider를 쓸 수 없다.
+// 그래도 키를 고르는 규칙은 같아야 하므로 resolveAiKey로 키만 받아 온다 —
+// 여기서 process.env를 직접 읽으면 이 경로만 개인 키를 영원히 무시하게 된다.
+async function generateImageBase64(prompt: string, userId: string | null): Promise<string> {
+  const { resolveAiKey } = await import("@/lib/ai-gateway.server");
+  const { key } = await resolveAiKey(userId);
+  return generateImageGemini(prompt, key);
 }
 
 async function generateImageGemini(prompt: string, apiKey: string): Promise<string> {
@@ -39,9 +43,8 @@ async function generateImageGemini(prompt: string, apiKey: string): Promise<stri
       content?: { parts?: Array<{ inlineData?: { data?: string } }> };
     }>;
   };
-  const b64 = payload.candidates?.[0]?.content?.parts?.find(
-    (p) => p.inlineData?.data,
-  )?.inlineData?.data;
+  const b64 = payload.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData
+    ?.data;
   if (!b64) {
     throw new Error(
       `이미지 응답 형식을 인식할 수 없습니다: ${JSON.stringify(payload).slice(0, 300)}`,
@@ -84,7 +87,7 @@ export const generateLessonComicImages = createServerFn({ method: "POST" })
         (typeof p.image_prompt === "string" && p.image_prompt) ||
         (typeof p.narration === "string" && p.narration) ||
         "cute friendly scene of two characters chatting";
-      const b64 = await generateImageBase64(prompt);
+      const b64 = await generateImageBase64(prompt, context.userId);
       const bytes = Buffer.from(b64, "base64");
 
       const relPath = `lesson-images/${data.lessonId}/panel-${i}-${Date.now()}.png`;

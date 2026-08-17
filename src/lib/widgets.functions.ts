@@ -73,8 +73,9 @@ async function ensureQuotePool(): Promise<DailyQuote[]> {
   if (cached?.quotes?.length) return cached.quotes;
 
   const { generateText, Output } = await import("ai");
-  const { createTextProvider } = await import("@/lib/ai-gateway.server");
-  const gateway = createTextProvider();
+  const { createTextProviderFor } = await import("@/lib/ai-gateway.server");
+  // 명언 풀은 앱 전역 캐시고 로그인 없이도 읽히므로 사용자가 없다 — 공용 키 고정.
+  const gateway = await createTextProviderFor(null);
   const { experimental_output: parsed } = await generateText({
     model: gateway("google/gemini-3-flash-preview"),
     system:
@@ -158,9 +159,7 @@ export const getWidgetStats = createServerFn({ method: "GET" })
     // Streak: consecutive days ending today (or yesterday if today idle).
     let streak = 0;
     const today = kstDateKey(new Date());
-    let cursor = dates.has(today)
-      ? new Date()
-      : new Date(Date.now() - 86_400_000);
+    let cursor = dates.has(today) ? new Date() : new Date(Date.now() - 86_400_000);
     while (dates.has(kstDateKey(cursor))) {
       streak++;
       cursor = new Date(cursor.getTime() - 86_400_000);

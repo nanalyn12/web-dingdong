@@ -44,10 +44,11 @@ type Usage = { inputTokens: number; outputTokens: number };
 async function translateBatch(
   items: string[],
   unit: "sentence" | "passage",
+  userId: string | null,
 ): Promise<{ translations: string[] } & Usage> {
-  const { createTextProvider } = await import("@/lib/ai-gateway.server");
+  const { createTextProviderFor } = await import("@/lib/ai-gateway.server");
   const { generateText } = await import("ai");
-  const gateway = createTextProvider();
+  const gateway = await createTextProviderFor(userId);
 
   const system = [
     "당신은 중국어–한국어 번역가입니다.",
@@ -106,6 +107,7 @@ async function translateBatch(
 async function translateList(
   items: string[],
   unit: "sentence" | "passage",
+  userId: string | null,
 ): Promise<{ translations: string[] } & Usage> {
   const out = new Array<string>(items.length).fill("");
   let inputTokens = 0;
@@ -116,7 +118,7 @@ async function translateList(
     if (slice.every((s) => !s.trim())) continue;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const r = await translateBatch(slice, unit);
+        const r = await translateBatch(slice, unit, userId);
         r.translations.forEach((t, i) => (out[off + i] = t));
         inputTokens += r.inputTokens;
         outputTokens += r.outputTokens;
@@ -139,12 +141,15 @@ async function translateList(
  * order. Used by the backfill, which has no TTS segments to align to. */
 export async function translateNarrations(
   narrations: string[],
+  /** 이 작업의 소유자. 개인 Gemini 키가 있으면 그 키로 돈다. 백필 스크립트처럼
+   *  소유자를 특정할 수 없는 호출은 생략하고 공용 키를 쓴다. */
+  userId: string | null = null,
 ): Promise<{ translations: string[]; inputTokens: number; outputTokens: number }> {
   const usable = narrations.map((n) => (n ?? "").trim());
   if (usable.every((n) => !n)) {
     return { translations: narrations.map(() => ""), inputTokens: 0, outputTokens: 0 };
   }
-  return translateList(usable, "passage");
+  return translateList(usable, "passage", userId);
 }
 
 /** The sentences the TTS step will synthesise for a scene. Must stay identical
@@ -165,6 +170,8 @@ export function narrationSentences(scene: ScriptScene): string[] {
 export async function ensureSceneKorean(
   cfg: VideoJobConfig,
   scenes: ScriptScene[],
+  /** 영상 작업의 소유자(video_jobs.created_by). */
+  userId: string | null = null,
 ): Promise<{ scenes: ScriptScene[]; repaired: number; inputTokens: number; outputTokens: number }> {
   if (cfg.language === "ko") {
     return {
@@ -212,7 +219,7 @@ export async function ensureSceneKorean(
   let inputTokens = 0;
   let outputTokens = 0;
   if (flat.length) {
-    const r = await translateList(flat, "sentence");
+    const r = await translateList(flat, "sentence", userId);
     translations = r.translations;
     inputTokens = r.inputTokens;
     outputTokens = r.outputTokens;

@@ -5,9 +5,12 @@ import { useEffect, useState } from "react";
 import { Copy, Loader2, Mail, Phone, ShieldCheck, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 
+import { AdminDataManager } from "@/components/admin-data-manager";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyProfile, useSession } from "@/lib/auth-client";
 import { decideTeacher, listPendingTeachers } from "@/lib/admin.functions";
+import { isEditorRole } from "@/lib/roles";
 
 export const Route = createFileRoute("/_app/admin")({
   head: () => ({ meta: [{ title: "관리자 — DingDong" }] }),
@@ -23,6 +26,8 @@ function AdminPage() {
   const qc = useQueryClient();
 
   const isAdmin = profile?.role === "admin";
+  // 데이터 관리(내 콘텐츠 백업·복원)는 교수자도 쓴다 — 교사 승인 큐만 관리자 전용.
+  const isEditor = isEditorRole(profile?.role);
 
   useEffect(() => {
     if (loading || pLoading) return;
@@ -36,8 +41,7 @@ function AdminPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (v: { userId: string; decision: "approve" | "reject" }) =>
-      decide({ data: v }),
+    mutationFn: (v: { userId: string; decision: "approve" | "reject" }) => decide({ data: v }),
     onSuccess: (_d, v) => {
       toast.success(v.decision === "approve" ? "교사로 승인했어요." : "거절했어요.");
       qc.invalidateQueries({ queryKey: ["pending-teachers"] });
@@ -48,14 +52,14 @@ function AdminPage() {
   if (loading || pLoading) {
     return <p className="p-8 text-muted-foreground">불러오는 중…</p>;
   }
-  if (!isAdmin) {
+  if (!isEditor) {
     return (
       <div className="max-w-2xl mx-auto">
         <section className="glass rounded-3xl p-8 text-center">
           <ShieldCheck className="size-10 mx-auto text-muted-foreground" />
           <h1 className="mt-3 text-2xl font-bold">관리자 전용 페이지</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            이 페이지는 관리자만 접근할 수 있어요.
+            이 페이지는 관리자와 교수자만 접근할 수 있어요.
           </p>
         </section>
       </div>
@@ -66,33 +70,48 @@ function AdminPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <header className="glass rounded-3xl p-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <ShieldCheck className="size-6 text-primary" /> 교사 승인 대기열
+          <ShieldCheck className="size-6 text-primary" /> {isAdmin ? "관리자" : "교수자"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          신청한 사용자를 검토하고 교사 권한을 승인하거나 거절하세요.
+          {isAdmin
+            ? "교사 신청을 검토하고, 내가 만든 콘텐츠를 백업·복원할 수 있어요."
+            : "내가 만든 콘텐츠를 백업하고 복원할 수 있어요."}
         </p>
       </header>
 
-      <section className="glass rounded-3xl p-4">
-        {isLoading && (
-          <p className="p-4 text-sm text-muted-foreground">불러오는 중…</p>
+      <Tabs defaultValue={isAdmin ? "teachers" : "data"} className="space-y-6">
+        <TabsList>
+          {isAdmin && <TabsTrigger value="teachers">교사 승인</TabsTrigger>}
+          <TabsTrigger value="data">데이터 관리</TabsTrigger>
+        </TabsList>
+
+        {isAdmin && (
+          <TabsContent value="teachers" className="space-y-6">
+            <section className="glass rounded-3xl p-4">
+              {isLoading && <p className="p-4 text-sm text-muted-foreground">불러오는 중…</p>}
+              {pending && pending.length === 0 && (
+                <p className="p-6 text-sm text-muted-foreground text-center">
+                  대기 중인 신청이 없어요. 🎉
+                </p>
+              )}
+              <ul className="flex flex-col gap-3">
+                {pending?.map((p) => (
+                  <PendingTeacherCard
+                    key={p.id}
+                    p={p}
+                    onDecide={(decision) => mutation.mutate({ userId: p.id, decision })}
+                    disabled={mutation.isPending}
+                  />
+                ))}
+              </ul>
+            </section>
+          </TabsContent>
         )}
-        {pending && pending.length === 0 && (
-          <p className="p-6 text-sm text-muted-foreground text-center">
-            대기 중인 신청이 없어요. 🎉
-          </p>
-        )}
-        <ul className="flex flex-col gap-3">
-          {pending?.map((p) => (
-            <PendingTeacherCard
-              key={p.id}
-              p={p}
-              onDecide={(decision) => mutation.mutate({ userId: p.id, decision })}
-              disabled={mutation.isPending}
-            />
-          ))}
-        </ul>
-      </section>
+
+        <TabsContent value="data">
+          <AdminDataManager />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -134,8 +153,7 @@ function PendingTeacherCard({
   const displayName = p.real_name || p.nickname || p.id.slice(0, 8);
   const phone = p.phone || p.auth_phone;
   const appliedAt = p.teacher_applied_at || p.created_at;
-  const legacy =
-    !p.teacher_school && !p.teacher_application_note && !p.phone;
+  const legacy = !p.teacher_school && !p.teacher_application_note && !p.phone;
 
   async function copy(text: string, label: string) {
     try {
@@ -195,13 +213,9 @@ function PendingTeacherCard({
 
           {(p.teacher_school || p.teacher_department) && (
             <div className="flex items-center gap-2 text-sm text-foreground/90">
-              <span className="font-medium">
-                {p.teacher_school || "학교 미입력"}
-              </span>
+              <span className="font-medium">{p.teacher_school || "학교 미입력"}</span>
               {p.teacher_department && (
-                <span className="text-muted-foreground">
-                  · {p.teacher_department}
-                </span>
+                <span className="text-muted-foreground">· {p.teacher_department}</span>
               )}
             </div>
           )}
@@ -213,11 +227,7 @@ function PendingTeacherCard({
         </div>
 
         <div className="flex gap-2 shrink-0">
-          <Button
-            size="sm"
-            onClick={() => onDecide("approve")}
-            disabled={disabled}
-          >
+          <Button size="sm" onClick={() => onDecide("approve")} disabled={disabled}>
             {disabled ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

@@ -194,7 +194,10 @@ function escapeDrawtext(t: string): string {
 // emits in free-form mode (code fences, trailing commas, a stray unescaped
 // newline inside a string). Returns null so the caller can retry.
 function tryParseScript(text: string): VideoScript | null {
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "");
   const s = cleaned.indexOf("{");
   const e = cleaned.lastIndexOf("}");
   if (s < 0 || e <= s) return null;
@@ -228,10 +231,11 @@ async function resolveLevel(cfg: VideoJobConfig): Promise<VideoJobConfig> {
   return { ...cfg, level: levelOf({ level: course?.level as VideoLevel, audience: cfg.audience }) };
 }
 
-async function generateScript(cfg: VideoJobConfig): Promise<VideoScript> {
-  const { createTextProvider } = await import("@/lib/ai-gateway.server");
+async function generateScript(cfg: VideoJobConfig, userId: string | null): Promise<VideoScript> {
+  const { createTextProviderFor } = await import("@/lib/ai-gateway.server");
   const { generateText } = await import("ai");
-  const gateway = createTextProvider();
+  // 영상 작업은 예약/큐로 돌아 세션이 없다 — 작업을 만든 사람의 키를 쓴다.
+  const gateway = await createTextProviderFor(userId);
 
   const focusKo = {
     culture: "중국 문화 상식",
@@ -245,8 +249,7 @@ async function generateScript(cfg: VideoJobConfig): Promise<VideoScript> {
   // The script itself has to match the level the lesson gets filed under —
   // otherwise a "고급" filter turns up HSK 1 sentences.
   const level = levelOf(cfg);
-  const hskRange =
-    level === "beginner" ? "1~3" : level === "intermediate" ? "4~6" : "7~9";
+  const hskRange = level === "beginner" ? "1~3" : level === "intermediate" ? "4~6" : "7~9";
 
   const topicLine = cfg.topic?.trim()
     ? `주제: "${cfg.topic}" — 반드시 이 주제를 그대로 다뤄. 키워드는 참고일 뿐, 주제를 바꾸지 마.`
@@ -311,11 +314,7 @@ ${topicLine}
 
 type PexelsVideoFile = { width: number; height: number; link: string };
 
-async function pexelsClip(
-  query: string,
-  cfg: VideoJobConfig,
-  dest: string,
-): Promise<boolean> {
+async function pexelsClip(query: string, cfg: VideoJobConfig, dest: string): Promise<boolean> {
   const key = process.env.PEXELS_API_KEY;
   if (!key) throw new Error("PEXELS_API_KEY 미설정 — pexels.com/api 에서 무료 발급");
   const [w] = cfg.resolution.split("x").map(Number);
@@ -345,30 +344,23 @@ const SAMPLE_RATE = 24000;
 const WAV_HEADER = 44;
 
 // Returns WAV (LINEAR16 24kHz mono) buffer.
-async function synthesize(
-  textInput: string,
-  voice: string,
-  speakingRate = 1.0,
-): Promise<Buffer> {
+async function synthesize(textInput: string, voice: string, speakingRate = 1.0): Promise<Buffer> {
   const key = process.env.GOOGLE_TTS_API_KEY;
   if (!key) throw new Error("GOOGLE_TTS_API_KEY 미설정 — Cloud Text-to-Speech API 키 필요");
   const languageCode = voice.split("-").slice(0, 2).join("-");
-  const res = await fetch(
-    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        input: { text: textInput },
-        voice: { languageCode, name: voice },
-        audioConfig: {
-          audioEncoding: "LINEAR16",
-          sampleRateHertz: SAMPLE_RATE,
-          speakingRate,
-        },
-      }),
-    },
-  );
+  const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${key}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      input: { text: textInput },
+      voice: { languageCode, name: voice },
+      audioConfig: {
+        audioEncoding: "LINEAR16",
+        sampleRateHertz: SAMPLE_RATE,
+        speakingRate,
+      },
+    }),
+  });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     throw new Error(`TTS 실패 (${res.status}): ${t.slice(0, 200)}`);
@@ -508,7 +500,7 @@ export async function runVideoJob(jobId: string): Promise<void> {
     await step(jobId, "대본 생성 중 (Gemini)", 5);
     const script = job.script
       ? (job.script as unknown as VideoScript)
-      : await generateScript(cfg);
+      : await generateScript(cfg, job.created_by);
 
     // 1b) Korean narration. The generator is asked for narration_ko inline, but
     //     on a long script it drops or truncates the field often enough that
@@ -516,7 +508,7 @@ export async function runVideoJob(jobId: string): Promise<void> {
     //     lines, the scene summaries — shipped untranslated. Repair it here,
     //     once, before anything reads it.
     await step(jobId, "한국어 번역 확인 중", 10);
-    const ko = await ensureSceneKorean(cfg, script.scenes);
+    const ko = await ensureSceneKorean(cfg, script.scenes, job.created_by);
     if (ko.repaired) {
       console.log(`[video] narration_ko 보정: ${ko.repaired}/${script.scenes.length} 장면`);
     }
@@ -531,9 +523,7 @@ export async function runVideoJob(jobId: string): Promise<void> {
     await step(jobId, "나레이션 합성 중 (TTS)", 15);
     const { ZH_PAIR_VOICE } = await import("./config");
     const zhVoice =
-      cfg.language === "ko"
-        ? (ZH_PAIR_VOICE[cfg.voice] ?? "cmn-CN-Standard-A")
-        : undefined;
+      cfg.language === "ko" ? (ZH_PAIR_VOICE[cfg.voice] ?? "cmn-CN-Standard-A") : undefined;
     const GAP = 0.4; // physical silence between sentences
     const durations: number[] = [];
     let clock = 0;
@@ -597,15 +587,38 @@ export async function runVideoJob(jobId: string): Promise<void> {
       const d = durations[i].toFixed(2);
       if (clipPaths[i]) {
         await run(ff, [
-          "-y", "-stream_loop", "-1", "-i", clipPaths[i]!,
-          "-t", d, "-an",
-          "-vf", `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=30,format=yuv420p`,
-          "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", out,
+          "-y",
+          "-stream_loop",
+          "-1",
+          "-i",
+          clipPaths[i]!,
+          "-t",
+          d,
+          "-an",
+          "-vf",
+          `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=30,format=yuv420p`,
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-crf",
+          "23",
+          out,
         ]);
       } else {
         await run(ff, [
-          "-y", "-f", "lavfi", "-i", `color=c=0x1a1033:s=${W}x${H}:d=${d}:r=30`,
-          "-vf", "format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", out,
+          "-y",
+          "-f",
+          "lavfi",
+          "-i",
+          `color=c=0x1a1033:s=${W}x${H}:d=${d}:r=30`,
+          "-vf",
+          "format=yuv420p",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          out,
         ]);
       }
     }
@@ -616,10 +629,18 @@ export async function runVideoJob(jobId: string): Promise<void> {
     const intro = join(work, "intro.mp4");
     const introTitle = escapeDrawtext(script.title.slice(0, 30));
     await run(ff, [
-      "-y", "-f", "lavfi", "-i", `color=c=0x1a1033:s=${W}x${H}:d=1.5:r=30`,
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      `color=c=0x1a1033:s=${W}x${H}:d=1.5:r=30`,
       "-vf",
       `drawtext=fontfile='${filterPath(font)}':text='${introTitle}':fontcolor=white:fontsize=${Math.round(H / 14)}:x=(w-text_w)/2:y=(h-text_h)/2,format=yuv420p`,
-      "-c:v", "libx264", "-preset", "veryfast", intro,
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      intro,
     ]);
 
     // 7) Concat video parts + audio parts
@@ -636,7 +657,9 @@ export async function runVideoJob(jobId: string): Promise<void> {
     const audioList = join(work, "alist.txt");
     await writeFile(
       audioList,
-      scenes.map((_s, i) => `file '${join(work, `audio-${i}.wav`).replace(/\\/g, "/")}'`).join("\n"),
+      scenes
+        .map((_s, i) => `file '${join(work, `audio-${i}.wav`).replace(/\\/g, "/")}'`)
+        .join("\n"),
       "utf8",
     );
     const audioAll = join(work, "audio.wav");
@@ -653,14 +676,28 @@ export async function runVideoJob(jobId: string): Promise<void> {
     await writeFile(shiftedSrt, shifted, "utf8");
 
     const muxArgs = [
-      "-y", "-i", videoOnly, "-itsoffset", "1.5", "-i", audioAll,
-      "-map", "0:v:0", "-map", "1:a:0",
+      "-y",
+      "-i",
+      videoOnly,
+      "-itsoffset",
+      "1.5",
+      "-i",
+      audioAll,
+      "-map",
+      "0:v:0",
+      "-map",
+      "1:a:0",
     ];
     if (cfg.burnSubtitles) {
       muxArgs.push(
         "-vf",
         `subtitles='${filterPath(shiftedSrt)}':fontsdir='${filterPath(join(getMediaDir(), "fonts"))}':force_style='FontName=Noto Sans CJK KR Bold,FontSize=14,Outline=1'`,
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "23",
       );
     } else {
       muxArgs.push("-c:v", "copy");
@@ -678,11 +715,27 @@ export async function runVideoJob(jobId: string): Promise<void> {
         try {
           const mixed = join(work, "final-bgm.mp4");
           await run(ff, [
-            "-y", "-i", finalPath, "-stream_loop", "-1", "-i", bgmPath,
+            "-y",
+            "-i",
+            finalPath,
+            "-stream_loop",
+            "-1",
+            "-i",
+            bgmPath,
             "-filter_complex",
             "[0:a]aformat=channel_layouts=stereo[nar];[1:a]aformat=channel_layouts=stereo,volume=0.15[bg];[nar][bg]amix=inputs=2:duration=first:normalize=0[aout]",
-            "-map", "0:v", "-map", "[aout]",
-            "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-shortest", mixed,
+            "-map",
+            "0:v",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "160k",
+            "-shortest",
+            mixed,
           ]);
           const { copyFile } = await import("node:fs/promises");
           await copyFile(mixed, finalPath);
@@ -705,9 +758,18 @@ export async function runVideoJob(jobId: string): Promise<void> {
       ? `,drawtext=fontfile='${filterPath(font)}':text='${escapeDrawtext(line2)}':fontcolor=white:fontsize=${fs1}:${boxArgs}:x=(w-text_w)/2:y=h-1.3*${fs1}`
       : "";
     await run(ff, [
-      "-y", "-ss", "3.2", "-i", videoOnly, "-frames:v", "1",
-      "-vf", draw1 + draw2,
-      "-q:v", "3", thumbPath,
+      "-y",
+      "-ss",
+      "3.2",
+      "-i",
+      videoOnly,
+      "-frames:v",
+      "1",
+      "-vf",
+      draw1 + draw2,
+      "-q:v",
+      "3",
+      thumbPath,
     ]);
 
     await setJob(jobId, {
@@ -776,9 +838,7 @@ export async function uploadAndFinalize(jobId: string): Promise<void> {
     try {
       videoId = await uploadToYouTube({
         filePath: join(getMediaDir(), job.video_path),
-        thumbnailPath: job.thumbnail_path
-          ? join(getMediaDir(), job.thumbnail_path)
-          : undefined,
+        thumbnailPath: job.thumbnail_path ? join(getMediaDir(), job.thumbnail_path) : undefined,
         title: script.title,
         description: script.description + (await import("./bgm.server")).bgmAttribution(cfg),
         tags: script.tags ?? [],
@@ -926,12 +986,11 @@ export async function finalizeWebOnly(jobId: string): Promise<void> {
     let newThumb: string | null = null;
     if (job.thumbnail_path) {
       newThumb = `dramas/${dramaId}-thumb.jpg`;
-      await rename(
-        join(getMediaDir(), job.thumbnail_path),
-        join(getMediaDir(), newThumb),
-      ).catch(() => {
-        newThumb = null;
-      });
+      await rename(join(getMediaDir(), job.thumbnail_path), join(getMediaDir(), newThumb)).catch(
+        () => {
+          newThumb = null;
+        },
+      );
     }
     await db
       .update(tables.dramas)
@@ -1083,7 +1142,7 @@ async function createLessonFromScript(
   let enrichment: LessonEnrichment = { dialogues: [], slides: [], quiz: [] };
   try {
     const { buildLessonEnrichment } = await import("./lesson-enrich.server");
-    enrichment = await buildLessonEnrichment(cfg, script);
+    enrichment = await buildLessonEnrichment(cfg, script, userId);
   } catch (e) {
     console.warn("[video] 강의 보강 콘텐츠 생성 실패 (비치명):", e);
   }
@@ -1137,9 +1196,7 @@ export function buildLessonMarkdown(script: VideoScript): string {
       // Chinese narration is unreadable to a learner without its translation,
       // and `sc.ko` only covers the short teaching line.
       const koBlock =
-        sc.narration_ko && sc.narration_ko !== sc.narration
-          ? `\n\n> ${sc.narration_ko}`
-          : "";
+        sc.narration_ko && sc.narration_ko !== sc.narration ? `\n\n> ${sc.narration_ko}` : "";
       return `## ${i + 1}. ${sc.ko || `장면 ${i + 1}`}\n\n${sc.narration}${koBlock}${zhBlock}`;
     })
     .join("\n\n");
