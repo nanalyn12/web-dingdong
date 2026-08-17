@@ -22,11 +22,7 @@ export function initialSrs(now: Date = new Date()): SrsState {
   };
 }
 
-export function applyGrade(
-  state: SrsState,
-  grade: SrsGrade,
-  now: Date = new Date(),
-): SrsState {
+export function applyGrade(state: SrsState, grade: SrsGrade, now: Date = new Date()): SrsState {
   let { ease, intervalDays, reps, lapses } = state;
 
   if (grade === 0) {

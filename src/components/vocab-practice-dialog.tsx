@@ -35,24 +35,19 @@ import {
 } from "@/lib/vocab-practice.functions";
 import { useMyProfile } from "@/lib/auth-client";
 import { LEVEL_LABEL } from "@/lib/levels";
+import type {
+  SpeechRecognitionErrorEventLike,
+  SpeechRecognitionLike,
+  SpeechRecognitionResultEventLike,
+  SpeechRecognitionWindow,
+} from "@/lib/speech-recognition";
 
-type SR = {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  continuous: boolean;
-  onresult: ((e: any) => void) | null;
-  onerror: ((e: any) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-};
-function getRecognition(): SR | null {
+function getRecognition(): SpeechRecognitionLike | null {
   if (typeof window === "undefined") return null;
-  const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const w = window as unknown as SpeechRecognitionWindow;
+  const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
   if (!Ctor) return null;
-  const r: SR = new Ctor();
+  const r: SpeechRecognitionLike = new Ctor();
   r.lang = "zh-CN";
   r.interimResults = false;
   r.maxAlternatives = 1;
@@ -126,9 +121,7 @@ export function VocabPracticeDialog({
               <span className="text-2xl font-bold text-slate-900" lang="zh-CN">
                 {word.zh}
               </span>
-              {word.pinyin && (
-                <span className="text-xs italic text-slate-500">{word.pinyin}</span>
-              )}
+              {word.pinyin && <span className="text-xs italic text-slate-500">{word.pinyin}</span>}
             </div>
             <button
               type="button"
@@ -197,7 +190,9 @@ export function VocabPracticeDialog({
             {/* meaning + tip */}
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-100 p-3">
-                <p className="text-[11px] font-bold text-rose-600 uppercase tracking-wider mb-1">의미</p>
+                <p className="text-[11px] font-bold text-rose-600 uppercase tracking-wider mb-1">
+                  의미
+                </p>
                 <p className="text-sm text-slate-800">{data.meaning_ko}</p>
               </div>
               {data.tip && (
@@ -228,13 +223,22 @@ export function VocabPracticeDialog({
 
             <Tabs value={tab} onValueChange={setTab} className="w-full mt-2">
               <TabsList className="grid grid-cols-3 bg-slate-100/70 rounded-xl p-1">
-                <TabsTrigger value="examples" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <TabsTrigger
+                  value="examples"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                >
                   📚 예문
                 </TabsTrigger>
-                <TabsTrigger value="flashcard" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <TabsTrigger
+                  value="flashcard"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                >
                   🃏 플래시카드
                 </TabsTrigger>
-                <TabsTrigger value="quiz" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <TabsTrigger
+                  value="quiz"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                >
                   🎯 퀴즈
                 </TabsTrigger>
               </TabsList>
@@ -243,12 +247,7 @@ export function VocabPracticeDialog({
                 <ExamplesPanel data={data} speak={speak} speakingId={speakingId} />
               </TabsContent>
               <TabsContent value="flashcard" className="mt-3">
-                <FlashcardPanel
-                  word={word}
-                  data={data}
-                  speak={speak}
-                  speakingId={speakingId}
-                />
+                <FlashcardPanel word={word} data={data} speak={speak} speakingId={speakingId} />
               </TabsContent>
               <TabsContent value="quiz" className="mt-3">
                 <QuizPanel data={data} speak={speak} speakingId={speakingId} />
@@ -359,7 +358,7 @@ function FlashcardPanel({
   const [score, setScore] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const recRef = useRef<SR | null>(null);
+  const recRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
     setFlipped(false);
@@ -382,12 +381,12 @@ function FlashcardPanel({
     setErr(null);
     setHeard(null);
     setScore(null);
-    rec.onresult = (e: any) => {
+    rec.onresult = (e: SpeechRecognitionResultEventLike) => {
       const t = e?.results?.[0]?.[0]?.transcript ?? "";
       setHeard(t);
       setScore(scorePronunciation(card.zh, t));
     };
-    rec.onerror = (e: any) =>
+    rec.onerror = (e: SpeechRecognitionErrorEventLike) =>
       setErr(e?.error === "not-allowed" ? "마이크 권한이 필요해요." : "다시 시도해주세요.");
     rec.onend = () => setListening(false);
     try {
@@ -411,16 +410,17 @@ function FlashcardPanel({
       >
         {!flipped ? (
           <>
-            <p className="text-3xl sm:text-4xl font-semibold text-slate-900 leading-tight" lang="zh-CN">
+            <p
+              className="text-3xl sm:text-4xl font-semibold text-slate-900 leading-tight"
+              lang="zh-CN"
+            >
               {card.zh}
             </p>
             <p className="text-xs text-slate-400 mt-3">탭하면 뜻이 나와요</p>
           </>
         ) : (
           <>
-            {card.pinyin && (
-              <p className="text-sm italic text-slate-500">{card.pinyin}</p>
-            )}
+            {card.pinyin && <p className="text-sm italic text-slate-500">{card.pinyin}</p>}
             <p className="text-lg sm:text-xl font-semibold text-slate-800 mt-2">{card.ko}</p>
             <p className="text-xs text-slate-400 mt-3">탭하면 한자가 나와요</p>
           </>
@@ -486,7 +486,10 @@ function FlashcardPanel({
         {heard != null && (
           <div className="space-y-1.5">
             <p className="text-xs text-slate-600">
-              들린 말: <span className="font-semibold text-slate-800" lang="zh-CN">{heard || "—"}</span>
+              들린 말:{" "}
+              <span className="font-semibold text-slate-800" lang="zh-CN">
+                {heard || "—"}
+              </span>
             </p>
             {pct != null && (
               <div className="flex items-center gap-2">
@@ -623,7 +626,9 @@ function MeaningQ({
                 reveal && !isPick && !isRight && "bg-white border-slate-100 text-slate-400",
               )}
             >
-              <span className="font-semibold mr-2 text-slate-500">{String.fromCharCode(65 + i)}.</span>
+              <span className="font-semibold mr-2 text-slate-500">
+                {String.fromCharCode(65 + i)}.
+              </span>
               {opt}
             </button>
           );
@@ -703,7 +708,10 @@ function FillQ({
               </p>
             ) : (
               <p>
-                정답: <span className="font-bold" lang="zh-CN">{q.answer}</span>
+                정답:{" "}
+                <span className="font-bold" lang="zh-CN">
+                  {q.answer}
+                </span>
               </p>
             )}
           </div>

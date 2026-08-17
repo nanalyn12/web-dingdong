@@ -100,7 +100,6 @@ function pickBestTrack(tracks: CaptionTrack[], pref: PreferredLang = "auto"): Ca
   return tracks[0];
 }
 
-
 export type CaptionSource = "youtube" | "supadata";
 
 // For Supadata, we try aliases in order. `auto` uses the module default.
@@ -118,7 +117,9 @@ export async function fetchYouTubeCaptions(
   const track = pickBestTrack(tracks, preferredLang);
   if (track?.baseUrl) {
     const url = track.baseUrl.replace(/\\u0026/g, "&");
-    const xml = await fetch(url).then((r) => (r.ok ? r.text() : "")).catch(() => "");
+    const xml = await fetch(url)
+      .then((r) => (r.ok ? r.text() : ""))
+      .catch(() => "");
     if (xml) {
       const segments = parseTimedTextXml(xml);
       if (segments.length > 0) {
@@ -150,7 +151,6 @@ export async function fetchYouTubeCaptions(
 
   return null;
 }
-
 
 // ---------------------------------------------------------------------------
 // Supadata fallback (https://supadata.ai)
@@ -208,11 +208,13 @@ export async function fetchViaSupadata(
     const content = json.content ?? [];
     if (content.length === 0) continue;
 
-    const segments: CaptionSegment[] = content.map((s) => ({
-      start: (s.offset ?? 0) / 1000,
-      dur: (s.duration ?? 0) / 1000,
-      text: decodeEntities(s.text ?? ""),
-    })).filter((s) => s.text);
+    const segments: CaptionSegment[] = content
+      .map((s) => ({
+        start: (s.offset ?? 0) / 1000,
+        dur: (s.duration ?? 0) / 1000,
+        text: decodeEntities(s.text ?? ""),
+      }))
+      .filter((s) => s.text);
 
     if (segments.length === 0) continue;
 
@@ -229,7 +231,13 @@ export async function fetchViaSupadata(
 }
 
 export type CaptionProbe =
-  | { status: "ok"; languageCode: string; trackCount: number; segmentCount: number; source: CaptionSource }
+  | {
+      status: "ok";
+      languageCode: string;
+      trackCount: number;
+      segmentCount: number;
+      source: CaptionSource;
+    }
   | { status: "no-tracks"; trackCount: 0 }
   | { status: "empty-response"; languageCode: string; trackCount: number };
 
@@ -245,7 +253,9 @@ export async function probeYouTubeCaptions(
 
   if (track?.baseUrl) {
     const url = track.baseUrl.replace(/\\u0026/g, "&");
-    const xml = await fetch(url).then((r) => (r.ok ? r.text() : "")).catch(() => "");
+    const xml = await fetch(url)
+      .then((r) => (r.ok ? r.text() : ""))
+      .catch(() => "");
     const segments = xml ? parseTimedTextXml(xml) : [];
     if (segments.length > 0) {
       return {

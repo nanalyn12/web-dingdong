@@ -63,12 +63,7 @@ export const hasVocabZh = createServerFn({ method: "GET" })
     const rows = await db
       .select({ id: tables.vocabulary.id })
       .from(tables.vocabulary)
-      .where(
-        and(
-          eq(tables.vocabulary.user_id, context.userId),
-          eq(tables.vocabulary.zh, data.zh),
-        ),
-      )
+      .where(and(eq(tables.vocabulary.user_id, context.userId), eq(tables.vocabulary.zh, data.zh)))
       .limit(1);
     return { saved: rows.length > 0 };
   });
@@ -102,12 +97,7 @@ export const saveVocabulary = createServerFn({ method: "POST" })
     const existed = await db
       .select({ id: tables.vocabulary.id })
       .from(tables.vocabulary)
-      .where(
-        and(
-          eq(tables.vocabulary.user_id, context.userId),
-          eq(tables.vocabulary.zh, data.zh),
-        ),
-      )
+      .where(and(eq(tables.vocabulary.user_id, context.userId), eq(tables.vocabulary.zh, data.zh)))
       .limit(1);
     const [row] = await db
       .insert(tables.vocabulary)
@@ -134,12 +124,7 @@ export const deleteVocabulary = createServerFn({ method: "POST" })
     const { db, tables } = await import("@/db");
     await db
       .delete(tables.vocabulary)
-      .where(
-        and(
-          eq(tables.vocabulary.user_id, context.userId),
-          eq(tables.vocabulary.zh, data.zh),
-        ),
-      );
+      .where(and(eq(tables.vocabulary.user_id, context.userId), eq(tables.vocabulary.zh, data.zh)));
     return { ok: true };
   });
 
@@ -158,12 +143,7 @@ export const updateVocabularyTags = createServerFn({ method: "POST" })
     const [row] = await db
       .update(tables.vocabulary)
       .set({ tags: data.tags })
-      .where(
-        and(
-          eq(tables.vocabulary.id, data.id),
-          eq(tables.vocabulary.user_id, context.userId),
-        ),
-      )
+      .where(and(eq(tables.vocabulary.id, data.id), eq(tables.vocabulary.user_id, context.userId)))
       .returning();
     if (!row) throw new Error("단어를 찾을 수 없습니다.");
     return shape(row);
@@ -202,12 +182,7 @@ export const gradeVocabulary = createServerFn({ method: "POST" })
     const existing = await db
       .select()
       .from(tables.vocabulary)
-      .where(
-        and(
-          eq(tables.vocabulary.id, data.id),
-          eq(tables.vocabulary.user_id, context.userId),
-        ),
-      )
+      .where(and(eq(tables.vocabulary.id, data.id), eq(tables.vocabulary.user_id, context.userId)))
       .limit(1);
     if (!existing[0]) throw new Error("단어를 찾을 수 없습니다.");
 
@@ -224,12 +199,7 @@ export const gradeVocabulary = createServerFn({ method: "POST" })
         srs_due_at: next.dueAt,
         srs_last_reviewed_at: next.lastReviewedAt ?? new Date().toISOString(),
       })
-      .where(
-        and(
-          eq(tables.vocabulary.id, data.id),
-          eq(tables.vocabulary.user_id, context.userId),
-        ),
-      )
+      .where(and(eq(tables.vocabulary.id, data.id), eq(tables.vocabulary.user_id, context.userId)))
       .returning();
     const { bumpActivity } = await import("@/lib/learning-activity.server");
     void bumpActivity(context.userId, { reviews: 1 }).catch(() => {});

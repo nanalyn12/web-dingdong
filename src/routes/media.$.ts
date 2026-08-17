@@ -73,8 +73,7 @@ export const Route = createFileRoute("/media/$")({
         }
         if (!info.isFile()) return new Response("Not found", { status: 404 });
 
-        const contentType =
-          MIME[extname(safe).toLowerCase()] ?? "application/octet-stream";
+        const contentType = MIME[extname(safe).toLowerCase()] ?? "application/octet-stream";
         const baseHeaders = {
           "content-type": contentType,
           "cache-control": "public, max-age=31536000, immutable",
@@ -104,9 +103,7 @@ export const Route = createFileRoute("/media/$")({
           });
         }
 
-        const stream = Readable.toWeb(
-          createReadStream(fullPath),
-        ) as ReadableStream;
+        const stream = Readable.toWeb(createReadStream(fullPath)) as ReadableStream;
         return new Response(stream, {
           headers: { ...baseHeaders, "content-length": String(info.size) },
         });

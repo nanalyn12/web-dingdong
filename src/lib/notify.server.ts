@@ -3,11 +3,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db, tables } from "@/db";
 
-export async function notifyAdmins(
-  title: string,
-  body: string,
-  url = "/studio",
-): Promise<void> {
+export async function notifyAdmins(title: string, body: string, url = "/studio"): Promise<void> {
   try {
     const pub = process.env.VAPID_PUBLIC_KEY;
     const priv = process.env.VAPID_PRIVATE_KEY;
@@ -31,11 +27,7 @@ export async function notifyAdmins(
     if (subs.length === 0) return;
 
     const { default: webpush } = await import("web-push");
-    webpush.setVapidDetails(
-      process.env.VAPID_SUBJECT || "mailto:dingdong@example.com",
-      pub,
-      priv,
-    );
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:dingdong@example.com", pub, priv);
     const payload = JSON.stringify({ title, body: body.slice(0, 160), url });
     await Promise.allSettled(
       subs.map((s) =>

@@ -110,7 +110,9 @@ function buildHtml(p: Props) {
         <h2 style="font-size:15px;font-weight:700;margin:0 0 6px;">🎲 인터랙티브 활동</h2>
         ${p.activities
           .map(
-            (a) => `<div style="border:1px solid #fbcfe8;border-radius:10px;padding:10px;margin-bottom:8px;font-size:12px;">
+            (
+              a,
+            ) => `<div style="border:1px solid #fbcfe8;border-radius:10px;padding:10px;margin-bottom:8px;font-size:12px;">
               <div style="font-weight:700;font-size:13px;">${esc(a.name ?? "")} <span style="color:#64748b;font-weight:500;">· ${esc(a.type ?? "")} · ${a.duration_min ?? 0}분</span></div>
               <div style="color:#475569;margin:4px 0;">🎯 ${esc(a.objective ?? "")}</div>
               <div style="margin:4px 0;">준비물: ${(a.materials ?? []).map(esc).join(", ")}</div>
@@ -177,7 +179,9 @@ export function CurriculumPdfButton(props: Props) {
   const print = () => {
     const w = window.open("", "_blank", "width=900,height=1200");
     if (!w) return;
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(props.title)}</title></head><body>${buildHtml(props)}<script>window.onload=()=>{window.print();}</script></body></html>`);
+    w.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>${esc(props.title)}</title></head><body>${buildHtml(props)}<script>window.onload=()=>{window.print();}</script></body></html>`,
+    );
     w.document.close();
   };
 

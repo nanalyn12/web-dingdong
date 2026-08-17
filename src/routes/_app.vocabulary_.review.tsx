@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { shuffle } from "@/lib/shuffle";
 import { useZhTts } from "@/lib/use-zh-tts";
 import { useVocabStore } from "@/hooks/use-vocab-store";
 import { srsStatus } from "@/lib/vocab-srs";
@@ -43,8 +44,16 @@ export const Route = createFileRoute("/_app/vocabulary_/review")({
 });
 
 const MODE_INFO: Record<Mode, { icon: React.ReactNode; label: string; desc: string }> = {
-  flash: { icon: <Sparkles className="size-4" />, label: "플래시카드", desc: "카드를 뒤집어 스스로 채점" },
-  cloze: { icon: <Puzzle className="size-4" />, label: "빈칸(병음→한자)", desc: "병음·뜻 힌트로 한자 입력" },
+  flash: {
+    icon: <Sparkles className="size-4" />,
+    label: "플래시카드",
+    desc: "카드를 뒤집어 스스로 채점",
+  },
+  cloze: {
+    icon: <Puzzle className="size-4" />,
+    label: "빈칸(병음→한자)",
+    desc: "병음·뜻 힌트로 한자 입력",
+  },
   match: { icon: <Shuffle className="size-4" />, label: "매칭", desc: "한자와 뜻을 짝지어요" },
   dictate: { icon: <Headphones className="size-4" />, label: "받아쓰기", desc: "듣고 한자를 입력" },
 };
@@ -59,10 +68,13 @@ function ReviewPage() {
   useEffect(() => {
     if (store.loading || queue) return;
     const now = new Date();
-    const pool = scope === "due"
-      ? store.items.filter((v) => srsStatus(v.srs, now) === "due" || srsStatus(v.srs, now) === "new")
-      : store.items;
-    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, limit);
+    const pool =
+      scope === "due"
+        ? store.items.filter(
+            (v) => srsStatus(v.srs, now) === "due" || srsStatus(v.srs, now) === "new",
+          )
+        : store.items;
+    const shuffled = shuffle(pool).slice(0, limit);
     setQueue(shuffled);
   }, [store.loading, store.items, scope, limit, queue]);
 
@@ -79,7 +91,9 @@ function ReviewPage() {
       <section className="glass rounded-3xl p-10 text-center space-y-3">
         <div className="text-4xl">🎉</div>
         <p className="font-semibold">지금 복습할 단어가 없어요!</p>
-        <Button asChild variant="outline"><Link to="/vocabulary">단어장으로</Link></Button>
+        <Button asChild variant="outline">
+          <Link to="/vocabulary">단어장으로</Link>
+        </Button>
       </section>
     );
   }
@@ -87,7 +101,10 @@ function ReviewPage() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <Link to="/vocabulary" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/vocabulary"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="size-4" /> 단어장
         </Link>
         <div className="flex gap-1 glass-soft rounded-full p-1">
@@ -100,7 +117,9 @@ function ReviewPage() {
               }}
               className={cn(
                 "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs cursor-pointer",
-                mode === m ? "gradient-primary text-primary-foreground" : "text-foreground/70 hover:text-foreground",
+                mode === m
+                  ? "gradient-primary text-primary-foreground"
+                  : "text-foreground/70 hover:text-foreground",
               )}
             >
               {MODE_INFO[m].icon}
@@ -126,19 +145,31 @@ function useProgress(total: number) {
   const [wrong, setWrong] = useState(0);
   const done = idx >= total;
   return {
-    idx, correct, wrong, done, total,
+    idx,
+    correct,
+    wrong,
+    done,
+    total,
     next: (ok: boolean) => {
       setIdx((n) => n + 1);
       if (ok) setCorrect((n) => n + 1);
       else setWrong((n) => n + 1);
     },
-    reset: () => { setIdx(0); setCorrect(0); setWrong(0); },
+    reset: () => {
+      setIdx(0);
+      setCorrect(0);
+      setWrong(0);
+    },
   };
 }
 
 function SessionShell({
-  progress, children,
-}: { progress: ReturnType<typeof useProgress>; children: React.ReactNode }) {
+  progress,
+  children,
+}: {
+  progress: ReturnType<typeof useProgress>;
+  children: React.ReactNode;
+}) {
   const pct = Math.min(100, (progress.idx / progress.total) * 100);
   if (progress.done) {
     return (
@@ -146,13 +177,16 @@ function SessionShell({
         <div className="text-4xl">✨</div>
         <p className="font-semibold text-lg">복습 완료!</p>
         <p className="text-sm text-muted-foreground">
-          정답 <b className="text-emerald-600">{progress.correct}</b> ·
-          오답 <b className="text-rose-500">{progress.wrong}</b> ·
-          다음 복습 일정에 반영되었어요.
+          정답 <b className="text-emerald-600">{progress.correct}</b> · 오답{" "}
+          <b className="text-rose-500">{progress.wrong}</b> · 다음 복습 일정에 반영되었어요.
         </p>
         <div className="flex justify-center gap-2">
-          <Button variant="outline" onClick={progress.reset}>다시 하기</Button>
-          <Button asChild><Link to="/vocabulary">목록으로</Link></Button>
+          <Button variant="outline" onClick={progress.reset}>
+            다시 하기
+          </Button>
+          <Button asChild>
+            <Link to="/vocabulary">목록으로</Link>
+          </Button>
         </div>
       </div>
     );
@@ -160,8 +194,12 @@ function SessionShell({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>진행 {progress.idx + 1}/{progress.total}</span>
-        <span>정답 {progress.correct} · 오답 {progress.wrong}</span>
+        <span>
+          진행 {progress.idx + 1}/{progress.total}
+        </span>
+        <span>
+          정답 {progress.correct} · 오답 {progress.wrong}
+        </span>
       </div>
       <Progress value={pct} className="h-1.5" />
       {children}
@@ -172,8 +210,12 @@ function SessionShell({
 /* ═══ 플래시카드 ════════════════════════════════════════════════ */
 
 function FlashSession({
-  queue, onGrade,
-}: { queue: VocabItem[]; onGrade: (id: string, g: 0 | 1 | 2) => Promise<void> | void }) {
+  queue,
+  onGrade,
+}: {
+  queue: VocabItem[];
+  onGrade: (id: string, g: 0 | 1 | 2) => Promise<void> | void;
+}) {
   const p = useProgress(queue.length);
   const [flipped, setFlipped] = useState(false);
   const cur = queue[p.idx];
@@ -188,8 +230,10 @@ function FlashSession({
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (!cur) return;
-      if (e.key === " " || e.key === "Enter") { e.preventDefault(); setFlipped((f) => !f); }
-      else if (e.key === "1") grade(0);
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        setFlipped((f) => !f);
+      } else if (e.key === "1") grade(0);
       else if (e.key === "2") grade(1);
       else if (e.key === "3") grade(2);
     };
@@ -209,7 +253,9 @@ function FlashSession({
           >
             <Volume2 className="size-4 text-primary" />
           </button>
-          <p className="text-5xl font-bold" lang="zh-CN">{cur.zh}</p>
+          <p className="text-5xl font-bold" lang="zh-CN">
+            {cur.zh}
+          </p>
           {cur.pinyin && <p className="text-sm italic text-slate-500">{cur.pinyin}</p>}
           {flipped ? (
             <>
@@ -224,13 +270,25 @@ function FlashSession({
         </div>
       )}
       <div className="grid grid-cols-3 gap-2">
-        <Button variant="outline" onClick={() => grade(0)} className="border-rose-200 text-rose-600 hover:bg-rose-50">
+        <Button
+          variant="outline"
+          onClick={() => grade(0)}
+          className="border-rose-200 text-rose-600 hover:bg-rose-50"
+        >
           모름 <span className="text-[10px] opacity-60 ml-1">(1)</span>
         </Button>
-        <Button variant="outline" onClick={() => grade(1)} className="border-amber-200 text-amber-700 hover:bg-amber-50">
+        <Button
+          variant="outline"
+          onClick={() => grade(1)}
+          className="border-amber-200 text-amber-700 hover:bg-amber-50"
+        >
           헷갈림 <span className="text-[10px] opacity-60 ml-1">(2)</span>
         </Button>
-        <Button variant="outline" onClick={() => grade(2)} className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+        <Button
+          variant="outline"
+          onClick={() => grade(2)}
+          className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+        >
           암기 <span className="text-[10px] opacity-60 ml-1">(3)</span>
         </Button>
       </div>
@@ -241,8 +299,12 @@ function FlashSession({
 /* ═══ 빈칸(병음 → 한자) ════════════════════════════════════════ */
 
 function ClozeSession({
-  queue, onGrade,
-}: { queue: VocabItem[]; onGrade: (id: string, g: 0 | 1 | 2) => Promise<void> | void }) {
+  queue,
+  onGrade,
+}: {
+  queue: VocabItem[];
+  onGrade: (id: string, g: 0 | 1 | 2) => Promise<void> | void;
+}) {
   const p = useProgress(queue.length);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<null | "ok" | "no" | "hint">(null);
@@ -251,7 +313,9 @@ function ClozeSession({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setAnswer(""); setFeedback(null); setHintUsed(false);
+    setAnswer("");
+    setFeedback(null);
+    setHintUsed(false);
     inputRef.current?.focus();
   }, [p.idx]);
 
@@ -272,7 +336,9 @@ function ClozeSession({
             <p className="text-xs text-muted-foreground">뜻</p>
             <p className="text-lg font-semibold">{cur.ko || "(뜻 정보 없음)"}</p>
             {cur.pinyin && (
-              <p className="text-sm italic text-slate-500 mt-1">{hintUsed ? cur.pinyin : "___ ___ ___"}</p>
+              <p className="text-sm italic text-slate-500 mt-1">
+                {hintUsed ? cur.pinyin : "___ ___ ___"}
+              </p>
             )}
           </div>
           <div className="flex gap-2">
@@ -285,21 +351,38 @@ function ClozeSession({
               className="text-center text-xl h-12"
               onKeyDown={(e) => e.key === "Enter" && submit()}
             />
-            <Button onClick={submit} disabled={!answer || !!feedback}>확인</Button>
+            <Button onClick={submit} disabled={!answer || !!feedback}>
+              확인
+            </Button>
           </div>
           <div className="flex justify-between text-xs">
-            <button className="text-primary hover:underline" onClick={() => setHintUsed(true)} disabled={hintUsed}>
+            <button
+              className="text-primary hover:underline"
+              onClick={() => setHintUsed(true)}
+              disabled={hintUsed}
+            >
               💡 병음 힌트
             </button>
-            <button className="text-muted-foreground hover:text-foreground" onClick={async () => { setFeedback("no"); await onGrade(cur.id, 0); setTimeout(() => p.next(false), 600); }}>
+            <button
+              className="text-muted-foreground hover:text-foreground"
+              onClick={async () => {
+                setFeedback("no");
+                await onGrade(cur.id, 0);
+                setTimeout(() => p.next(false), 600);
+              }}
+            >
               모르겠어요
             </button>
           </div>
           {feedback === "ok" && (
-            <p className="text-center text-emerald-600 font-semibold flex items-center justify-center gap-1"><Check className="size-4" /> 정답! {cur.zh}</p>
+            <p className="text-center text-emerald-600 font-semibold flex items-center justify-center gap-1">
+              <Check className="size-4" /> 정답! {cur.zh}
+            </p>
           )}
           {feedback === "no" && (
-            <p className="text-center text-rose-600 font-semibold flex items-center justify-center gap-1"><X className="size-4" /> 정답: {cur.zh}</p>
+            <p className="text-center text-rose-600 font-semibold flex items-center justify-center gap-1">
+              <X className="size-4" /> 정답: {cur.zh}
+            </p>
           )}
         </div>
       )}
@@ -310,8 +393,12 @@ function ClozeSession({
 /* ═══ 매칭 ════════════════════════════════════════════════════ */
 
 function MatchSession({
-  queue, onGrade,
-}: { queue: VocabItem[]; onGrade: (id: string, g: 0 | 1 | 2) => Promise<void> | void }) {
+  queue,
+  onGrade,
+}: {
+  queue: VocabItem[];
+  onGrade: (id: string, g: 0 | 1 | 2) => Promise<void> | void;
+}) {
   const CHUNK = 5;
   const chunks = useMemo(() => {
     const arr: VocabItem[][] = [];
@@ -320,15 +407,19 @@ function MatchSession({
     return arr;
   }, [queue]);
   const [chunkIdx, setChunkIdx] = useState(0);
-  const chunk = chunks[chunkIdx] ?? [];
+  // Memoised because the `?? []` fallback would otherwise hand `kos` a fresh
+  // array on every render past the last chunk, reshuffling it for no reason.
+  const chunk = useMemo(() => chunks[chunkIdx] ?? [], [chunks, chunkIdx]);
   const [selectedZh, setSelectedZh] = useState<string | null>(null);
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [wrongFlash, setWrongFlash] = useState<string | null>(null);
   const [wrongCount, setWrongCount] = useState<Record<string, number>>({});
-  const kos = useMemo(() => [...chunk].sort(() => Math.random() - 0.5), [chunk]);
+  const kos = useMemo(() => shuffle(chunk), [chunk]);
 
   useEffect(() => {
-    setSelectedZh(null); setMatched(new Set()); setWrongCount({});
+    setSelectedZh(null);
+    setMatched(new Set());
+    setWrongCount({});
   }, [chunkIdx]);
 
   const done = matched.size === chunk.length && chunk.length > 0;
@@ -353,14 +444,22 @@ function MatchSession({
   };
 
   if (chunks.length === 0) {
-    return <div className="glass rounded-3xl p-8 text-center text-muted-foreground text-sm">뜻이 없는 단어들이라 매칭을 만들 수 없어요.</div>;
+    return (
+      <div className="glass rounded-3xl p-8 text-center text-muted-foreground text-sm">
+        뜻이 없는 단어들이라 매칭을 만들 수 없어요.
+      </div>
+    );
   }
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>세트 {chunkIdx + 1}/{chunks.length}</span>
-        <span>{matched.size}/{chunk.length} 매칭</span>
+        <span>
+          세트 {chunkIdx + 1}/{chunks.length}
+        </span>
+        <span>
+          {matched.size}/{chunk.length} 매칭
+        </span>
       </div>
       <div className="glass rounded-3xl p-4 grid grid-cols-2 gap-3">
         <div className="space-y-2">
@@ -373,7 +472,9 @@ function MatchSession({
                 "w-full text-left rounded-2xl border p-3 text-lg font-semibold transition-all",
                 matched.has(v.id) && "opacity-40 line-through border-emerald-200 bg-emerald-50",
                 selectedZh === v.id && "border-primary ring-2 ring-primary/40 bg-primary/5",
-                !matched.has(v.id) && selectedZh !== v.id && "border-slate-200 bg-white hover:bg-slate-50 cursor-pointer",
+                !matched.has(v.id) &&
+                  selectedZh !== v.id &&
+                  "border-slate-200 bg-white hover:bg-slate-50 cursor-pointer",
               )}
               lang="zh-CN"
             >
@@ -391,7 +492,9 @@ function MatchSession({
                 "w-full text-left rounded-2xl border p-3 text-sm transition-all",
                 matched.has(v.id) && "opacity-40 line-through border-emerald-200 bg-emerald-50",
                 wrongFlash === v.id && "border-rose-300 bg-rose-50 animate-pulse",
-                !matched.has(v.id) && wrongFlash !== v.id && "border-slate-200 bg-white hover:bg-slate-50 cursor-pointer",
+                !matched.has(v.id) &&
+                  wrongFlash !== v.id &&
+                  "border-slate-200 bg-white hover:bg-slate-50 cursor-pointer",
               )}
             >
               {v.ko}
@@ -402,7 +505,9 @@ function MatchSession({
       {done && (
         <div className="flex justify-end">
           <Button
-            onClick={() => (chunkIdx + 1 < chunks.length ? setChunkIdx(chunkIdx + 1) : setChunkIdx(chunks.length))}
+            onClick={() =>
+              chunkIdx + 1 < chunks.length ? setChunkIdx(chunkIdx + 1) : setChunkIdx(chunks.length)
+            }
           >
             {chunkIdx + 1 < chunks.length ? "다음 세트" : "완료"}
           </Button>
@@ -412,7 +517,9 @@ function MatchSession({
         <div className="glass rounded-3xl p-8 text-center space-y-2">
           <div className="text-3xl">✨</div>
           <p className="font-semibold">매칭 완료!</p>
-          <Button asChild><Link to="/vocabulary">목록으로</Link></Button>
+          <Button asChild>
+            <Link to="/vocabulary">목록으로</Link>
+          </Button>
         </div>
       )}
     </div>
@@ -422,8 +529,12 @@ function MatchSession({
 /* ═══ 받아쓰기 ═══════════════════════════════════════════════════ */
 
 function DictateSession({
-  queue, onGrade,
-}: { queue: VocabItem[]; onGrade: (id: string, g: 0 | 1 | 2) => Promise<void> | void }) {
+  queue,
+  onGrade,
+}: {
+  queue: VocabItem[];
+  onGrade: (id: string, g: 0 | 1 | 2) => Promise<void> | void;
+}) {
   const p = useProgress(queue.length);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<null | "ok" | "no">(null);
@@ -432,7 +543,8 @@ function DictateSession({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setAnswer(""); setFeedback(null);
+    setAnswer("");
+    setFeedback(null);
     if (cur) setTimeout(() => speak(cur.zh, cur.zh), 200);
     inputRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -451,11 +563,7 @@ function DictateSession({
       {cur && (
         <div className="glass rounded-3xl p-6 space-y-4 text-center">
           <p className="text-xs text-muted-foreground">🎧 들리는 대로 한자로 입력하세요</p>
-          <Button
-            variant="outline"
-            className="gap-2 mx-auto"
-            onClick={() => speak(cur.zh, cur.zh)}
-          >
+          <Button variant="outline" className="gap-2 mx-auto" onClick={() => speak(cur.zh, cur.zh)}>
             <Volume2 className="size-4" /> 다시 듣기
           </Button>
           <div className="flex gap-2 max-w-sm mx-auto">
@@ -468,13 +576,19 @@ function DictateSession({
               className="text-center text-xl h-12"
               onKeyDown={(e) => e.key === "Enter" && submit()}
             />
-            <Button onClick={submit} disabled={!answer || !!feedback}>확인</Button>
+            <Button onClick={submit} disabled={!answer || !!feedback}>
+              확인
+            </Button>
           </div>
           {feedback === "ok" && (
-            <p className="text-emerald-600 font-semibold flex items-center justify-center gap-1"><Check className="size-4" /> 정답! {cur.zh} ({cur.pinyin})</p>
+            <p className="text-emerald-600 font-semibold flex items-center justify-center gap-1">
+              <Check className="size-4" /> 정답! {cur.zh} ({cur.pinyin})
+            </p>
           )}
           {feedback === "no" && (
-            <p className="text-rose-600 font-semibold flex items-center justify-center gap-1"><X className="size-4" /> 정답: {cur.zh} ({cur.pinyin})</p>
+            <p className="text-rose-600 font-semibold flex items-center justify-center gap-1">
+              <X className="size-4" /> 정답: {cur.zh} ({cur.pinyin})
+            </p>
           )}
         </div>
       )}

@@ -6,27 +6,17 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useMyProfile, useSession } from "@/lib/auth-client";
-import {
-  getMyDramaProgress,
-  saveMyDramaProgress,
-} from "@/lib/drama-progress.functions";
-import {
-  getDrama,
-  updateDramaLineTime,
-  type DramaScene,
-} from "@/lib/dramas.functions";
+import { getMyDramaProgress, saveMyDramaProgress } from "@/lib/drama-progress.functions";
+import { getDrama, updateDramaLineTime, type DramaScene } from "@/lib/dramas.functions";
 import { useZhTts } from "@/lib/use-zh-tts";
 import { useVideoViewPrefs, VIDEO_SIZES, VIDEO_SIZE_CLASS } from "@/lib/video-view-prefs";
 import { saveVocabulary } from "@/lib/vocab.functions";
 import { addGuestVocab, guessEmoji } from "@/lib/vocab";
 
-
 export const Route = createFileRoute("/_app/dramas/$id")({
   component: DramaDetail,
   errorComponent: ({ error }) => (
-    <div className="glass rounded-3xl p-6 text-sm text-destructive">
-      {error.message}
-    </div>
+    <div className="glass rounded-3xl p-6 text-sm text-destructive">{error.message}</div>
   ),
   notFoundComponent: () => <div className="glass rounded-3xl p-6">드라마를 찾을 수 없어요.</div>,
 });
@@ -113,9 +103,10 @@ function useYoutubePlayer(videoId: string) {
   }, []);
 
   const seek = (seconds: number) => {
-    const p = playerRef.current as
-      | { seekTo?: (s: number, allow?: boolean) => void; playVideo?: () => void }
-      | null;
+    const p = playerRef.current as {
+      seekTo?: (s: number, allow?: boolean) => void;
+      playVideo?: () => void;
+    } | null;
     p?.seekTo?.(seconds, true);
     p?.playVideo?.();
   };
@@ -179,9 +170,7 @@ function DramaDetail() {
   // Auto-scroll the active chip into view
   const timelineRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const el = timelineRef.current?.querySelector<HTMLElement>(
-      `[data-scene-idx="${shownIndex}"]`,
-    );
+    const el = timelineRef.current?.querySelector<HTMLElement>(`[data-scene-idx="${shownIndex}"]`);
     el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [shownIndex]);
 
@@ -194,8 +183,7 @@ function DramaDetail() {
     staleTime: Infinity,
   });
   const [resumeDismissed, setResumeDismissed] = useState(false);
-  const { size: videoSize, setSize: setVideoSize, pinned, setPinned } =
-    useVideoViewPrefs();
+  const { size: videoSize, setSize: setVideoSize, pinned, setPinned } = useVideoViewPrefs();
   const completedRef = useRef<Set<number>>(new Set());
   useEffect(() => {
     if (progress?.completed_scenes) {
@@ -246,7 +234,10 @@ function DramaDetail() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm">
-        <Link to="/dramas" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+        <Link
+          to="/dramas"
+          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="size-4" /> 목록으로
         </Link>
       </div>
@@ -270,24 +261,14 @@ function DramaDetail() {
             {drama.has_captions ? "🎯 자막 기반" : "≈ 근사 타임"}
           </span>
         </div>
-        {drama.title_zh && (
-          <div className="text-muted-foreground">{drama.title_zh}</div>
-        )}
-        {drama.description && (
-          <p className="text-sm text-muted-foreground">{drama.description}</p>
-        )}
+        {drama.title_zh && <div className="text-muted-foreground">{drama.title_zh}</div>}
+        {drama.description && <p className="text-sm text-muted-foreground">{drama.description}</p>}
       </div>
-
 
       {/* Player — size and pinning are reader preferences. The card used to be
           permanently sticky at full width, which meant a large video followed
           you down the page while reading the script below it. */}
-      <div
-        className={[
-          "glass rounded-3xl p-3",
-          pinned ? "sticky top-2 z-10" : "",
-        ].join(" ")}
-      >
+      <div className={["glass rounded-3xl p-3", pinned ? "sticky top-2 z-10" : ""].join(" ")}>
         <div className="flex items-center justify-end gap-1.5 pb-2">
           <div className="glass-soft rounded-full flex text-[11px] font-semibold overflow-hidden">
             {VIDEO_SIZES.map((s) => (
@@ -349,9 +330,7 @@ function DramaDetail() {
           !resumeDismissed &&
           currentTime < 3 && (
             <div className="mt-2 flex items-center justify-between gap-2 rounded-2xl bg-primary/10 px-3 py-2 text-sm">
-              <span>
-                ⏱️ 지난번 {fmtTime(progress.last_seconds)}까지 학습했어요.
-              </span>
+              <span>⏱️ 지난번 {fmtTime(progress.last_seconds)}까지 학습했어요.</span>
               <span className="flex gap-2">
                 <Button
                   size="sm"
@@ -397,9 +376,7 @@ function DramaDetail() {
                     : "bg-white/60 hover:bg-white",
                 ].join(" ")}
               >
-                <div className="font-mono text-[10px] opacity-80">
-                  {fmtTime(s.start_seconds)}
-                </div>
+                <div className="font-mono text-[10px] opacity-80">{fmtTime(s.start_seconds)}</div>
                 <div className="font-semibold truncate max-w-[140px]">
                   {s.index ?? i + 1}. {s.title}
                 </div>
@@ -468,9 +445,7 @@ function TranscriptPanel({
   // Auto-scroll the active line into view (inside the panel only).
   useEffect(() => {
     if (!open || !activeKey) return;
-    const el = listRef.current?.querySelector<HTMLElement>(
-      `[data-line-key="${activeKey}"]`,
-    );
+    const el = listRef.current?.querySelector<HTMLElement>(`[data-line-key="${activeKey}"]`);
     el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [activeKey, open]);
 
@@ -490,10 +465,7 @@ function TranscriptPanel({
       </button>
 
       {open && (
-        <div
-          ref={listRef}
-          className="mt-3 max-h-72 overflow-y-auto pr-1 space-y-1 scroll-smooth"
-        >
+        <div ref={listRef} className="mt-3 max-h-72 overflow-y-auto pr-1 space-y-1 scroll-smooth">
           {lines.map((l) => {
             const active = l.key === activeKey;
             return (
@@ -589,9 +561,7 @@ function ScenePanel({
           </button>
         </div>
         {scene.summary_ko && (
-          <p className="text-sm leading-relaxed text-foreground/90">
-            {scene.summary_ko}
-          </p>
+          <p className="text-sm leading-relaxed text-foreground/90">{scene.summary_ko}</p>
         )}
       </div>
 
@@ -610,10 +580,7 @@ function ScenePanel({
               const step = usable / Math.max(1, n);
               return scene.key_lines.map((l, i) => {
                 const raw = start + buffer + step * (i + 0.5);
-                const clamped = Math.min(
-                  Math.max(raw, start),
-                  Math.max(start, end - 1),
-                );
+                const clamped = Math.min(Math.max(raw, start), Math.max(start, end - 1));
                 const approx = Math.round(clamped);
                 const explicit =
                   typeof l.time_seconds === "number" ? Math.round(l.time_seconds) : null;
@@ -636,10 +603,6 @@ function ScenePanel({
           </div>
         </div>
       )}
-
-
-
-
 
       {scene.vocab?.length > 0 && (
         <div className="glass-read rounded-3xl p-5 space-y-3">
@@ -757,9 +720,7 @@ function LineRow({
             </button>
           )}
         </div>
-        <div className="text-lg font-semibold tracking-wide leading-snug">
-          {line.zh || line.ko}
-        </div>
+        <div className="text-lg font-semibold tracking-wide leading-snug">{line.zh || line.ko}</div>
         {line.pinyin && (
           <div className="text-xs text-muted-foreground font-mono">{line.pinyin}</div>
         )}
@@ -770,8 +731,6 @@ function LineRow({
     </div>
   );
 }
-
-
 
 function VocabRow({ item }: { item: DramaScene["vocab"][number] }) {
   const { speak, speakingId } = useZhTts();
@@ -922,7 +881,6 @@ function MiniQuiz({
     setPicked("");
     setRevealed(false);
   };
-
 
   return (
     <div className="glass rounded-3xl p-5 space-y-4 border border-primary/30">

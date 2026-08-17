@@ -62,9 +62,7 @@ export function saveGuestVocab(items: VocabItem[]) {
   window.localStorage.setItem(GUEST_KEY_V2, JSON.stringify(items));
 }
 
-export function addGuestVocab(
-  input: Omit<VocabItem, "id" | "created_at" | "srs">,
-): VocabItem[] {
+export function addGuestVocab(input: Omit<VocabItem, "id" | "created_at" | "srs">): VocabItem[] {
   const items = loadGuestVocab();
   if (items.some((x) => x.zh === input.zh)) return items;
   const now = new Date();

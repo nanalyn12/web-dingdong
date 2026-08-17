@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { runTour } from "@/lib/coachmark";
 import { coursesTourSteps } from "@/lib/tour-steps";
 
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,7 +100,11 @@ function CoursesPage() {
   const { cat } = Route.useSearch();
   const navigate = useNavigate();
   const category = findCategory(cat);
-  const { data: courses, isLoading, error } = useQuery({
+  const {
+    data: courses,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["courses-with-counts"],
     queryFn: () => listCoursesWithCounts(),
   });
@@ -121,10 +124,7 @@ function CoursesPage() {
     .filter((c) => (levelFilter === "all" ? true : c.level === levelFilter))
     .filter((c) => (lang === "all" ? true : (c.video_languages ?? []).includes(lang)))
     .sort(SORTERS[sort]);
-  const totalLessons = (courses ?? []).reduce(
-    (s, c) => s + (c.lesson_count ?? 0),
-    0,
-  );
+  const totalLessons = (courses ?? []).reduce((s, c) => s + (c.lesson_count ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -159,10 +159,10 @@ function CoursesPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             <div className="inline-flex rounded-2xl bg-white/60 border border-white/60 p-1">
-              {([
+              {[
                 ["all", "전체"] as const,
                 ...LEVEL_OPTIONS.map((l) => [l.value, l.label] as const),
-              ]).map(([key, label]) => (
+              ].map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -211,19 +211,16 @@ function CoursesPage() {
           </div>
         </div>
 
-        {isLoading && (
-          <p className="text-muted-foreground px-2">불러오는 중…</p>
-        )}
+        {isLoading && <p className="text-muted-foreground px-2">불러오는 중…</p>}
         {error && (
-          <p className="text-destructive whitespace-pre-wrap px-2">
-            {(error as Error).message}
-          </p>
+          <p className="text-destructive whitespace-pre-wrap px-2">{(error as Error).message}</p>
         )}
         {courses && courses.length === 0 && (
           <div className="glass rounded-3xl p-10 text-center">
             <div className="text-4xl mb-3">🐼</div>
             <p className="text-muted-foreground">
-              아직 강의가 없어요. {isEditor ? "위에서 첫 강의를 만들어 보세요." : "곧 새 강의가 열려요!"}
+              아직 강의가 없어요.{" "}
+              {isEditor ? "위에서 첫 강의를 만들어 보세요." : "곧 새 강의가 열려요!"}
             </p>
           </div>
         )}
@@ -379,11 +376,7 @@ function CreateCourseForm() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>난이도 *</Label>
-            <Select
-              value={level}
-              onValueChange={(v) => setLevel(v as Level)}
-              disabled={creating}
-            >
+            <Select value={level} onValueChange={(v) => setLevel(v as Level)} disabled={creating}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -432,8 +425,7 @@ function CreateCourseForm() {
           <div className="rounded-2xl bg-primary/10 border border-primary/30 p-3 space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Loader2 className="size-4 animate-spin" />
-              叮叮이 {progress.current}/{progress.total}주차 세부 강의를 만드는
-              중… (각 10~30초)
+              叮叮이 {progress.current}/{progress.total}주차 세부 강의를 만드는 중… (각 10~30초)
             </div>
             <div className="h-2 rounded-full bg-white/60 overflow-hidden">
               <div
@@ -446,23 +438,16 @@ function CreateCourseForm() {
           </div>
         )}
 
-        {genError && (
-          <p className="text-destructive whitespace-pre-wrap text-sm">
-            {genError}
-          </p>
-        )}
+        {genError && <p className="text-destructive whitespace-pre-wrap text-sm">{genError}</p>}
 
         <Button type="submit" disabled={creating}>
           {creating && <Loader2 className="mr-2 size-4 animate-spin" />}
-          {autoGenerate
-            ? `강의 + ${weeks}개 세부 강의 만들기 ✨`
-            : "강의 만들기"}
+          {autoGenerate ? `강의 + ${weeks}개 세부 강의 만들기 ✨` : "강의 만들기"}
         </Button>
       </form>
     </section>
   );
 }
-
 
 function CourseCard({ course }: { course: CourseWithCount }) {
   const navigate = useNavigate();
@@ -471,9 +456,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
   const generate = useServerFn(generateLesson);
   const removeCourse = useServerFn(deleteCourse);
   const courseLevel = (
-    ["beginner", "intermediate", "advanced"].includes(course.level)
-      ? course.level
-      : "beginner"
+    ["beginner", "intermediate", "advanced"].includes(course.level) ? course.level : "beginner"
   ) as Level;
 
   const deleteCourseM = useMutation({
@@ -483,7 +466,6 @@ function CourseCard({ course }: { course: CourseWithCount }) {
       qc.invalidateQueries({ queryKey: ["sidebar-courses-with-lessons"] });
     },
   });
-
 
   const [lessonTitle, setLessonTitle] = useState("");
   const [level, setLevel] = useState<Level>(courseLevel);
@@ -510,8 +492,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
     queryKey: ["sidebar-courses-with-lessons"],
     queryFn: () => listCoursesWithLessons(),
   });
-  const firstLessonId = coursesWithLessons?.find((c) => c.id === course.id)
-    ?.lessons?.[0]?.id;
+  const firstLessonId = coursesWithLessons?.find((c) => c.id === course.id)?.lessons?.[0]?.id;
 
   const accent = {
     // Amber/orange was the one accent outside the pink–sky–mint–lavender
@@ -584,11 +565,23 @@ function CourseCard({ course }: { course: CourseWithCount }) {
           {/* Progress ring */}
           <div className="shrink-0 relative w-14 h-14">
             <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-              <circle cx="18" cy="18" r="15.9" fill="none" className="stroke-white/60" strokeWidth="3" />
               <circle
-                cx="18" cy="18" r="15.9" fill="none"
+                cx="18"
+                cy="18"
+                r="15.9"
+                fill="none"
+                className="stroke-white/60"
+                strokeWidth="3"
+              />
+              <circle
+                cx="18"
+                cy="18"
+                r="15.9"
+                fill="none"
                 className={accent.ring}
-                stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
                 strokeDasharray={`${pct * 100} 100`}
               />
             </svg>
@@ -649,7 +642,9 @@ function CourseCard({ course }: { course: CourseWithCount }) {
           <details className="group/details rounded-2xl border border-white/40 bg-white/30 open:bg-white/40 transition">
             <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-muted-foreground flex items-center justify-between">
               <span>편집자 도구 · 세부 강의 관리</span>
-              <span className="text-[10px] opacity-70 group-open/details:rotate-180 transition-transform">▾</span>
+              <span className="text-[10px] opacity-70 group-open/details:rotate-180 transition-transform">
+                ▾
+              </span>
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-4">
               <CourseEditDialog course={course} />
@@ -658,9 +653,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
                 size="sm"
                 variant="outline"
                 className="w-full rounded-xl text-xs"
-                onClick={() =>
-                  navigate({ to: "/studio", search: { courseId: course.id } })
-                }
+                onClick={() => navigate({ to: "/studio", search: { courseId: course.id } })}
               >
                 🎬 이 강의에 새 영상 강의 만들기
               </Button>
@@ -675,7 +668,8 @@ function CourseCard({ course }: { course: CourseWithCount }) {
               >
                 <div className="space-y-1.5">
                   <Label htmlFor={`lt-${course.id}`} className="text-xs">
-                    새 세부 강의 제목 <span className="text-muted-foreground">(선택 — 비우면 AI가 자동 생성)</span>
+                    새 세부 강의 제목{" "}
+                    <span className="text-muted-foreground">(선택 — 비우면 AI가 자동 생성)</span>
                   </Label>
                   <Input
                     id={`lt-${course.id}`}
@@ -717,12 +711,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
                   </p>
                 )}
 
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="w-full"
-                  disabled={mutation.isPending}
-                >
+                <Button type="submit" size="sm" className="w-full" disabled={mutation.isPending}>
                   {lessonTitle.trim() ? "세부 강의 생성" : "AI에게 제목+콘텐츠 맡기기 ✨"}
                 </Button>
               </form>
@@ -756,9 +745,7 @@ function CourseEditDialog({ course }: { course: CourseWithCount }) {
     if (!open) return;
     setTitle(course.title);
     setDescription(course.description ?? "");
-    setLevel(
-      LEVEL_ORDER.includes(course.level as Level) ? (course.level as Level) : "beginner",
-    );
+    setLevel(LEVEL_ORDER.includes(course.level as Level) ? (course.level as Level) : "beginner");
     setWeeks(course.weeks);
   }, [open, course]);
 
@@ -906,13 +893,10 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
   };
 
   const toggle = (id: string) =>
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const moveMut = useMutation({
-    mutationFn: () =>
-      move({ data: { lessonIds: selected, targetCourseId: moveTarget } }),
+    mutationFn: () => move({ data: { lessonIds: selected, targetCourseId: moveTarget } }),
     onSuccess: (r) => {
       toast.success(`세부 강의 ${r.moved}개를 이동했어요.`);
       setSelected([]);
@@ -963,9 +947,7 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base">
-            구조 편집 — {course.title}
-          </DialogTitle>
+          <DialogTitle className="text-base">구조 편집 — {course.title}</DialogTitle>
         </DialogHeader>
 
         {/* 레슨 선택 */}
@@ -999,9 +981,7 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
               type="button"
               className="text-xs text-primary underline"
               onClick={() =>
-                setSelected(
-                  selected.length === lessons.length ? [] : lessons.map((l) => l.id),
-                )
+                setSelected(selected.length === lessons.length ? [] : lessons.map((l) => l.id))
               }
             >
               {selected.length === lessons.length ? "전체 해제" : "전체 선택"}
@@ -1082,8 +1062,7 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
               variant="destructive"
               disabled={busy || !mergeTarget}
               onClick={() => {
-                const targetTitle =
-                  otherCourses.find((c) => c.id === mergeTarget)?.title ?? "";
+                const targetTitle = otherCourses.find((c) => c.id === mergeTarget)?.title ?? "";
                 if (
                   confirm(
                     `"${course.title}"의 모든 세부 강의를 "${targetTitle}" 뒤에 붙이고,\n"${course.title}" 강의는 삭제됩니다. 계속할까요?`,
@@ -1098,8 +1077,8 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            모든 세부 강의가 대상 강의 뒤에 이어 붙고, 이 강의(빈 껍데기)는 삭제돼요.
-            학습 진도 기록은 레슨을 따라 그대로 유지됩니다.
+            모든 세부 강의가 대상 강의 뒤에 이어 붙고, 이 강의(빈 껍데기)는 삭제돼요. 학습 진도
+            기록은 레슨을 따라 그대로 유지됩니다.
           </p>
         </div>
       </DialogContent>
@@ -1146,9 +1125,7 @@ function LessonListEditor({ courseId }: { courseId: string }) {
             key={l.id}
             lesson={l}
             isEditor={isEditor}
-            onSave={(title, description) =>
-              updateM.mutate({ lessonId: l.id, title, description })
-            }
+            onSave={(title, description) => updateM.mutate({ lessonId: l.id, title, description })}
             onDelete={() => {
               if (confirm(`"${l.title}" 세부 강의를 삭제할까요?`)) {
                 deleteM.mutate(l.id);
@@ -1236,17 +1213,13 @@ function LessonRow({
       <button
         type="button"
         className="min-w-0 flex-1 text-left hover:text-primary"
-        onClick={() =>
-          navigate({ to: "/lessons/$id", params: { id: lesson.id } })
-        }
+        onClick={() => navigate({ to: "/lessons/$id", params: { id: lesson.id } })}
       >
         <span className="block truncate">
           {lesson.order_index}. {lesson.title}
         </span>
         {lesson.description && (
-          <span className="block truncate text-xs text-muted-foreground">
-            {lesson.description}
-          </span>
+          <span className="block truncate text-xs text-muted-foreground">{lesson.description}</span>
         )}
       </button>
       {isEditor && (

@@ -1,7 +1,14 @@
 import { type ReactNode, useMemo, Fragment } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Volume2, Sparkles, Quote, MessageSquareQuote, BookOpen, GraduationCap } from "lucide-react";
+import {
+  Volume2,
+  Sparkles,
+  Quote,
+  MessageSquareQuote,
+  BookOpen,
+  GraduationCap,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const HAN_RE = /[\u3400-\u9fff]/;
@@ -60,7 +67,9 @@ function parseSentence(raw: string, defaultPrefix?: string): SentenceItem | null
   if (!HAN_RE.test(s)) return null;
 
   // Pattern: "中文.。(pinyin) 한글" or "中文 (pinyin.) 한글"
-  const m = s.match(/^([\u3400-\u9fff\s\u3000-\u303f\uff00-\uffef，。！？、；：]+?)\s*[（(]([^)）]+)[)）]\s*(.*)$/);
+  const m = s.match(
+    /^([\u3400-\u9fff\s\u3000-\u303f\uff00-\uffef，。！？、；：]+?)\s*[（(]([^)）]+)[)）]\s*(.*)$/,
+  );
   if (m) {
     return {
       zh: m[1].trim(),
@@ -71,7 +80,9 @@ function parseSentence(raw: string, defaultPrefix?: string): SentenceItem | null
   }
 
   // Pattern without pinyin: "中文 한글"
-  const m2 = s.match(/^([\u3400-\u9fff\s\u3000-\u303f\uff00-\uffef，。！？、；：]+?)\s+([가-힣][^]*)$/);
+  const m2 = s.match(
+    /^([\u3400-\u9fff\s\u3000-\u303f\uff00-\uffef，。！？、；：]+?)\s+([가-힣][^]*)$/,
+  );
   if (m2) {
     return { zh: m2[1].trim(), ko: m2[2].trim(), prefix };
   }
@@ -92,7 +103,7 @@ function parseExpressionHeader(
   // Bold-wrapped: **X (pinyin)**: meaning  OR  **X**: meaning
   const m = s.match(/^\*\*(.+?)\*\*\s*[:：]?\s*(.*)$/);
   if (m) {
-    let head = m[1].trim();
+    const head = m[1].trim();
     const meaning = stripBold(m[2].trim());
     // Extract pinyin from head: "受欢迎 (shòu huānyíng)"
     const p = head.match(/^(.+?)\s*[（(]([^)）]+)[)）]\s*$/);
@@ -127,12 +138,18 @@ function parseGrammarHeader(
   if (bp) {
     const zh = bp[1].trim();
     const pinyin = bp[2].trim();
-    const meaning = s.replace(bp[0], "").replace(/\s+/g, " ").replace(/^[:：]\s*/, "").trim();
+    const meaning = s
+      .replace(bp[0], "")
+      .replace(/\s+/g, " ")
+      .replace(/^[:：]\s*/, "")
+      .trim();
     return { number, zh, pinyin, meaning };
   }
 
   // Pattern B: bold Chinese followed by (pinyin), e.g. "**因为…所以…** (yīnwèi…) : meaning"
-  const bp2 = s.match(/\*\*\s*([\u3400-\u9fff][^*]*?)\s*\*\*\s*[（(]([^)）]+)[)）]\s*[:：]?\s*(.*)$/);
+  const bp2 = s.match(
+    /\*\*\s*([\u3400-\u9fff][^*]*?)\s*\*\*\s*[（(]([^)）]+)[)）]\s*[:：]?\s*(.*)$/,
+  );
   if (bp2) {
     return { number, zh: bp2[1].trim(), pinyin: bp2[2].trim(), meaning: stripBold(bp2[3].trim()) };
   }
@@ -338,7 +355,12 @@ export function parseRichMarkdown(md: string): Block[] {
     // If pending grammar and this is a plain paragraph, emit grammar as expression with meaning only
     if (pendingH3Grammar) {
       const paraBuf: string[] = [];
-      while (i < n && lines[i].trim() && !lines[i].trim().startsWith("#") && !/^[*\-+]\s+/.test(lines[i].trim())) {
+      while (
+        i < n &&
+        lines[i].trim() &&
+        !lines[i].trim().startsWith("#") &&
+        !/^[*\-+]\s+/.test(lines[i].trim())
+      ) {
         paraBuf.push(lines[i].trim());
         i++;
       }
@@ -407,11 +429,36 @@ function TtsPill({
 }
 
 const TONES = [
-  { text: "text-rose-600", bg: "bg-rose-500", soft: "from-rose-50 to-white", border: "border-rose-100" },
-  { text: "text-sky-600", bg: "bg-sky-500", soft: "from-sky-50 to-white", border: "border-sky-100" },
-  { text: "text-emerald-600", bg: "bg-emerald-500", soft: "from-emerald-50 to-white", border: "border-emerald-100" },
-  { text: "text-indigo-600", bg: "bg-indigo-500", soft: "from-indigo-50 to-white", border: "border-indigo-100" },
-  { text: "text-amber-600", bg: "bg-amber-500", soft: "from-amber-50 to-white", border: "border-amber-100" },
+  {
+    text: "text-rose-600",
+    bg: "bg-rose-500",
+    soft: "from-rose-50 to-white",
+    border: "border-rose-100",
+  },
+  {
+    text: "text-sky-600",
+    bg: "bg-sky-500",
+    soft: "from-sky-50 to-white",
+    border: "border-sky-100",
+  },
+  {
+    text: "text-emerald-600",
+    bg: "bg-emerald-500",
+    soft: "from-emerald-50 to-white",
+    border: "border-emerald-100",
+  },
+  {
+    text: "text-indigo-600",
+    bg: "bg-indigo-500",
+    soft: "from-indigo-50 to-white",
+    border: "border-indigo-100",
+  },
+  {
+    text: "text-amber-600",
+    bg: "bg-amber-500",
+    soft: "from-amber-50 to-white",
+    border: "border-amber-100",
+  },
 ];
 
 function SentenceCard({
@@ -450,11 +497,17 @@ function SentenceCard({
       >
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
-            <div className="text-base sm:text-[17px] font-bold text-slate-900 leading-snug" lang="zh-CN">
+            <div
+              className="text-base sm:text-[17px] font-bold text-slate-900 leading-snug"
+              lang="zh-CN"
+            >
               {s.zh}
             </div>
             {showPinyin && s.pinyin && (
-              <div className={cn("text-xs italic mt-0.5", tone.text)} style={{ fontFamily: "Georgia, serif" }}>
+              <div
+                className={cn("text-xs italic mt-0.5", tone.text)}
+                style={{ fontFamily: "Georgia, serif" }}
+              >
                 {s.pinyin}
               </div>
             )}
@@ -477,7 +530,6 @@ function SentenceCard({
     </div>
   );
 }
-
 
 function ExpressionCard({
   item,
@@ -507,7 +559,9 @@ function ExpressionCard({
       )}
     >
       {/* corner accent */}
-      <div className={cn("absolute -right-8 -top-8 size-24 rounded-full opacity-20 blur-2xl", tone.bg)} />
+      <div
+        className={cn("absolute -right-8 -top-8 size-24 rounded-full opacity-20 blur-2xl", tone.bg)}
+      />
 
       {/* Header */}
       <div className="relative flex items-start justify-between gap-2.5">
@@ -518,20 +572,32 @@ function ExpressionCard({
               tone.bg,
             )}
           >
-            {item.isGrammar ? <GraduationCap className="size-5" /> : <Sparkles className="size-5" />}
+            {item.isGrammar ? (
+              <GraduationCap className="size-5" />
+            ) : (
+              <Sparkles className="size-5" />
+            )}
           </div>
           <div className="min-w-0">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 leading-none tracking-tight" lang="zh-CN">
+              <div
+                className="text-2xl sm:text-3xl font-black text-slate-900 leading-none tracking-tight"
+                lang="zh-CN"
+              >
                 {item.zh}
               </div>
               {item.pinyin && (
-                <div className={cn("text-sm italic", tone.text)} style={{ fontFamily: "Georgia, serif" }}>
+                <div
+                  className={cn("text-sm italic", tone.text)}
+                  style={{ fontFamily: "Georgia, serif" }}
+                >
                   {item.pinyin}
                 </div>
               )}
             </div>
-            <div className={cn("mt-0.5 text-[10px] font-black tracking-[0.25em] uppercase", tone.text)}>
+            <div
+              className={cn("mt-0.5 text-[10px] font-black tracking-[0.25em] uppercase", tone.text)}
+            >
               {item.isGrammar ? "Grammar Pattern" : "Key Expression"}
             </div>
           </div>
@@ -556,7 +622,9 @@ function ExpressionCard({
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Meaning</span>
           {meaningEmoji && <span className="text-sm leading-none">{meaningEmoji}</span>}
         </div>
-        <p className="text-sm sm:text-base font-semibold text-slate-800 leading-snug">{meaningText}</p>
+        <p className="text-sm sm:text-base font-semibold text-slate-800 leading-snug">
+          {meaningText}
+        </p>
         {item.notes && (
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-1">{item.notes}</p>
         )}
@@ -565,7 +633,12 @@ function ExpressionCard({
       {/* Examples */}
       {item.examples.length > 0 && (
         <div className="mt-2.5 space-y-1.5">
-          <div className={cn("text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-1.5", tone.text)}>
+          <div
+            className={cn(
+              "text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-1.5",
+              tone.text,
+            )}
+          >
             <MessageSquareQuote className="size-3" />
             예문 {item.examples.length}
           </div>
@@ -587,7 +660,6 @@ function ExpressionCard({
     </div>
   );
 }
-
 
 function H2({ text, number }: { text: string; number: number }) {
   return (
@@ -747,7 +819,10 @@ export function RichLessonContent({
         }
         if (b.type === "sentence-list") {
           return (
-            <div key={i} className="rounded-3xl bg-white/70 border border-white p-4 sm:p-5 shadow-sm space-y-2">
+            <div
+              key={i}
+              className="rounded-3xl bg-white/70 border border-white p-4 sm:p-5 shadow-sm space-y-2"
+            >
               <div className="text-[10px] font-black tracking-[0.3em] uppercase text-rose-500 flex items-center gap-1.5">
                 <MessageSquareQuote className="size-3" /> 예문
               </div>
@@ -769,10 +844,7 @@ export function RichLessonContent({
           return (
             <ul
               key={i}
-              className={cn(
-                "grid gap-2 list-none p-0",
-                b.items.length > 1 && "sm:grid-cols-2",
-              )}
+              className={cn("grid gap-2 list-none p-0", b.items.length > 1 && "sm:grid-cols-2")}
             >
               {b.items.map((t, idx) => {
                 const tone = TONES[idx % TONES.length];

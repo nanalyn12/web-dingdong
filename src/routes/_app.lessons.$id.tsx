@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -30,19 +30,12 @@ import { getLessonRelatedSongs } from "@/lib/content-links.functions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { RichLessonContent } from "@/components/lesson-rich-content";
 import { LessonPdfButton } from "@/components/lesson-pdf-button";
 import { loadProgress, saveProgress } from "@/lib/lesson-progress";
-import {
-  getMyLessonProgress,
-  saveMyLessonProgress,
-} from "@/lib/lesson-progress.functions";
+import { getMyLessonProgress, saveMyLessonProgress } from "@/lib/lesson-progress.functions";
 import { useMyProfile, useSession } from "@/lib/auth-client";
 import { generateLessonCulturalCards } from "@/lib/cultural-cards.functions";
 import { useZhTts } from "@/lib/use-zh-tts";
@@ -171,7 +164,11 @@ function LessonPage() {
   const isEditor = profile?.role === "teacher" || profile?.role === "admin";
 
   const callGetLesson = useServerFn(getLesson);
-  const { data: lesson, isLoading, error } = useQuery({
+  const {
+    data: lesson,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["lesson", id],
     queryFn: async () => {
       const data = await callGetLesson({ data: { lessonId: id } });
@@ -180,15 +177,13 @@ function LessonPage() {
   });
   const lessonVideo = lesson?.video ?? null;
 
-  const [tab, setTab] = useState<string>(
-    () => loadProgress(id).completedTabs[0] ?? "content",
-  );
+  const [tab, setTab] = useState<string>(() => loadProgress(id).completedTabs[0] ?? "content");
   const [completedTabs, setCompletedTabs] = useState<string[]>(
     () => loadProgress(id).completedTabs,
   );
-  const [quizScore, setQuizScore] = useState<
-    { correct: number; total: number } | undefined
-  >(() => loadProgress(id).quizScore);
+  const [quizScore, setQuizScore] = useState<{ correct: number; total: number } | undefined>(
+    () => loadProgress(id).quizScore,
+  );
 
   // Signed-in users also sync progress to the server (dashboard + cross-device).
   const { session } = useSession();
@@ -296,13 +291,43 @@ function LessonPage() {
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex flex-wrap gap-1 h-auto bg-white/60 backdrop-blur-xl rounded-2xl border border-white/70 shadow-sm p-1">
           {(lessonVideo?.youtube_video_id || lessonVideo?.media_url) && (
-            <TabsTrigger value="video" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">🎬 영상</TabsTrigger>
+            <TabsTrigger
+              value="video"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+            >
+              🎬 영상
+            </TabsTrigger>
           )}
-          <TabsTrigger value="key" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">핵심표현</TabsTrigger>
-          <TabsTrigger value="content" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">본문</TabsTrigger>
-          <TabsTrigger value="dialogue" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">실전대화</TabsTrigger>
-          <TabsTrigger value="slides" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">슬라이드</TabsTrigger>
-          <TabsTrigger value="quiz" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl">퀴즈</TabsTrigger>
+          <TabsTrigger
+            value="key"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+          >
+            핵심표현
+          </TabsTrigger>
+          <TabsTrigger
+            value="content"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+          >
+            본문
+          </TabsTrigger>
+          <TabsTrigger
+            value="dialogue"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+          >
+            실전대화
+          </TabsTrigger>
+          <TabsTrigger
+            value="slides"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+          >
+            슬라이드
+          </TabsTrigger>
+          <TabsTrigger
+            value="quiz"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+          >
+            퀴즈
+          </TabsTrigger>
         </TabsList>
 
         {(lessonVideo?.youtube_video_id || lessonVideo?.media_url) && (
@@ -344,10 +369,30 @@ function LessonPage() {
           <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
             {(lesson.key_expressions ?? []).map((k, i) => {
               const tones = [
-                { tag: "bg-rose-50 text-rose-600 border-rose-100", hover: "hover:shadow-[0_20px_40px_-12px_rgba(244,114,182,0.25)]", pin: "text-rose-500", ring: "ring-1 ring-rose-100" },
-                { tag: "bg-indigo-50 text-indigo-600 border-indigo-100", hover: "hover:shadow-[0_20px_40px_-12px_rgba(99,102,241,0.25)]", pin: "text-indigo-500", ring: "ring-1 ring-indigo-100" },
-                { tag: "bg-emerald-50 text-emerald-600 border-emerald-100", hover: "hover:shadow-[0_20px_40px_-12px_rgba(34,197,94,0.25)]", pin: "text-emerald-500", ring: "ring-1 ring-emerald-100" },
-                { tag: "bg-sky-50 text-sky-600 border-sky-100", hover: "hover:shadow-[0_20px_40px_-12px_rgba(14,165,233,0.25)]", pin: "text-sky-500", ring: "ring-1 ring-sky-100" },
+                {
+                  tag: "bg-rose-50 text-rose-600 border-rose-100",
+                  hover: "hover:shadow-[0_20px_40px_-12px_rgba(244,114,182,0.25)]",
+                  pin: "text-rose-500",
+                  ring: "ring-1 ring-rose-100",
+                },
+                {
+                  tag: "bg-indigo-50 text-indigo-600 border-indigo-100",
+                  hover: "hover:shadow-[0_20px_40px_-12px_rgba(99,102,241,0.25)]",
+                  pin: "text-indigo-500",
+                  ring: "ring-1 ring-indigo-100",
+                },
+                {
+                  tag: "bg-emerald-50 text-emerald-600 border-emerald-100",
+                  hover: "hover:shadow-[0_20px_40px_-12px_rgba(34,197,94,0.25)]",
+                  pin: "text-emerald-500",
+                  ring: "ring-1 ring-emerald-100",
+                },
+                {
+                  tag: "bg-sky-50 text-sky-600 border-sky-100",
+                  hover: "hover:shadow-[0_20px_40px_-12px_rgba(14,165,233,0.25)]",
+                  pin: "text-sky-500",
+                  ring: "ring-1 ring-sky-100",
+                },
               ];
               const t = tones[i % tones.length];
               return (
@@ -576,8 +621,6 @@ function ContentMarkdown({
   );
 }
 
-
-
 /* ---------------- Cultural Card ---------------- */
 
 /** The lesson generator never pinned down a field name for the cultural cards,
@@ -615,12 +658,7 @@ function CulturalCardView({
       ? "from-purple-100/70 to-pink-100/40 border-purple-200/60"
       : "from-emerald-100/70 to-sky-100/40 border-emerald-200/60";
   return (
-    <div
-      className={cn(
-        "rounded-3xl border bg-gradient-to-br p-5 backdrop-blur-sm",
-        toneCls,
-      )}
-    >
+    <div className={cn("rounded-3xl border bg-gradient-to-br p-5 backdrop-blur-sm", toneCls)}>
       <div className="flex items-center gap-2 mb-2">
         <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-foreground/70">
           {icon}
@@ -628,9 +666,7 @@ function CulturalCardView({
         </span>
       </div>
       <h4 className="text-lg font-bold mb-2">{title}</h4>
-      <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/85">
-        {desc}
-      </p>
+      <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/85">{desc}</p>
     </div>
   );
 }
@@ -692,31 +728,20 @@ function ComicStrip({
               </div>
             )}
             <div className="p-3 space-y-2">
-              {p.narration && (
-                <p className="text-xs text-muted-foreground italic">{p.narration}</p>
-              )}
+              {p.narration && <p className="text-xs text-muted-foreground italic">{p.narration}</p>}
               {panelLines(p).map((l, j) => (
                 <div key={j} className="rounded-lg bg-background/50 p-2 text-sm">
                   {l.speaker && (
-                    <div className="text-[10px] text-muted-foreground">
-                      {l.speaker}
-                    </div>
+                    <div className="text-[10px] text-muted-foreground">{l.speaker}</div>
                   )}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold" lang="zh-CN">
                       {l.zh}
                     </span>
-                    <TtsButton
-                      text={l.zh}
-                      speak={speak}
-                      active={speakingId === l.zh}
-                      size="sm"
-                    />
+                    <TtsButton text={l.zh} speak={speak} active={speakingId === l.zh} size="sm" />
                   </div>
                   {showPinyin && l.pinyin && (
-                    <div className="text-[11px] text-muted-foreground">
-                      {l.pinyin}
-                    </div>
+                    <div className="text-[11px] text-muted-foreground">{l.pinyin}</div>
                   )}
                   {l.ko && <div className="text-xs text-foreground/75">{l.ko}</div>}
                 </div>
@@ -806,10 +831,7 @@ function DialogueList({
               </div>
               {showPinyin && d.pinyin && (
                 <div
-                  className={cn(
-                    "text-xs italic mt-1",
-                    isDing ? "text-rose-100" : "text-sky-500",
-                  )}
+                  className={cn("text-xs italic mt-1", isDing ? "text-rose-100" : "text-sky-500")}
                 >
                   {d.pinyin}
                 </div>
@@ -844,11 +866,46 @@ type SlideTheme = {
 };
 
 const SLIDE_THEMES: SlideTheme[] = [
-  { grad: "from-rose-100 via-pink-50 to-white", accent: "bg-rose-500", accentHex: "#f43f5e", text: "text-rose-600", ring: "ring-rose-200", softBg: "bg-rose-50" },
-  { grad: "from-sky-100 via-cyan-50 to-white", accent: "bg-sky-500", accentHex: "#0ea5e9", text: "text-sky-600", ring: "ring-sky-200", softBg: "bg-sky-50" },
-  { grad: "from-emerald-100 via-teal-50 to-white", accent: "bg-emerald-500", accentHex: "#10b981", text: "text-emerald-600", ring: "ring-emerald-200", softBg: "bg-emerald-50" },
-  { grad: "from-indigo-100 via-violet-50 to-white", accent: "bg-indigo-500", accentHex: "#6366f1", text: "text-indigo-600", ring: "ring-indigo-200", softBg: "bg-indigo-50" },
-  { grad: "from-amber-100 via-orange-50 to-white", accent: "bg-amber-500", accentHex: "#f59e0b", text: "text-amber-600", ring: "ring-amber-200", softBg: "bg-amber-50" },
+  {
+    grad: "from-rose-100 via-pink-50 to-white",
+    accent: "bg-rose-500",
+    accentHex: "#f43f5e",
+    text: "text-rose-600",
+    ring: "ring-rose-200",
+    softBg: "bg-rose-50",
+  },
+  {
+    grad: "from-sky-100 via-cyan-50 to-white",
+    accent: "bg-sky-500",
+    accentHex: "#0ea5e9",
+    text: "text-sky-600",
+    ring: "ring-sky-200",
+    softBg: "bg-sky-50",
+  },
+  {
+    grad: "from-emerald-100 via-teal-50 to-white",
+    accent: "bg-emerald-500",
+    accentHex: "#10b981",
+    text: "text-emerald-600",
+    ring: "ring-emerald-200",
+    softBg: "bg-emerald-50",
+  },
+  {
+    grad: "from-indigo-100 via-violet-50 to-white",
+    accent: "bg-indigo-500",
+    accentHex: "#6366f1",
+    text: "text-indigo-600",
+    ring: "ring-indigo-200",
+    softBg: "bg-indigo-50",
+  },
+  {
+    grad: "from-amber-100 via-orange-50 to-white",
+    accent: "bg-amber-500",
+    accentHex: "#f59e0b",
+    text: "text-amber-600",
+    ring: "ring-amber-200",
+    softBg: "bg-amber-50",
+  },
 ];
 
 /* Progress ring (SVG) */
@@ -871,7 +928,14 @@ function ProgressRing({
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="#e2e8f0" strokeWidth={stroke} fill="none" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="#e2e8f0"
+          strokeWidth={stroke}
+          fill="none"
+        />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -922,7 +986,15 @@ function RingBulletCard({
       >
         {/* Background ring */}
         <svg width={size} height={size} className="absolute inset-0">
-          <circle cx={size / 2} cy={size / 2} r={r} stroke="#e2e8f0" strokeWidth={stroke} fill="none" opacity="0.5" />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke="#e2e8f0"
+            strokeWidth={stroke}
+            fill="none"
+            opacity="0.5"
+          />
           <g style={{ transformOrigin: "center", transform: `rotate(${rotate}deg)` }}>
             <circle
               cx={size / 2}
@@ -996,10 +1068,16 @@ function VocabHeroCard({
           <span
             key={tone}
             className="size-1.5 rounded-full"
-            style={{ backgroundColor: `${color}${tone === 1 ? "" : "80"}`, opacity: 0.3 + tone * 0.15 }}
+            style={{
+              backgroundColor: `${color}${tone === 1 ? "" : "80"}`,
+              opacity: 0.3 + tone * 0.15,
+            }}
           />
         ))}
-        <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest" style={{ color }}>
+        <span
+          className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest"
+          style={{ color }}
+        >
           <Volume2 className={cn("size-3", speakingId === v.zh && "animate-pulse")} /> Play
         </span>
       </div>
@@ -1011,7 +1089,10 @@ function VocabHeroCard({
         {v.zh}
       </div>
       {v.pinyin && (
-        <div className="text-center text-sm italic mt-1" style={{ color, fontFamily: "'Georgia', serif" }}>
+        <div
+          className="text-center text-sm italic mt-1"
+          style={{ color, fontFamily: "'Georgia', serif" }}
+        >
           {v.pinyin}
         </div>
       )}
@@ -1066,7 +1147,10 @@ function ExampleBubble({
         />
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
-            <div className="text-base sm:text-lg font-bold text-slate-900 leading-snug" lang="zh-CN">
+            <div
+              className="text-base sm:text-lg font-bold text-slate-900 leading-snug"
+              lang="zh-CN"
+            >
               {e.zh}
             </div>
             {showPinyin && e.pinyin && (
@@ -1132,9 +1216,7 @@ function KeyPointSpotlight({ text, color }: { text: string; color: string }) {
           <div className="text-[10px] font-black tracking-[0.3em] uppercase mb-1" style={{ color }}>
             Key Point
           </div>
-          <p className="text-lg sm:text-2xl font-bold leading-snug text-slate-900">
-            {text}
-          </p>
+          <p className="text-lg sm:text-2xl font-bold leading-snug text-slate-900">{text}</p>
         </div>
       </div>
     </div>
@@ -1155,11 +1237,16 @@ function SlidesCarousel({
   const [i, setI] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
 
-  const go = (next: number) => {
-    if (next < 0 || next > slides.length - 1) return;
-    setDir(next > i ? 1 : -1);
-    setI(next);
-  };
+  // Memoised on exactly what it closes over, so the keyboard effect below can
+  // depend on `go` itself instead of restating those values.
+  const go = useCallback(
+    (next: number) => {
+      if (next < 0 || next > slides.length - 1) return;
+      setDir(next > i ? 1 : -1);
+      setI(next);
+    },
+    [i, slides.length],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1168,8 +1255,7 @@ function SlidesCarousel({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-     
-  }, [i, slides.length]);
+  }, [go, i, slides.length]);
 
   if (!slides.length) {
     return <p className="text-sm text-muted-foreground">슬라이드가 없습니다.</p>;
@@ -1193,19 +1279,20 @@ function SlidesCarousel({
 
   const isCoverOnly = !hasStructured && !!(slide.title || slide.subtitle);
 
-  const allZh = [
-    slide.title,
-    slide.subtitle,
-    slide.content,
-    slide.key_point,
-    ...(slide.bullets ?? []),
-    ...(slide.vocab ?? []).map((v) => v.zh),
-    ...(slide.examples ?? []).map((e) => e.zh),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .match(/[\u3400-\u9fff][\u3400-\u9fff\u3000-\u303f\uff00-\uffef，。！？、；：\s]*/g)
-    ?.join("") ?? "";
+  const allZh =
+    [
+      slide.title,
+      slide.subtitle,
+      slide.content,
+      slide.key_point,
+      ...(slide.bullets ?? []),
+      ...(slide.vocab ?? []).map((v) => v.zh),
+      ...(slide.examples ?? []).map((e) => e.zh),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .match(/[\u3400-\u9fff][\u3400-\u9fff\u3000-\u303f\uff00-\uffef，。！？、；：\s]*/g)
+      ?.join("") ?? "";
 
   // Staggered animation wrapper
   const stagger = (idx: number) => ({
@@ -1227,7 +1314,9 @@ function SlidesCarousel({
               title={s.title ?? `슬라이드 ${idx + 1}`}
               className={cn(
                 "shrink-0 group relative flex items-center gap-2 rounded-full transition-all cursor-pointer",
-                active ? "lg:w-12 lg:h-12 w-10 h-10" : "lg:w-9 lg:h-9 w-8 h-8 opacity-60 hover:opacity-100",
+                active
+                  ? "lg:w-12 lg:h-12 w-10 h-10"
+                  : "lg:w-9 lg:h-9 w-8 h-8 opacity-60 hover:opacity-100",
               )}
             >
               <span
@@ -1253,8 +1342,18 @@ function SlidesCarousel({
             theme.grad,
           )}
         >
-          <div className={cn("absolute -top-16 -right-16 size-64 rounded-full opacity-30 blur-3xl", theme.accent)} />
-          <div className={cn("absolute -bottom-20 -left-20 size-72 rounded-full opacity-20 blur-3xl", theme.accent)} />
+          <div
+            className={cn(
+              "absolute -top-16 -right-16 size-64 rounded-full opacity-30 blur-3xl",
+              theme.accent,
+            )}
+          />
+          <div
+            className={cn(
+              "absolute -bottom-20 -left-20 size-72 rounded-full opacity-20 blur-3xl",
+              theme.accent,
+            )}
+          />
 
           <div key={i} className="relative p-6 sm:p-9 min-h-[520px] flex flex-col gap-5">
             {/* Header */}
@@ -1268,14 +1367,21 @@ function SlidesCarousel({
                 label={`${i + 1}/${total}`}
               />
               <div className="min-w-0">
-                <div className={cn("text-[10px] font-black tracking-[0.3em] uppercase mb-1", theme.text)}>
+                <div
+                  className={cn(
+                    "text-[10px] font-black tracking-[0.3em] uppercase mb-1",
+                    theme.text,
+                  )}
+                >
                   Slide {String(i + 1).padStart(2, "0")}
                 </div>
                 {slide.title && (
-                  <h3 className={cn(
-                    "font-black text-slate-900 leading-[1.1] tracking-tight truncate",
-                    isCoverOnly ? "text-3xl sm:text-5xl" : "text-2xl sm:text-3xl",
-                  )}>
+                  <h3
+                    className={cn(
+                      "font-black text-slate-900 leading-[1.1] tracking-tight truncate",
+                      isCoverOnly ? "text-3xl sm:text-5xl" : "text-2xl sm:text-3xl",
+                    )}
+                  >
                     {slide.title}
                   </h3>
                 )}
@@ -1316,7 +1422,6 @@ function SlidesCarousel({
               <div
                 className="rounded-3xl bg-white/70 backdrop-blur border border-white/80 p-2 sm:p-3"
                 style={stagger(2)}
-
               >
                 <RichLessonContent
                   md={normalizeMarkdown(slide.content)}
@@ -1331,7 +1436,12 @@ function SlidesCarousel({
             {/* Bullets as ring cards */}
             {slide.bullets && slide.bullets.length > 0 && (
               <div style={stagger(2)}>
-                <div className={cn("text-[10px] font-black tracking-[0.3em] uppercase mb-4", theme.text)}>
+                <div
+                  className={cn(
+                    "text-[10px] font-black tracking-[0.3em] uppercase mb-4",
+                    theme.text,
+                  )}
+                >
                   Highlights
                 </div>
                 <div
@@ -1359,7 +1469,12 @@ function SlidesCarousel({
             {/* Vocab hero tiles */}
             {slide.vocab && slide.vocab.length > 0 && (
               <div style={stagger(3)}>
-                <div className={cn("text-[10px] font-black tracking-[0.3em] uppercase mb-3 flex items-center gap-1.5", theme.text)}>
+                <div
+                  className={cn(
+                    "text-[10px] font-black tracking-[0.3em] uppercase mb-3 flex items-center gap-1.5",
+                    theme.text,
+                  )}
+                >
                   <BookMarked className="size-3" /> Vocabulary
                 </div>
                 <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
@@ -1379,7 +1494,12 @@ function SlidesCarousel({
             {/* Examples as bubbles */}
             {slide.examples && slide.examples.length > 0 && (
               <div style={stagger(4)}>
-                <div className={cn("text-[10px] font-black tracking-[0.3em] uppercase mb-3 flex items-center gap-1.5", theme.text)}>
+                <div
+                  className={cn(
+                    "text-[10px] font-black tracking-[0.3em] uppercase mb-3 flex items-center gap-1.5",
+                    theme.text,
+                  )}
+                >
                   <MessageSquareQuote className="size-3" /> 예문
                 </div>
                 <div className="space-y-3">
@@ -1433,7 +1553,11 @@ function SlidesCarousel({
                 <CollapsibleTrigger asChild>
                   <Button
                     size="sm"
-                    className={cn("self-start rounded-full text-white shadow-md hover:shadow-lg", theme.accent, "hover:opacity-90")}
+                    className={cn(
+                      "self-start rounded-full text-white shadow-md hover:shadow-lg",
+                      theme.accent,
+                      "hover:opacity-90",
+                    )}
                   >
                     <Pencil className="size-3.5 mr-1.5" />
                     연습 문제 보기
@@ -1491,7 +1615,11 @@ function SlidesCarousel({
             size="lg"
             onClick={() => go(i + 1)}
             disabled={i === total - 1}
-            className={cn("rounded-full text-white shadow-md cursor-pointer disabled:opacity-40", theme.accent, "hover:opacity-90")}
+            className={cn(
+              "rounded-full text-white shadow-md cursor-pointer disabled:opacity-40",
+              theme.accent,
+              "hover:opacity-90",
+            )}
           >
             다음 <ChevronRight className="size-4" />
           </Button>
@@ -1533,9 +1661,7 @@ function SlideMiniCard({
 function SlideMeta({ label, text }: { label: string; text: string }) {
   return (
     <div className="rounded-xl bg-background/40 p-3 border">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-        {label}
-      </div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
       <p className="text-sm whitespace-pre-wrap">{text}</p>
     </div>
   );
@@ -1591,10 +1717,7 @@ function QuizRunner({
     }
   };
 
-  const score = quiz.reduce(
-    (acc, _, idx) => acc + (answers[idx]?.correct ? 1 : 0),
-    0,
-  );
+  const score = quiz.reduce((acc, _, idx) => acc + (answers[idx]?.correct ? 1 : 0), 0);
 
   if (finished) {
     const passed = score >= Math.ceil(quiz.length * 0.7);
@@ -1609,18 +1732,12 @@ function QuizRunner({
           </div>
           <div className="h-3 rounded-full bg-background/40 overflow-hidden border max-w-xs mx-auto">
             <div
-              className={cn(
-                "h-full transition-all",
-                passed ? "bg-emerald-500" : "bg-amber-500",
-              )}
+              className={cn("h-full transition-all", passed ? "bg-emerald-500" : "bg-amber-500")}
               style={{ width: `${pct}%` }}
             />
           </div>
           <div
-            className={cn(
-              "text-sm font-medium",
-              passed ? "text-emerald-600" : "text-amber-600",
-            )}
+            className={cn("text-sm font-medium", passed ? "text-emerald-600" : "text-amber-600")}
           >
             {passed ? "통과! 정말 잘했어요 🎉" : "조금만 더 연습해봐요!"}
           </div>
@@ -1692,13 +1809,9 @@ function QuizRunner({
           <div className="text-base font-semibold">{q.question_ko}</div>
         </div>
 
-        {q.type === "choice" && (
-          <ChoiceBlock q={q} answer={a} setAnswer={setAnswer} />
-        )}
+        {q.type === "choice" && <ChoiceBlock q={q} answer={a} setAnswer={setAnswer} />}
         {q.type === "fill" && <FillBlock q={q} answer={a} setAnswer={setAnswer} />}
-        {q.type === "order" && (
-          <OrderBlock q={q} answer={a} setAnswer={setAnswer} />
-        )}
+        {q.type === "order" && <OrderBlock q={q} answer={a} setAnswer={setAnswer} />}
 
         {a?.submitted && (
           <div
@@ -1715,9 +1828,7 @@ function QuizRunner({
               <X className="size-5 shrink-0 mt-0.5" />
             )}
             <div className="space-y-1">
-              <div className="font-bold">
-                {a.correct ? "정답이에요! 🎉" : "아쉬워요"}
-              </div>
+              <div className="font-bold">{a.correct ? "정답이에요! 🎉" : "아쉬워요"}</div>
               {/* Only about a third of generated items carry an explanation, so
                   a wrong answer used to leave nothing but "아쉬워요". The
                   answer itself is always present — show it here for every
@@ -1781,15 +1892,16 @@ function ChoiceBlock({
   const options = Array.isArray(q.options) ? q.options : [];
   if (!options.length) {
     return (
-      <p className="text-sm text-muted-foreground">
-        이 객관식 문항의 보기 데이터가 비어 있습니다.
-      </p>
+      <p className="text-sm text-muted-foreground">이 객관식 문항의 보기 데이터가 비어 있습니다.</p>
     );
   }
   return (
     <div className="space-y-3">
       {q.question_zh && (
-        <div className="text-lg font-medium rounded-xl bg-background/40 px-3 py-2 border" lang="zh-CN">
+        <div
+          className="text-lg font-medium rounded-xl bg-background/40 px-3 py-2 border"
+          lang="zh-CN"
+        >
           {q.question_zh}
         </div>
       )}
@@ -1804,10 +1916,7 @@ function ChoiceBlock({
             submitted &&
               isCorrect &&
               "bg-emerald-100 border-emerald-500 text-emerald-900 scale-[1.01]",
-            submitted &&
-              isPicked &&
-              !isCorrect &&
-              "bg-rose-100 border-rose-500 text-rose-900",
+            submitted && isPicked && !isCorrect && "bg-rose-100 border-rose-500 text-rose-900",
             !submitted && isPicked && "border-primary",
             submitted && "hover:scale-100 cursor-default",
           );
@@ -1829,9 +1938,7 @@ function ChoiceBlock({
                 {String.fromCharCode(65 + idx)}
               </span>
               <span lang="zh-CN">{opt}</span>
-              {submitted && isCorrect && (
-                <Check className="inline ml-2 size-4 text-emerald-600" />
-              )}
+              {submitted && isCorrect && <Check className="inline ml-2 size-4 text-emerald-600" />}
               {submitted && isPicked && !isCorrect && (
                 <X className="inline ml-2 size-4 text-rose-600" />
               )}
@@ -1865,7 +1972,9 @@ function FillBlock({
               <span
                 className={cn(
                   "inline-block mx-1 px-2 py-0.5 rounded border-b-2 min-w-[3em] text-center font-semibold",
-                  submitted && answer?.correct && "text-emerald-700 border-emerald-500 bg-emerald-50",
+                  submitted &&
+                    answer?.correct &&
+                    "text-emerald-700 border-emerald-500 bg-emerald-50",
                   submitted && !answer?.correct && "text-rose-700 border-rose-500 bg-rose-50",
                   !submitted && "text-primary border-primary/50",
                 )}
@@ -1938,15 +2047,12 @@ function OrderBlock({
       </p>
     );
   }
-  const remaining = words
-    .map((_, idx) => idx)
-    .filter((idx) => !picks.includes(idx));
+  const remaining = words.map((_, idx) => idx).filter((idx) => !picks.includes(idx));
 
   const pickedWords = picks.map((idx) => words[idx]);
   const submit = () => {
     const ok =
-      picks.length === correctOrder.length &&
-      picks.every((v, idx) => v === correctOrder[idx]);
+      picks.length === correctOrder.length && picks.every((v, idx) => v === correctOrder[idx]);
     setAnswer({ submitted: true, correct: ok, orderPicks: picks });
   };
 

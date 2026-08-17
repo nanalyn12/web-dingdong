@@ -1,8 +1,4 @@
-export type FaqCategory =
-  | "platform"
-  | "lesson"
-  | "feature"
-  | "dingdong";
+export type FaqCategory = "platform" | "lesson" | "feature" | "dingdong";
 
 export type FaqItem = {
   id: string;

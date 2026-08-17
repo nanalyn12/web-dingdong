@@ -126,11 +126,8 @@ export function LessonPdfButton({
 }
 
 function escapeHtml(s: string) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 function safeFile(s: string) {
-  return s.replace(/[^\w가-힣\-]+/g, "_").slice(0, 40);
+  return s.replace(/[^\w가-힣-]+/g, "_").slice(0, 40);
 }

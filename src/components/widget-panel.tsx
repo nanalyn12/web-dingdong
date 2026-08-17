@@ -93,9 +93,7 @@ export function WidgetPanel() {
       </div>
 
       {layout.length === 0 && !edit && (
-        <p className="px-1 pb-1 text-xs text-muted-foreground">
-          [편집]에서 위젯을 추가해보세요.
-        </p>
+        <p className="px-1 pb-1 text-xs text-muted-foreground">[편집]에서 위젯을 추가해보세요.</p>
       )}
 
       <div className="space-y-2">
@@ -181,8 +179,7 @@ function QuoteWidget() {
     queryFn: () => getDailyQuote({}),
     staleTime: Infinity,
   });
-  if (isLoading)
-    return <p className="text-xs text-muted-foreground">불러오는 중…</p>;
+  if (isLoading) return <p className="text-xs text-muted-foreground">불러오는 중…</p>;
   if (!data) return <p className="text-xs text-muted-foreground">오늘의 명언을 준비 중이에요.</p>;
   return (
     <div className="space-y-1">
@@ -223,7 +220,9 @@ function StatsWidget({ signedIn }: { signedIn: boolean }) {
   if (!signedIn) {
     return (
       <p className="text-xs text-muted-foreground">
-        <Link to="/auth" className="text-primary hover:underline">로그인</Link>
+        <Link to="/auth" className="text-primary hover:underline">
+          로그인
+        </Link>
         하면 복습 현황과 스트릭이 보여요.
       </p>
     );
@@ -232,9 +231,7 @@ function StatsWidget({ signedIn }: { signedIn: boolean }) {
     <div className="space-y-2">
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <div className="text-2xl font-bold leading-none">
-            {data ? data.dueCount : "…"}
-          </div>
+          <div className="text-2xl font-bold leading-none">{data ? data.dueCount : "…"}</div>
           <div className="text-[11px] text-muted-foreground mt-0.5">오늘 복습할 단어</div>
         </div>
         <div className="text-right">
@@ -284,7 +281,9 @@ function CalendarWidget({ signedIn }: { signedIn: boolean }) {
       </p>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {["일", "월", "화", "수", "목", "금", "토"].map((w) => (
-          <span key={w} className="text-[9px] text-muted-foreground">{w}</span>
+          <span key={w} className="text-[9px] text-muted-foreground">
+            {w}
+          </span>
         ))}
         {cells.map((d, i) =>
           d === null ? (
@@ -329,7 +328,9 @@ function ContinueWidget({ signedIn }: { signedIn: boolean }) {
     return (
       <p className="text-xs text-muted-foreground">
         아직 시청 기록이 없어요.{" "}
-        <Link to="/dramas" className="text-primary hover:underline">영상 학습 →</Link>
+        <Link to="/dramas" className="text-primary hover:underline">
+          영상 학습 →
+        </Link>
       </p>
     );
   const m = Math.floor(data.last_seconds / 60);
@@ -367,8 +368,7 @@ function DailySongWidget() {
     staleTime: Infinity,
   });
   if (isLoading) return <p className="text-xs text-muted-foreground">불러오는 중…</p>;
-  if (!data)
-    return <p className="text-xs text-muted-foreground">아직 학습송이 없어요.</p>;
+  if (!data) return <p className="text-xs text-muted-foreground">아직 학습송이 없어요.</p>;
   return (
     <Link to="/songs/$id" params={{ id: data.id }} className="flex items-center gap-3 group">
       <div className="size-12 rounded-xl overflow-hidden bg-primary/10 shrink-0 grid place-items-center">

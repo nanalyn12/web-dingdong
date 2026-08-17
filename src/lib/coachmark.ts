@@ -15,11 +15,7 @@ const KO_LABELS: Partial<Config> = {
   popoverClass: "dingdong-coach",
 };
 
-export type TourName =
-  | "landing"
-  | "sidebar"
-  | "courses"
-  | "dingdong";
+export type TourName = "landing" | "sidebar" | "courses" | "dingdong";
 
 const KEY = (n: TourName) => `dingdong:tour:${n}:v1:done`;
 
@@ -38,11 +34,7 @@ export function resetTour(name: TourName) {
   window.localStorage.removeItem(KEY(name));
 }
 
-export function runTour(
-  name: TourName,
-  steps: DriveStep[],
-  opts: { force?: boolean } = {},
-) {
+export function runTour(name: TourName, steps: DriveStep[], opts: { force?: boolean } = {}) {
   if (typeof window === "undefined") return;
   if (!opts.force && isTourDone(name)) return;
   // Filter out steps whose targets don't exist yet

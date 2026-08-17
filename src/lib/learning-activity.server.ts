@@ -3,12 +3,7 @@
 // (used by the dashboard streak).
 import { sql } from "drizzle-orm";
 
-export type ActivityField =
-  | "reviews"
-  | "words_added"
-  | "lessons"
-  | "videos"
-  | "quizzes";
+export type ActivityField = "reviews" | "words_added" | "lessons" | "videos" | "quizzes";
 
 /** Today's date in KST as "YYYY-MM-DD". */
 export function kstToday(): string {

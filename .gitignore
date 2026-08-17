@@ -34,6 +34,14 @@ dist-ssr
 # Local-only workspace files
 .claude/settings.local.json
 .workspace/
+# 하네스 산출물 (기준·Red 리포트·게이트 판정) — 로컬 감사 기록이라 공유하지 않는다
+_workspace/
+_workspace_*/
+
+# 논문 원고 (로컬 문서, 저장소에 올리지 않는다)
+write.md
+new-write.md
+소개.md
 
 # Editor directories and files
 .vscode/*
@@ -45,3 +53,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 논문용 이미지 (로컬 산출물)
+paper_images/

@@ -220,11 +220,7 @@ export function TapSyncPanel({
           <Button size="sm" variant="ghost" onClick={onClose}>
             취소
           </Button>
-          <Button
-            size="sm"
-            onClick={() => onSave(times)}
-            disabled={saving || stamped === 0}
-          >
+          <Button size="sm" onClick={() => onSave(times)} disabled={saving || stamped === 0}>
             <Check className="size-4 mr-1" />
             {saving ? "저장 중…" : "저장"}
           </Button>

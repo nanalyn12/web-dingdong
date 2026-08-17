@@ -1,6 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CalendarClock, Loader2, Music, Pencil, Play, Plus, Search, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarClock,
+  Loader2,
+  Music,
+  Pencil,
+  Play,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -11,7 +24,13 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useMyProfile } from "@/lib/auth-client";
@@ -46,13 +65,7 @@ import {
   type LyricLine,
   type SongRow,
 } from "@/lib/songs.functions";
-import {
-  LEVEL_LABEL,
-  LEVEL_LABEL_HSK,
-  LEVEL_OPTIONS,
-  LEVEL_ORDER,
-  levelLabel,
-} from "@/lib/levels";
+import { LEVEL_LABEL, LEVEL_LABEL_HSK, LEVEL_OPTIONS, LEVEL_ORDER, levelLabel } from "@/lib/levels";
 
 const songsSearchSchema = z.object({
   level: fallback(z.enum(["all", "beginner", "intermediate", "advanced"]), "all").default("all"),
@@ -70,7 +83,10 @@ export const Route = createFileRoute("/_app/songs/")({
   head: () => ({
     meta: [
       { title: "학습송 — DingDong" },
-      { name: "description", content: "노래로 배우는 중국어. 가사 싱크 플레이어로 자연스럽게 익혀보세요." },
+      {
+        name: "description",
+        content: "노래로 배우는 중국어. 가사 싱크 플레이어로 자연스럽게 익혀보세요.",
+      },
     ],
   }),
   validateSearch: zodValidator(songsSearchSchema),
@@ -100,9 +116,8 @@ function estimateProgress(startIso: string, totalSec: number) {
   const start = new Date(startIso).getTime();
   const elapsed = Math.max(0, (Date.now() - start) / 1000);
   // asymptotic: 0..95% over totalSec, then crawl
-  const pct = elapsed < totalSec
-    ? (elapsed / totalSec) * 95
-    : 95 + Math.min(4.9, (elapsed - totalSec) / 60);
+  const pct =
+    elapsed < totalSec ? (elapsed / totalSec) * 95 : 95 + Math.min(4.9, (elapsed - totalSec) / 60);
   const remaining = Math.max(0, Math.round(totalSec - elapsed));
   return { pct: Math.min(99.9, pct), elapsed: Math.round(elapsed), remaining };
 }
@@ -119,7 +134,6 @@ export function isRateLimitedMessage(msg: string | undefined | null): boolean {
   return /429|한도\s*초과|rate.?limit|too many/i.test(msg);
 }
 
-
 function SongsPage() {
   const { data: profile } = useMyProfile();
   const isEditor = profile?.role === "teacher" || profile?.role === "admin";
@@ -135,9 +149,7 @@ function SongsPage() {
       return pending ? 6000 : false;
     },
   });
-  const [creating, setCreating] = useState<
-    null | "manual" | "ai" | "curated" | "schedule"
-  >(null);
+  const [creating, setCreating] = useState<null | "manual" | "ai" | "curated" | "schedule">(null);
   // Editors get a "작업 현황" tab like the video studio; students only ever see
   // the library, so the tab bar and job panels stay hidden for them.
   const [tab, setTab] = useState<"library" | "jobs">("library");
@@ -305,365 +317,371 @@ function SongsPage() {
       )}
 
       {(!isEditor || tab === "library") && (
-      <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="glass rounded-2xl flex items-center gap-2 px-3 py-2 flex-1 min-w-0">
-          <Search className="size-4 shrink-0 opacity-50" />
-          <Input
-            value={search.q}
-            onChange={(e) =>
-              navigate({ search: (prev: SearchParams) => ({ ...prev, q: e.target.value }) })
-            }
-            placeholder="제목 또는 中文 제목 검색…"
-            className="border-0 bg-transparent shadow-none focus-visible:ring-0 h-8 text-sm px-0"
-          />
-          {search.q && (
-            <button
-              onClick={() => navigate({ search: (prev: SearchParams) => ({ ...prev, q: "" }) })}
-              className="size-6 grid place-items-center rounded-full hover:bg-white/40 shrink-0"
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="glass rounded-2xl flex items-center gap-2 px-3 py-2 flex-1 min-w-0">
+              <Search className="size-4 shrink-0 opacity-50" />
+              <Input
+                value={search.q}
+                onChange={(e) =>
+                  navigate({ search: (prev: SearchParams) => ({ ...prev, q: e.target.value }) })
+                }
+                placeholder="제목 또는 中文 제목 검색…"
+                className="border-0 bg-transparent shadow-none focus-visible:ring-0 h-8 text-sm px-0"
+              />
+              {search.q && (
+                <button
+                  onClick={() => navigate({ search: (prev: SearchParams) => ({ ...prev, q: "" }) })}
+                  className="size-6 grid place-items-center rounded-full hover:bg-white/40 shrink-0"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 좁혀 보기 — 난이도·장르·주제·종류. 고를 게 하나뿐인 축은 숨긴다. */}
+          <div className="glass rounded-2xl p-2 flex items-center gap-2 flex-wrap">
+            <SlidersHorizontal className="size-4 shrink-0 opacity-50 ml-1" />
+            <Select
+              value={search.level}
+              onValueChange={(v) =>
+                navigate({
+                  search: (prev: SearchParams) => ({ ...prev, level: v as typeof search.level }),
+                })
+              }
             >
-              <X className="size-3" />
-            </button>
-          )}
+              <SelectTrigger className="h-8 w-32 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{LEVEL_FILTER_LABEL.all}</SelectItem>
+                {LEVEL_OPTIONS.map((l) => (
+                  <SelectItem key={l.value} value={l.value}>
+                    {l.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {genreOptions.length > 1 && (
+              <Select
+                value={search.genre}
+                onValueChange={(v) =>
+                  navigate({ search: (prev: SearchParams) => ({ ...prev, genre: v }) })
+                }
+              >
+                <SelectTrigger className="h-8 w-44 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 장르</SelectItem>
+                  {genreOptions.map((g) => (
+                    <SelectItem key={g.value} value={g.value}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {themeOptions.length > 1 && (
+              <Select
+                value={search.theme}
+                onValueChange={(v) =>
+                  navigate({ search: (prev: SearchParams) => ({ ...prev, theme: v }) })
+                }
+              >
+                <SelectTrigger className="h-8 w-44 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 주제</SelectItem>
+                  {themeOptions.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {hasBothSources && (
+              <Select
+                value={search.source}
+                onValueChange={(v) =>
+                  navigate({
+                    search: (prev: SearchParams) => ({
+                      ...prev,
+                      source: v as typeof search.source,
+                    }),
+                  })
+                }
+              >
+                <SelectTrigger className="h-8 w-36 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 종류</SelectItem>
+                  <SelectItem value="curated">🎧 실제 노래</SelectItem>
+                  <SelectItem value="suno">🤖 AI 생성</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto mr-1">
+              {filteredSongs.length}곡{filtering && ` / 전체 ${songs?.length ?? 0}곡`}
+            </span>
+            {filtering && (
+              <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={resetFilters}>
+                초기화
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* 좁혀 보기 — 난이도·장르·주제·종류. 고를 게 하나뿐인 축은 숨긴다. */}
-      <div className="glass rounded-2xl p-2 flex items-center gap-2 flex-wrap">
-        <SlidersHorizontal className="size-4 shrink-0 opacity-50 ml-1" />
-        <Select
-          value={search.level}
-          onValueChange={(v) =>
-            navigate({ search: (prev: SearchParams) => ({ ...prev, level: v as typeof search.level }) })
-          }
-        >
-          <SelectTrigger className="h-8 w-32 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{LEVEL_FILTER_LABEL.all}</SelectItem>
-            {LEVEL_OPTIONS.map((l) => (
-              <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {genreOptions.length > 1 && (
-          <Select
-            value={search.genre}
-            onValueChange={(v) =>
-              navigate({ search: (prev: SearchParams) => ({ ...prev, genre: v }) })
-            }
-          >
-            <SelectTrigger className="h-8 w-44 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 장르</SelectItem>
-              {genreOptions.map((g) => (
-                <SelectItem key={g.value} value={g.value}>
-                  {g.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {themeOptions.length > 1 && (
-          <Select
-            value={search.theme}
-            onValueChange={(v) =>
-              navigate({ search: (prev: SearchParams) => ({ ...prev, theme: v }) })
-            }
-          >
-            <SelectTrigger className="h-8 w-44 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 주제</SelectItem>
-              {themeOptions.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {hasBothSources && (
-          <Select
-            value={search.source}
-            onValueChange={(v) =>
-              navigate({ search: (prev: SearchParams) => ({ ...prev, source: v as typeof search.source }) })
-            }
-          >
-            <SelectTrigger className="h-8 w-36 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 종류</SelectItem>
-              <SelectItem value="curated">🎧 실제 노래</SelectItem>
-              <SelectItem value="suno">🤖 AI 생성</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-        <span className="text-xs text-muted-foreground ml-auto mr-1">
-          {filteredSongs.length}곡
-          {filtering && ` / 전체 ${songs?.length ?? 0}곡`}
-        </span>
-        {filtering && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 text-xs"
-            onClick={resetFilters}
-          >
-            초기화
-          </Button>
-        )}
-      </div>
-      </div>
       )}
 
-      {creating === "manual" && isEditor && (
-        <CreateSongForm onDone={() => setCreating(null)} />
-      )}
-      {creating === "ai" && isEditor && (
-        <GenerateSongForm onDone={() => setCreating(null)} />
-      )}
-      {creating === "curated" && isEditor && (
-        <CuratedSongForm onDone={() => setCreating(null)} />
-      )}
+      {creating === "manual" && isEditor && <CreateSongForm onDone={() => setCreating(null)} />}
+      {creating === "ai" && isEditor && <GenerateSongForm onDone={() => setCreating(null)} />}
+      {creating === "curated" && isEditor && <CuratedSongForm onDone={() => setCreating(null)} />}
       {creating === "schedule" && isEditor && <SongSchedulePanel />}
 
       {isEditor && tab === "jobs" && (
-      <div className="space-y-4">
-      {isEditor && <FailedSongsPanel songs={songs ?? []} />}
+        <div className="space-y-4">
+          {isEditor && <FailedSongsPanel songs={songs ?? []} />}
 
-      {generatingSongs.length > 0 && (
-        <div className="glass rounded-3xl p-5 space-y-4 border border-primary/40 bg-primary/5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-            <Loader2 className="size-4 animate-spin" />
-            Suno가 {generatingSongs.length}곡을 만들고 있어요
-            <span className="ml-auto text-[11px] font-normal text-muted-foreground">
-              완료되면 자동으로 목록에 반영돼요
-            </span>
-          </div>
-          <div className="space-y-3">
-            {generatingSongs.map((s) => {
-              const isVideo = s.status === "generating_video";
-              const { pct, elapsed, remaining } = estimateProgress(
-                s.created_at,
-                isVideo ? EST_VIDEO_SEC : EST_AUDIO_SEC,
-              );
-              const err = pollErrors[s.id];
-              const rateLimited = isRateLimitedMessage(err);
-              const retryAt = nextRetryAt[s.id];
-              const retryIn = retryAt ? Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)) : 0;
-              const stuck = elapsed > 60 * 10; // >10 minutes
-              return (
-                <div key={s.id} className="glass-soft rounded-2xl p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <div className="truncate">
-                      <span className="font-medium">{s.title}</span>
-                      {s.title_zh && (
-                        <span className="text-muted-foreground"> · {s.title_zh}</span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground shrink-0 flex items-center gap-1.5">
-                      <span>{isVideo ? "🎬 영상" : "🎙️ 음원"}</span>
-                      <span>· 경과 {formatElapsed(elapsed)}</span>
-                      {remaining > 0 && !rateLimited && (
-                        <span>· 남음 ~{formatElapsed(remaining)}</span>
-                      )}
-                    </div>
-                  </div>
-                  <Progress value={pct} className="h-1.5" />
-                  {rateLimited ? (
-                    <div className="flex items-center gap-1.5 text-[11px] text-amber-700 bg-amber-100/60 rounded-full px-2 py-1 w-fit">
-                      <Loader2 className="size-3 animate-spin" />
-                      <span>
-                        Suno 요청 한도 초과 — {retryIn > 0 ? `${retryIn}초 후 자동 재시도` : "재시도 중…"}
-                      </span>
-                    </div>
-                  ) : (
-                    err && (
-                      <div className="flex items-start gap-1.5 text-[11px] text-destructive">
-                        <AlertCircle className="size-3 mt-0.5 shrink-0" />
-                        <span className="line-clamp-2">{err}</span>
+          {generatingSongs.length > 0 && (
+            <div className="glass rounded-3xl p-5 space-y-4 border border-primary/40 bg-primary/5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                <Loader2 className="size-4 animate-spin" />
+                Suno가 {generatingSongs.length}곡을 만들고 있어요
+                <span className="ml-auto text-[11px] font-normal text-muted-foreground">
+                  완료되면 자동으로 목록에 반영돼요
+                </span>
+              </div>
+              <div className="space-y-3">
+                {generatingSongs.map((s) => {
+                  const isVideo = s.status === "generating_video";
+                  const { pct, elapsed, remaining } = estimateProgress(
+                    s.created_at,
+                    isVideo ? EST_VIDEO_SEC : EST_AUDIO_SEC,
+                  );
+                  const err = pollErrors[s.id];
+                  const rateLimited = isRateLimitedMessage(err);
+                  const retryAt = nextRetryAt[s.id];
+                  const retryIn = retryAt
+                    ? Math.max(0, Math.ceil((retryAt - Date.now()) / 1000))
+                    : 0;
+                  const stuck = elapsed > 60 * 10; // >10 minutes
+                  return (
+                    <div key={s.id} className="glass-soft rounded-2xl p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <div className="truncate">
+                          <span className="font-medium">{s.title}</span>
+                          {s.title_zh && (
+                            <span className="text-muted-foreground"> · {s.title_zh}</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground shrink-0 flex items-center gap-1.5">
+                          <span>{isVideo ? "🎬 영상" : "🎙️ 음원"}</span>
+                          <span>· 경과 {formatElapsed(elapsed)}</span>
+                          {remaining > 0 && !rateLimited && (
+                            <span>· 남음 ~{formatElapsed(remaining)}</span>
+                          )}
+                        </div>
                       </div>
-                    )
-                  )}
-                  {stuck && (
-                    <div className="text-[11px] text-amber-800 bg-amber-100/70 rounded-md px-2 py-1">
-                      ⚠️ 10분 이상 대기 중이에요. Suno 응답이 지연되고 있어요 — 아래 버튼으로 취소 후 다시 시도해 보세요.
+                      <Progress value={pct} className="h-1.5" />
+                      {rateLimited ? (
+                        <div className="flex items-center gap-1.5 text-[11px] text-amber-700 bg-amber-100/60 rounded-full px-2 py-1 w-fit">
+                          <Loader2 className="size-3 animate-spin" />
+                          <span>
+                            Suno 요청 한도 초과 —{" "}
+                            {retryIn > 0 ? `${retryIn}초 후 자동 재시도` : "재시도 중…"}
+                          </span>
+                        </div>
+                      ) : (
+                        err && (
+                          <div className="flex items-start gap-1.5 text-[11px] text-destructive">
+                            <AlertCircle className="size-3 mt-0.5 shrink-0" />
+                            <span className="line-clamp-2">{err}</span>
+                          </div>
+                        )
+                      )}
+                      {stuck && (
+                        <div className="text-[11px] text-amber-800 bg-amber-100/70 rounded-md px-2 py-1">
+                          ⚠️ 10분 이상 대기 중이에요. Suno 응답이 지연되고 있어요 — 아래 버튼으로
+                          취소 후 다시 시도해 보세요.
+                        </div>
+                      )}
+                      {isEditor && (
+                        <div className="flex justify-end">
+                          <CancelSongButton songId={s.id} />
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {isEditor && (
-                    <div className="flex justify-end">
-                      <CancelSongButton songId={s.id} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-          </div>
-        </div>
-      )}
-
-      {failedSongs.length > 0 && (
-        <div className="glass rounded-3xl p-4 border border-destructive/40 bg-destructive/5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-destructive mb-2">
-            <AlertCircle className="size-4" /> 생성에 실패한 곡이 있어요
-          </div>
-          <ul className="text-xs space-y-2">
-            {failedSongs.map((s) => {
-              const err = pollErrors[s.id];
-              return (
-                <li key={s.id} className="space-y-1">
-                  <div className="flex justify-between gap-2">
-                    <span className="truncate font-medium">{s.title}</span>
-                    <span className="text-muted-foreground shrink-0">
-                      {STATUS_LABEL[s.status]}
-                    </span>
-                  </div>
-                  {err && (
-                    <div className="flex items-start gap-1.5 text-destructive/90 pl-1">
-                      <AlertCircle className="size-3 mt-0.5 shrink-0" />
-                      <span className="leading-snug">{err}</span>
-                    </div>
-                  )}
-                  {isEditor && (
-                    <div className="flex justify-end pt-1">
-                      <DeleteSongButton songId={s.id} />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          <p className="text-[11px] text-muted-foreground mt-3">
-            💡 같은 키워드로 다시 시도하거나, 가사에서 민감 단어/특수 기호를 제거해보세요.
-          </p>
-        </div>
-      )}
-      {generatingSongs.length === 0 && failedSongs.length === 0 && (
-        <div className="glass rounded-3xl p-10 text-center text-muted-foreground">
-          <div className="text-4xl mb-2">✅</div>
-          진행 중이거나 실패한 작업이 없어요.
-        </div>
-      )}
-      </div>
-      )}
-
-      {(!isEditor || tab === "library") && (
-      <div className="space-y-6">
-      {isLoading && (
-        <div className="glass rounded-3xl p-8 text-center text-muted-foreground">불러오는 중…</div>
-      )}
-      {!isLoading && filteredSongs.length === 0 && (
-        <div className="glass rounded-3xl p-10 text-center">
-          <div className="text-4xl mb-2">{songs && songs.length > 0 ? "🔍" : "🎶"}</div>
-          <p className="font-medium">
-            {songs && songs.length > 0 ? "조건에 맞는 곡이 없어요." : "아직 등록된 노래가 없어요."}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {songs && songs.length > 0
-              ? "다른 검색어나 필터를 시도해보세요."
-              : isEditor
-                ? "위의 [AI로 만들기] 또는 [수동 추가] 버튼으로 첫 곡을 등록해보세요."
-                : "곧 멋진 노래가 추가될 거예요!"}
-          </p>
-          {songs && songs.length > 0 && filtering && (
-            <Button size="sm" variant="outline" className="mt-3" onClick={resetFilters}>
-              필터 초기화
-            </Button>
+          {failedSongs.length > 0 && (
+            <div className="glass rounded-3xl p-4 border border-destructive/40 bg-destructive/5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-destructive mb-2">
+                <AlertCircle className="size-4" /> 생성에 실패한 곡이 있어요
+              </div>
+              <ul className="text-xs space-y-2">
+                {failedSongs.map((s) => {
+                  const err = pollErrors[s.id];
+                  return (
+                    <li key={s.id} className="space-y-1">
+                      <div className="flex justify-between gap-2">
+                        <span className="truncate font-medium">{s.title}</span>
+                        <span className="text-muted-foreground shrink-0">
+                          {STATUS_LABEL[s.status]}
+                        </span>
+                      </div>
+                      {err && (
+                        <div className="flex items-start gap-1.5 text-destructive/90 pl-1">
+                          <AlertCircle className="size-3 mt-0.5 shrink-0" />
+                          <span className="leading-snug">{err}</span>
+                        </div>
+                      )}
+                      {isEditor && (
+                        <div className="flex justify-end pt-1">
+                          <DeleteSongButton songId={s.id} />
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="text-[11px] text-muted-foreground mt-3">
+                💡 같은 키워드로 다시 시도하거나, 가사에서 민감 단어/특수 기호를 제거해보세요.
+              </p>
+            </div>
+          )}
+          {generatingSongs.length === 0 && failedSongs.length === 0 && (
+            <div className="glass rounded-3xl p-10 text-center text-muted-foreground">
+              <div className="text-4xl mb-2">✅</div>
+              진행 중이거나 실패한 작업이 없어요.
+            </div>
           )}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {pagedSongs.map((s) => (
-          <Link
-            key={s.id}
-            to="/songs/$id"
-            params={{ id: s.id }}
-            className="glass rounded-3xl overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--shadow-soft)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transform-none motion-reduce:transition-none"
-          >
-            <div className="aspect-video bg-gradient-to-br from-pink-200/60 via-purple-200/40 to-sky-200/60 relative overflow-hidden">
-              {s.cover_url ? (
-                <img
-                  src={s.cover_url}
-                  alt={s.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full grid place-items-center text-5xl">
-                  {s.status === "generating_audio" || s.status === "generating_video" ? "⏳" : "🎵"}
-                </div>
-              )}
-              <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-                <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                  {levelLabel(s.level)}
-                </span>
-                {s.genre && GENRE_LABEL[s.genre] && (
-                  <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-medium">
-                    {GENRE_LABEL[s.genre]}
-                  </span>
-                )}
-              </div>
-              <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
-                {s.source === "curated" ? (
-                  <span className="bg-rose-500/85 text-white rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                    🎧 실제 노래
-                  </span>
-                ) : (
-                  <span className="bg-violet-500/85 text-white rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                    🤖 AI 생성
-                  </span>
-                )}
-                {s.video_url && (
-                  <span className="bg-primary/80 text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                    🎬 MP4
-                  </span>
-                )}
-                {s.artist && (
-                  <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-medium">
-                    {s.artist}
-                  </span>
-                )}
-              </div>
+      {(!isEditor || tab === "library") && (
+        <div className="space-y-6">
+          {isLoading && (
+            <div className="glass rounded-3xl p-8 text-center text-muted-foreground">
+              불러오는 중…
             </div>
-            <div className="p-4">
-              <div className="font-bold truncate">{s.title}</div>
-              {s.title_zh && (
-                <div className="text-sm text-muted-foreground truncate">{s.title_zh}</div>
+          )}
+          {!isLoading && filteredSongs.length === 0 && (
+            <div className="glass rounded-3xl p-10 text-center">
+              <div className="text-4xl mb-2">{songs && songs.length > 0 ? "🔍" : "🎶"}</div>
+              <p className="font-medium">
+                {songs && songs.length > 0
+                  ? "조건에 맞는 곡이 없어요."
+                  : "아직 등록된 노래가 없어요."}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {songs && songs.length > 0
+                  ? "다른 검색어나 필터를 시도해보세요."
+                  : isEditor
+                    ? "위의 [AI로 만들기] 또는 [수동 추가] 버튼으로 첫 곡을 등록해보세요."
+                    : "곧 멋진 노래가 추가될 거예요!"}
+              </p>
+              {songs && songs.length > 0 && filtering && (
+                <Button size="sm" variant="outline" className="mt-3" onClick={resetFilters}>
+                  필터 초기화
+                </Button>
               )}
-              <div className="text-[11px] text-muted-foreground mt-1">
-                {STATUS_LABEL[s.status] ??
-                  `가사 ${Array.isArray(s.lyrics) ? s.lyrics.length : 0}줄`}
-                {s.theme && THEME_LABEL[s.theme] && ` · ${THEME_LABEL[s.theme]}`}
-              </div>
             </div>
-          </Link>
-        ))}
-      </div>
+          )}
 
-      {remaining > 0 && (
-        <div className="flex flex-col items-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            className="rounded-2xl px-8"
-            onClick={() => setShown((n) => n + PAGE_SIZE)}
-          >
-            더 보기 ({remaining}곡 남음)
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {pagedSongs.length} / {filteredSongs.length}곡
-          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pagedSongs.map((s) => (
+              <Link
+                key={s.id}
+                to="/songs/$id"
+                params={{ id: s.id }}
+                className="glass rounded-3xl overflow-hidden group cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--shadow-soft)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transform-none motion-reduce:transition-none"
+              >
+                <div className="aspect-video bg-gradient-to-br from-pink-200/60 via-purple-200/40 to-sky-200/60 relative overflow-hidden">
+                  {s.cover_url ? (
+                    <img
+                      src={s.cover_url}
+                      alt={s.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center text-5xl">
+                      {s.status === "generating_audio" || s.status === "generating_video"
+                        ? "⏳"
+                        : "🎵"}
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                    <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                      {levelLabel(s.level)}
+                    </span>
+                    {s.genre && GENRE_LABEL[s.genre] && (
+                      <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-medium">
+                        {GENRE_LABEL[s.genre]}
+                      </span>
+                    )}
+                  </div>
+                  <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+                    {s.source === "curated" ? (
+                      <span className="bg-rose-500/85 text-white rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                        🎧 실제 노래
+                      </span>
+                    ) : (
+                      <span className="bg-violet-500/85 text-white rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                        🤖 AI 생성
+                      </span>
+                    )}
+                    {s.video_url && (
+                      <span className="bg-primary/80 text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                        🎬 MP4
+                      </span>
+                    )}
+                    {s.artist && (
+                      <span className="glass-soft rounded-full px-2 py-0.5 text-[10px] font-medium">
+                        {s.artist}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="font-bold truncate">{s.title}</div>
+                  {s.title_zh && (
+                    <div className="text-sm text-muted-foreground truncate">{s.title_zh}</div>
+                  )}
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    {STATUS_LABEL[s.status] ??
+                      `가사 ${Array.isArray(s.lyrics) ? s.lyrics.length : 0}줄`}
+                    {s.theme && THEME_LABEL[s.theme] && ` · ${THEME_LABEL[s.theme]}`}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {remaining > 0 && (
+            <div className="flex flex-col items-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="rounded-2xl px-8"
+                onClick={() => setShown((n) => n + PAGE_SIZE)}
+              >
+                더 보기 ({remaining}곡 남음)
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {pagedSongs.length} / {filteredSongs.length}곡
+              </span>
+            </div>
+          )}
         </div>
-      )}
-      </div>
       )}
     </div>
   );
@@ -783,10 +801,6 @@ function DeleteSongButton({ songId }: { songId: string }) {
   );
 }
 
-
-
-
-
 function GenerateSongForm({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
@@ -795,16 +809,16 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
   const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner");
   const [style, setStyle] = useState(STYLE_PRESETS[0].value);
   const [vocalGender, setVocalGender] = useState<"" | "m" | "f">("");
-  const [model, setModel] =
-    useState<"V4" | "V4_5" | "V4_5PLUS" | "V4_5ALL" | "V5" | "V5_5">("V4_5");
+  const [model, setModel] = useState<"V4" | "V4_5" | "V4_5PLUS" | "V4_5ALL" | "V5" | "V5_5">(
+    "V4_5",
+  );
   const [lyricsRaw, setLyricsRaw] = useState("");
   const [drafted, setDrafted] = useState(false);
   const [draftedPinyin, setDraftedPinyin] = useState<string[]>([]);
   const [draftedKo, setDraftedKo] = useState<string[]>([]);
 
   const draftMutation = useMutation({
-    mutationFn: () =>
-      draftSongFromKeyword({ data: { keyword, level, style } }),
+    mutationFn: () => draftSongFromKeyword({ data: { keyword, level, style } }),
     onSuccess: (res) => {
       setTitle(res.title);
       setTitleZh(res.title_zh);
@@ -825,9 +839,7 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
   const mutation = useMutation({
     mutationFn: () => {
       const parsed = parseLyricsWithAnnotations(lyricsRaw, draftedPinyin, draftedKo);
-      const plain = parsed.length
-        ? parsed.map((l) => l.zh).join("\n")
-        : lyricsRaw.trim();
+      const plain = parsed.length ? parsed.map((l) => l.zh).join("\n") : lyricsRaw.trim();
       return generateSongWithSuno({
         data: {
           title,
@@ -865,7 +877,10 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
         <h2 className="font-semibold flex items-center gap-2">
           <Sparkles className="size-4 text-primary" /> AI로 학습송 만들기 (Suno)
         </h2>
-        <button onClick={onDone} className="size-8 grid place-items-center rounded-full hover:bg-white/40">
+        <button
+          onClick={onDone}
+          className="size-8 grid place-items-center rounded-full hover:bg-white/40"
+        >
           <X className="size-4" />
         </button>
       </div>
@@ -887,10 +902,14 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
           <div>
             <label className="text-xs text-muted-foreground">난이도</label>
             <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {LEVEL_OPTIONS.map((l) => (
-                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                  <SelectItem key={l.value} value={l.value}>
+                    {l.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -898,10 +917,14 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
           <div>
             <label className="text-xs text-muted-foreground">스타일</label>
             <Select value={style} onValueChange={(v) => setStyle(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {STYLE_PRESETS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -918,23 +941,38 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
       </div>
 
       {/* Step 2 — review + edit */}
-      <div className={`rounded-2xl border border-white/40 p-4 space-y-3 transition-opacity ${drafted ? "opacity-100" : "opacity-60"}`}>
+      <div
+        className={`rounded-2xl border border-white/40 p-4 space-y-3 transition-opacity ${drafted ? "opacity-100" : "opacity-60"}`}
+      >
         <div className="text-xs font-semibold text-primary flex items-center gap-1">
           ② 제목·가사 확인 후 생성
         </div>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted-foreground">제목 (한글)</label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 봄날의 인사" />
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="예: 봄날의 인사"
+            />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">제목 (中文)</label>
-            <Input value={titleZh} onChange={(e) => setTitleZh(e.target.value)} placeholder="例: 春天的问候" />
+            <Input
+              value={titleZh}
+              onChange={(e) => setTitleZh(e.target.value)}
+              placeholder="例: 春天的问候"
+            />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">보컬 성별 (선택)</label>
-            <Select value={vocalGender || "_"} onValueChange={(v) => setVocalGender(v === "_" ? "" : (v as "m" | "f"))}>
-              <SelectTrigger><SelectValue placeholder="자동" /></SelectTrigger>
+            <Select
+              value={vocalGender || "_"}
+              onValueChange={(v) => setVocalGender(v === "_" ? "" : (v as "m" | "f"))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="자동" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_">자동</SelectItem>
                 <SelectItem value="f">여성</SelectItem>
@@ -945,7 +983,9 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
           <div>
             <label className="text-xs text-muted-foreground">Suno 모델</label>
             <Select value={model} onValueChange={(v) => setModel(v as typeof model)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="V4">V4</SelectItem>
                 <SelectItem value="V4_5">V4.5 (추천)</SelectItem>
@@ -976,9 +1016,14 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
             </summary>
             <div className="mt-2 space-y-1 max-h-72 overflow-auto">
               {previewRows.map((r, i) => (
-                <div key={i} className="grid grid-cols-[1.2fr_1.2fr_1fr] gap-2 py-1 border-b border-white/40 last:border-0">
+                <div
+                  key={i}
+                  className="grid grid-cols-[1.2fr_1.2fr_1fr] gap-2 py-1 border-b border-white/40 last:border-0"
+                >
                   <div className="font-medium">{r.zh}</div>
-                  <div className="text-primary/80">{r.pinyin || <span className="text-muted-foreground">—</span>}</div>
+                  <div className="text-primary/80">
+                    {r.pinyin || <span className="text-muted-foreground">—</span>}
+                  </div>
                   <div className="text-muted-foreground">{r.ko || "—"}</div>
                 </div>
               ))}
@@ -988,7 +1033,9 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onDone}>취소</Button>
+        <Button variant="ghost" onClick={onDone}>
+          취소
+        </Button>
         <Button
           onClick={() => mutation.mutate()}
           disabled={mutation.isPending || !title || !style || lyricsRaw.trim().length < 10}
@@ -999,7 +1046,6 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
     </div>
   );
 }
-
 
 function CreateSongForm({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
@@ -1042,57 +1088,90 @@ function CreateSongForm({ onDone }: { onDone: () => void }) {
     <div className="glass rounded-3xl p-5 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">새 노래 수동 추가</h2>
-        <button onClick={onDone} className="size-8 grid place-items-center rounded-full hover:bg-white/40">
+        <button
+          onClick={onDone}
+          className="size-8 grid place-items-center rounded-full hover:bg-white/40"
+        >
           <X className="size-4" />
         </button>
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-muted-foreground">제목 (한글)</label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 너무 좋아" />
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="예: 너무 좋아"
+          />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">제목 (中文)</label>
-          <Input value={titleZh} onChange={(e) => setTitleZh(e.target.value)} placeholder="例: 太喜欢" />
+          <Input
+            value={titleZh}
+            onChange={(e) => setTitleZh(e.target.value)}
+            placeholder="例: 太喜欢"
+          />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">난이도</label>
           <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {LEVEL_OPTIONS.map((l) => (
-                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                <SelectItem key={l.value} value={l.value}>
+                  {l.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <label className="text-xs text-muted-foreground">장르 (선택)</label>
-          <Select value={genre || "_"} onValueChange={(v) => setGenre(v === "_" ? "" : (v as SongGenre))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={genre || "_"}
+            onValueChange={(v) => setGenre(v === "_" ? "" : (v as SongGenre))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="_">지정 안 함</SelectItem>
               {SONG_GENRES.map((g) => (
-                <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                <SelectItem key={g.value} value={g.value}>
+                  {g.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <label className="text-xs text-muted-foreground">주제 (선택)</label>
-          <Select value={theme || "_"} onValueChange={(v) => setTheme(v === "_" ? "" : (v as SongTheme))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={theme || "_"}
+            onValueChange={(v) => setTheme(v === "_" ? "" : (v as SongTheme))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="_">지정 안 함</SelectItem>
               {SONG_THEMES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <label className="text-xs text-muted-foreground">커버 이미지 URL (선택)</label>
-          <Input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="https://…" />
+          <Input
+            value={coverUrl}
+            onChange={(e) => setCoverUrl(e.target.value)}
+            placeholder="https://…"
+          />
         </div>
       </div>
       <div>
@@ -1116,7 +1195,9 @@ function CreateSongForm({ onDone }: { onDone: () => void }) {
         />
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onDone}>취소</Button>
+        <Button variant="ghost" onClick={onDone}>
+          취소
+        </Button>
         <Button
           onClick={() => mutation.mutate()}
           disabled={mutation.isPending || !title || !mediaUrl}
@@ -1132,11 +1213,7 @@ function CreateSongForm({ onDone }: { onDone: () => void }) {
 // Uses index-based matching against the trimmed non-empty lines of the raw
 // lyrics — the same order the annotate helper saw. Falls back to whatever
 // parseLyrics extracts when no annotations are present.
-function parseLyricsWithAnnotations(
-  raw: string,
-  pinyin: string[],
-  ko: string[],
-): LyricLine[] {
+function parseLyricsWithAnnotations(raw: string, pinyin: string[], ko: string[]): LyricLine[] {
   const parsed = parseLyrics(raw);
   if (pinyin.length === 0 && ko.length === 0) return parsed;
   // Build a map: zh line → first available annotation index.
@@ -1162,7 +1239,12 @@ function parseLyrics(raw: string): LyricLine[] {
     const trimmed = ln.trim();
     if (!trimmed) continue;
     // Skip section markers like [Verse], [Chorus] common in Suno lyrics.
-    if (/^\[(verse|chorus|bridge|intro|outro|hook|pre-chorus|refrain)\]?$/i.test(trimmed.replace(/[\[\]]/g, ""))) continue;
+    if (
+      /^\[(verse|chorus|bridge|intro|outro|hook|pre-chorus|refrain)\]?$/i.test(
+        trimmed.replace(/[[\]]/g, ""),
+      )
+    )
+      continue;
     const timeMatch = trimmed.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]\s*(.*)$/);
     let time: number | undefined;
     let body = trimmed;
@@ -1197,7 +1279,10 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
 
   const m = useMutation({
     mutationFn: () => {
-      const lyrics = lyricsText.split("\n").map((l) => l.trim()).filter(Boolean);
+      const lyrics = lyricsText
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
       const pinyin = pinyinText.split("\n").map((l) => l.trim());
       const translation = translationText.split("\n").map((l) => l.trim());
       return createCuratedSong({
@@ -1236,51 +1321,80 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1">
           <label className="text-xs font-medium">제목 (한국어) *</label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 달빛 아래" />
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="예: 달빛 아래"
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium">제목 (中文)</label>
-          <Input value={titleZh} onChange={(e) => setTitleZh(e.target.value)} placeholder="月光下" />
+          <Input
+            value={titleZh}
+            onChange={(e) => setTitleZh(e.target.value)}
+            placeholder="月光下"
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium">아티스트</label>
-          <Input value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="예: 邓紫棋" />
+          <Input
+            value={artist}
+            onChange={(e) => setArtist(e.target.value)}
+            placeholder="예: 邓紫棋"
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium">난이도 *</label>
           <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {LEVEL_OPTIONS.map((l) => (
-                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                <SelectItem key={l.value} value={l.value}>
+                  {l.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium">장르</label>
-          <Select value={genre || "_"} onValueChange={(v) => setGenre(v === "_" ? "" : (v as SongGenre))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={genre || "_"}
+            onValueChange={(v) => setGenre(v === "_" ? "" : (v as SongGenre))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="_">지정 안 함</SelectItem>
               {SONG_GENRES.map((g) => (
-                <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                <SelectItem key={g.value} value={g.value}>
+                  {g.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <p className="text-[11px] text-muted-foreground">
-            AI 생성 곡은 스타일에서 자동으로 정해지지만, 실제 노래는 직접 골라야
-            장르 필터에 잡혀요.
+            AI 생성 곡은 스타일에서 자동으로 정해지지만, 실제 노래는 직접 골라야 장르 필터에 잡혀요.
           </p>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium">주제</label>
-          <Select value={theme || "_"} onValueChange={(v) => setTheme(v === "_" ? "" : (v as SongTheme))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={theme || "_"}
+            onValueChange={(v) => setTheme(v === "_" ? "" : (v as SongTheme))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="_">지정 안 함</SelectItem>
               {SONG_THEMES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -1366,9 +1480,7 @@ function FailedSongsPanel({ songs }: { songs: SongRow[] }) {
 function FailedSongCard({ song }: { song: SongRow }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [lyrics, setLyrics] = useState(() =>
-    (song.lyrics ?? []).map((l) => l.zh).join("\n"),
-  );
+  const [lyrics, setLyrics] = useState(() => (song.lyrics ?? []).map((l) => l.zh).join("\n"));
   const [style, setStyle] = useState(song.style ?? STYLE_PRESETS[0].value);
 
   const retry = useMutation({
@@ -1396,13 +1508,9 @@ function FailedSongCard({ song }: { song: SongRow }) {
         <div className="min-w-0">
           <div className="text-sm font-medium truncate">
             {song.title}
-            {song.title_zh && (
-              <span className="text-muted-foreground"> · {song.title_zh}</span>
-            )}
+            {song.title_zh && <span className="text-muted-foreground"> · {song.title_zh}</span>}
           </div>
-          {song.error && (
-            <p className="text-[11px] text-destructive mt-0.5">{song.error}</p>
-          )}
+          {song.error && <p className="text-[11px] text-destructive mt-0.5">{song.error}</p>}
           {isSensitive && (
             <p className="text-[11px] text-muted-foreground mt-0.5">
               💡 Suno가 거부한 표현을 비슷한 뜻의 다른 단어로 바꾼 뒤 재생성해보세요.
@@ -1434,10 +1542,14 @@ function FailedSongCard({ song }: { song: SongRow }) {
           <div className="space-y-1.5">
             <Label className="text-xs">음악 스타일</Label>
             <Select value={style} onValueChange={setStyle}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {STYLE_PRESETS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1515,7 +1627,10 @@ function SongSchedulePanel() {
   function buildPayload() {
     return {
       name: name.trim(),
-      keywords: keywordsRaw.split(/\r?\n|,/).map((s) => s.trim()).filter(Boolean),
+      keywords: keywordsRaw
+        .split(/\r?\n|,/)
+        .map((s) => s.trim())
+        .filter(Boolean),
       frequency,
       weekdays: frequency === "weekly" ? weekdays : [],
       time_kst: timeKst,
@@ -1555,7 +1670,12 @@ function SongSchedulePanel() {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>예약 이름 *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 주 2회 동요풍" maxLength={60} />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 주 2회 동요풍"
+              maxLength={60}
+            />
           </div>
           <div className="space-y-2">
             <Label>실행 시간 (한국 시간) *</Label>
@@ -1577,7 +1697,9 @@ function SongSchedulePanel() {
           <div className="space-y-2">
             <Label>반복 주기</Label>
             <Select value={frequency} onValueChange={(v) => setFrequency(v as "daily" | "weekly")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="daily">매일</SelectItem>
                 <SelectItem value="weekly">매주 (요일 선택)</SelectItem>
@@ -1611,10 +1733,14 @@ function SongSchedulePanel() {
           <div className="space-y-2">
             <Label>난이도</Label>
             <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {LEVEL_ORDER.map((l) => (
-                  <SelectItem key={l} value={l}>{LEVEL_LABEL_HSK[l]}</SelectItem>
+                  <SelectItem key={l} value={l}>
+                    {LEVEL_LABEL_HSK[l]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1622,18 +1748,27 @@ function SongSchedulePanel() {
           <div className="space-y-2">
             <Label>음악 스타일</Label>
             <Select value={style} onValueChange={setStyle}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {STYLE_PRESETS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>보컬 성별</Label>
-            <Select value={vocalGender || "auto"} onValueChange={(v) => setVocalGender(v === "auto" ? "" : (v as "m" | "f"))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={vocalGender || "auto"}
+              onValueChange={(v) => setVocalGender(v === "auto" ? "" : (v as "m" | "f"))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="auto">자동</SelectItem>
                 <SelectItem value="f">여성</SelectItem>
@@ -1671,7 +1806,10 @@ function SongSchedulePanel() {
         )}
         <ul className="space-y-2">
           {(schedules.data ?? []).map((s: SongSchedule) => (
-            <li key={s.id} className="glass rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
+            <li
+              key={s.id}
+              className="glass rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap"
+            >
               <Switch
                 checked={s.enabled}
                 onCheckedChange={(v) =>

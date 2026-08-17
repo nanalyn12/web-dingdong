@@ -27,13 +27,10 @@ export const saveSubscription = createServerFn({ method: "POST" })
       auth: data.auth,
       user_agent: data.user_agent ?? null,
     };
-    await db
-      .insert(tables.push_subscriptions)
-      .values(values)
-      .onConflictDoUpdate({
-        target: tables.push_subscriptions.endpoint,
-        set: values,
-      });
+    await db.insert(tables.push_subscriptions).values(values).onConflictDoUpdate({
+      target: tables.push_subscriptions.endpoint,
+      set: values,
+    });
     return { ok: true };
   });
 

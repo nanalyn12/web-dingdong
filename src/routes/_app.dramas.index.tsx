@@ -1,6 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Film, Loader2, Plus, RefreshCw, RotateCcw, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Film,
+  Loader2,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  SlidersHorizontal,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -14,14 +26,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useMyProfile } from "@/lib/auth-client";
-import { deleteDrama, listDramas } from "@/lib/dramas.functions";
+import { useIsEditor, useMyProfile } from "@/lib/auth-client";
+import {
+  deleteDrama,
+  listDramas,
+  updateDramaLevel,
+  type DramaListRow,
+} from "@/lib/dramas.functions";
 import { listMyDramaProgress } from "@/lib/drama-progress.functions";
 import { generateDrama } from "@/lib/generate-drama.functions";
 import { resyncAllDramasWithoutCaptions } from "@/lib/resync-dramas.functions";
 import { probeCaptions, type ProbeResult } from "@/lib/youtube-captions.functions";
 import { LEVEL_OPTIONS, levelLabel } from "@/lib/levels";
-
 
 export const Route = createFileRoute("/_app/dramas/")({
   head: () => ({
@@ -36,9 +52,7 @@ export const Route = createFileRoute("/_app/dramas/")({
   }),
   component: DramasPage,
   errorComponent: ({ error }) => (
-    <div className="glass rounded-3xl p-6 text-sm text-destructive">
-      {error.message}
-    </div>
+    <div className="glass rounded-3xl p-6 text-sm text-destructive">{error.message}</div>
   ),
   notFoundComponent: () => <div>없습니다.</div>,
 });
@@ -54,7 +68,7 @@ const NARRATION_LABEL: Record<string, string> = {
 
 function DramasPage() {
   const { data: profile } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = useIsEditor();
   const isAdmin = profile?.role === "admin";
   const qc = useQueryClient();
   const { data: dramas, isLoading } = useQuery({
@@ -66,9 +80,7 @@ function DramasPage() {
     queryFn: () => listMyDramaProgress({}),
     enabled: !!profile,
   });
-  const progressMap = new Map(
-    (progressList ?? []).map((p) => [p.drama_id, p.completed]),
-  );
+  const progressMap = new Map((progressList ?? []).map((p) => [p.drama_id, p.completed]));
   const [creating, setCreating] = useState(false);
   const [genreFilter, setGenreFilter] = useState("all");
   const [levelFilter, setLevelFilter] = useState("all");
@@ -81,17 +93,15 @@ function DramasPage() {
   // in step as the library grows instead of offering categories nothing is in.
   const genreOptions = useMemo(
     () =>
-      [...new Set((dramas ?? []).map((d) => d.genre).filter(Boolean))].sort(
-        (a, b) => String(a).localeCompare(String(b), "ko"),
+      [...new Set((dramas ?? []).map((d) => d.genre).filter(Boolean))].sort((a, b) =>
+        String(a).localeCompare(String(b), "ko"),
       ) as string[],
     [dramas],
   );
   const levelOptions = useMemo(() => {
     const present = new Set((dramas ?? []).map((d) => d.level).filter(Boolean));
     // Keep pedagogical order, not alphabetical.
-    return (["beginner", "intermediate", "advanced"] as const).filter((l) =>
-      present.has(l),
-    );
+    return (["beginner", "intermediate", "advanced"] as const).filter((l) => present.has(l));
   }, [dramas]);
   const langOptions = useMemo(() => {
     const present = new Set((dramas ?? []).map((d) => d.narration_language).filter(Boolean));
@@ -108,8 +118,7 @@ function DramasPage() {
       ),
     [dramas, genreFilter, levelFilter, langFilter],
   );
-  const filtering =
-    genreFilter !== "all" || levelFilter !== "all" || langFilter !== "all";
+  const filtering = genreFilter !== "all" || levelFilter !== "all" || langFilter !== "all";
 
   // The library grows by a handful of videos a day, so the grid is paged
   // rather than rendering every card. Filtering narrows the same list, so the
@@ -129,6 +138,18 @@ function DramasPage() {
       qc.invalidateQueries({ queryKey: ["dramas"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "삭제 실패"),
+  });
+
+  // 난이도는 등록 시 한 번 고르고 나면 고칠 방법이 없었다. 목록에서 바로
+  // 바꿀 수 있게 두어야 잘못 붙은 라벨이 그대로 굳지 않는다.
+  const setLevel = useMutation({
+    mutationFn: (v: { id: string; level: "beginner" | "intermediate" | "advanced" }) =>
+      updateDramaLevel({ data: v }),
+    onSuccess: (r) => {
+      toast.success(`난이도를 ${levelLabel(r.level)}으로 바꿨어요`);
+      qc.invalidateQueries({ queryKey: ["dramas"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "난이도 변경 실패"),
   });
 
   const resync = useMutation({
@@ -196,7 +217,6 @@ function DramasPage() {
             </Button>
           )}
         </div>
-
       </div>
 
       {creating && isEditor && <CreateDramaForm onDone={() => setCreating(false)} />}
@@ -251,8 +271,7 @@ function DramasPage() {
             </Select>
           )}
           <span className="text-xs text-muted-foreground ml-auto mr-1">
-            {visibleDramas.length}개
-            {filtering && ` / 전체 ${dramas?.length ?? 0}개`}
+            {visibleDramas.length}개{filtering && ` / 전체 ${dramas?.length ?? 0}개`}
           </span>
           {filtering && (
             <Button
@@ -271,9 +290,7 @@ function DramasPage() {
       )}
 
       {isLoading && (
-        <div className="glass rounded-3xl p-8 text-center text-muted-foreground">
-          불러오는 중…
-        </div>
+        <div className="glass rounded-3xl p-8 text-center text-muted-foreground">불러오는 중…</div>
       )}
       {!isLoading && dramas && dramas.length === 0 && (
         <div className="glass rounded-3xl p-10 text-center">
@@ -309,10 +326,7 @@ function DramasPage() {
         {pagedDramas.map((d) => {
           const canDelete = isAdmin || d.created_by === profile?.id;
           return (
-            <div
-              key={d.id}
-              className="glass rounded-3xl overflow-hidden group relative"
-            >
+            <div key={d.id} className="glass rounded-3xl overflow-hidden group relative">
               <Link
                 to="/dramas/$id"
                 params={{ id: d.id }}
@@ -328,9 +342,7 @@ function DramasPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full grid place-items-center text-5xl">
-                      🎬
-                    </div>
+                    <div className="w-full h-full grid place-items-center text-5xl">🎬</div>
                   )}
                   <div className="absolute top-2 right-2 glass-soft rounded-full px-2 py-0.5 text-[10px] font-semibold">
                     {levelLabel(d.level)}
@@ -339,8 +351,7 @@ function DramasPage() {
                     🎞 {d.scene_count}장면
                     {(progressMap.get(d.id) ?? 0) > 0 && (
                       <span className="ml-1 text-emerald-300">
-                        · ✅ {Math.min(progressMap.get(d.id)!, d.scene_count)}
-                        /{d.scene_count}
+                        · ✅ {Math.min(progressMap.get(d.id)!, d.scene_count)}/{d.scene_count}
                       </span>
                     )}
                   </div>
@@ -356,9 +367,7 @@ function DramasPage() {
                 <div className="p-4">
                   <div className="font-bold truncate">{d.title}</div>
                   {d.title_zh && (
-                    <div className="text-sm text-muted-foreground truncate">
-                      {d.title_zh}
-                    </div>
+                    <div className="text-sm text-muted-foreground truncate">{d.title_zh}</div>
                   )}
                   {d.description && (
                     <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
@@ -367,6 +376,28 @@ function DramasPage() {
                   )}
                 </div>
               </Link>
+              {isEditor && (
+                <div className="px-4 pb-4 -mt-2" onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={d.level}
+                    onValueChange={(v) =>
+                      setLevel.mutate({ id: d.id, level: v as DramaListRow["level"] })
+                    }
+                    disabled={setLevel.isPending}
+                  >
+                    <SelectTrigger className="h-8 rounded-xl text-xs" aria-label="난이도 변경">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEVEL_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {canDelete && (
                 <button
                   onClick={() => {
@@ -407,9 +438,7 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
-  const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">(
-    "beginner",
-  );
+  const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner");
   const [lang, setLang] = useState<"auto" | "zh-CN" | "zh-TW" | "en">("auto");
 
   // Debounced caption probe: whenever the URL changes, wait ~600ms then ask
@@ -441,8 +470,7 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
   }, [youtubeUrl, lang]);
 
   const mutation = useMutation({
-    mutationFn: () =>
-      generateDrama({ data: { youtubeUrl, title, level, genre, lang } }),
+    mutationFn: () => generateDrama({ data: { youtubeUrl, title, level, genre, lang } }),
     onSuccess: (res) => {
       toast.success("영상 학습 자료를 만들었어요 🎬");
       qc.invalidateQueries({ queryKey: ["dramas"] });
@@ -472,7 +500,8 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
         <Sparkles className="size-4 text-primary" /> AI로 영상 학습 만들기
       </h2>
       <p className="text-xs text-muted-foreground">
-        AI가 영상을 시청하고 장면을 나눠 학습 자료를 생성해요. 영상 길이에 따라 30초~2분 정도 걸려요.
+        AI가 영상을 시청하고 장면을 나눠 학습 자료를 생성해요. 영상 길이에 따라 30초~2분 정도
+        걸려요.
       </p>
 
       {errMsg && (
@@ -560,7 +589,6 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
           )}
         </div>
         <div className="sm:col-span-2">
-
           <label className="text-xs text-muted-foreground">제목 (선택, 비우면 AI가 작성)</label>
           <Input
             value={title}
@@ -576,7 +604,9 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
             </SelectTrigger>
             <SelectContent>
               {LEVEL_OPTIONS.map((l) => (
-                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                <SelectItem key={l.value} value={l.value}>
+                  {l.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -597,7 +627,10 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
         </div>
         <div className="sm:col-span-2">
           <label className="text-xs text-muted-foreground">장르 (선택)</label>
-          <Select value={genre || "__none__"} onValueChange={(v) => setGenre(v === "__none__" ? "" : v)}>
+          <Select
+            value={genre || "__none__"}
+            onValueChange={(v) => setGenre(v === "__none__" ? "" : v)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="장르 선택" />
             </SelectTrigger>
@@ -626,7 +659,6 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
             </SelectContent>
           </Select>
         </div>
-
       </div>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>
@@ -634,12 +666,7 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
         </Button>
         <Button
           onClick={() => mutation.mutate()}
-          disabled={
-            mutation.isPending ||
-            !youtubeUrl.trim() ||
-            probing ||
-            !probe?.ok
-          }
+          disabled={mutation.isPending || !youtubeUrl.trim() || probing || !probe?.ok}
         >
           {mutation.isPending
             ? "AI 분석 중… (1~2분 소요)"
@@ -653,4 +680,3 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
     </div>
   );
 }
-

@@ -56,8 +56,8 @@ function IntegrationsPage() {
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold">연동 상태</h1>
           <p className="text-sm text-muted-foreground">
-            외부 API가 제대로 연결돼 있는지 한눈에 확인하세요. 키 값은 저장·표시하지
-            않고 설정 여부만 확인해요.
+            외부 API가 제대로 연결돼 있는지 한눈에 확인하세요. 키 값은 저장·표시하지 않고 설정
+            여부만 확인해요.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isRefetching}>
@@ -70,8 +70,8 @@ function IntegrationsPage() {
 
       {data && missing > 0 && (
         <div className="glass rounded-2xl p-4 border border-amber-400/40 bg-amber-500/5 text-sm">
-          ⚠️ 설정되지 않은 연동이 <b>{missing}개</b> 있어요. 해당 기능은 동작하지 않거나
-          대체 경로로 넘어가요.
+          ⚠️ 설정되지 않은 연동이 <b>{missing}개</b> 있어요. 해당 기능은 동작하지 않거나 대체 경로로
+          넘어가요.
         </div>
       )}
 
@@ -82,8 +82,8 @@ function IntegrationsPage() {
       </div>
 
       <p className="text-xs text-muted-foreground px-2">
-        💡 API 키는 Railway 환경변수에서 관리해요. 키를 추가·변경하면 서비스가
-        재배포되어야 반영됩니다.
+        💡 API 키는 Railway 환경변수에서 관리해요. 키를 추가·변경하면 서비스가 재배포되어야
+        반영됩니다.
       </p>
     </div>
   );
@@ -122,9 +122,7 @@ function IntegrationCard({ item }: { item: IntegrationStatus }) {
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">{item.what}</p>
-          {item.detail && (
-            <p className="text-[11px] text-muted-foreground mt-1">{item.detail}</p>
-          )}
+          {item.detail && <p className="text-[11px] text-muted-foreground mt-1">{item.detail}</p>}
         </div>
       </div>
 
@@ -142,10 +140,7 @@ function IntegrationCard({ item }: { item: IntegrationStatus }) {
           </Button>
           {result && (
             <span
-              className={[
-                "text-xs",
-                result.ok ? "text-emerald-700" : "text-destructive",
-              ].join(" ")}
+              className={["text-xs", result.ok ? "text-emerald-700" : "text-destructive"].join(" ")}
             >
               {result.ok ? "✅" : "❌"} {result.message}
             </span>

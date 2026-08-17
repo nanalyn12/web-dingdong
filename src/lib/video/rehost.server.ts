@@ -66,9 +66,7 @@ async function repointLessons(mediaUrl: string, videoId: string): Promise<number
 
 /** Upload one drama's mp4 to YouTube and repoint drama + lessons + job at it.
  * Idempotent: a drama already on YouTube, or with no local file, is skipped. */
-export async function rehostDramaOnYouTube(
-  dramaId: string,
-): Promise<RehostResult> {
+export async function rehostDramaOnYouTube(dramaId: string): Promise<RehostResult> {
   const { join } = await import("node:path");
   const { rm, stat } = await import("node:fs/promises");
 
@@ -80,8 +78,7 @@ export async function rehostDramaOnYouTube(
   if (!drama) return { dramaId, title: "", status: "failed", reason: "드라마 없음" };
 
   const base = { dramaId, title: drama.title };
-  if (drama.youtube_video_id)
-    return { ...base, status: "skipped", reason: "이미 YouTube에 있음" };
+  if (drama.youtube_video_id) return { ...base, status: "skipped", reason: "이미 YouTube에 있음" };
   if (!drama.media_url?.startsWith("/media/"))
     return { ...base, status: "skipped", reason: "로컬 파일 없음" };
 

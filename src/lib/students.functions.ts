@@ -33,9 +33,7 @@ export type StudentRoster = {
 };
 
 function kstDateNDaysAgo(n: number): string {
-  return new Date(Date.now() + 9 * 3600_000 - n * 86400_000)
-    .toISOString()
-    .slice(0, 10);
+  return new Date(Date.now() + 9 * 3600_000 - n * 86400_000).toISOString().slice(0, 10);
 }
 
 export const getStudentRoster = createServerFn({ method: "GET" })
@@ -104,10 +102,7 @@ export const getStudentRoster = createServerFn({ method: "GET" })
       .from(dp);
     const dramaMap = new Map<string, { qc: number; qt: number }>();
     for (const r of dramaRows) {
-      const scores = (r.quiz_scores ?? {}) as Record<
-        string,
-        { score?: number; total?: number }
-      >;
+      const scores = (r.quiz_scores ?? {}) as Record<string, { score?: number; total?: number }>;
       let qc = dramaMap.get(r.user_id)?.qc ?? 0;
       let qt = dramaMap.get(r.user_id)?.qt ?? 0;
       for (const s of Object.values(scores)) {
@@ -136,7 +131,7 @@ export const getStudentRoster = createServerFn({ method: "GET" })
     const computeStreak = (dates: Set<string> | undefined): number => {
       if (!dates || dates.size === 0) return 0;
       let streak = 0;
-      let cursor = dates.has(today) ? 0 : 1;
+      const cursor = dates.has(today) ? 0 : 1;
       while (streak < 60 && dates.has(kstDateNDaysAgo(cursor + streak))) streak++;
       return streak;
     };
@@ -144,9 +139,7 @@ export const getStudentRoster = createServerFn({ method: "GET" })
     const students: StudentRow[] = profs.map((p) => {
       const dates = actByUser.get(p.id);
       const last = lastActive.get(p.id) ?? null;
-      const daysIdle = last
-        ? Math.round((Date.parse(today) - Date.parse(last)) / 86400_000)
-        : null;
+      const daysIdle = last ? Math.round((Date.parse(today) - Date.parse(last)) / 86400_000) : null;
       const les = lessonMap.get(p.id);
       const dra = dramaMap.get(p.id);
       const qc = (les?.qc ?? 0) + (dra?.qc ?? 0);

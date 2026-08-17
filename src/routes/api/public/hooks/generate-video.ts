@@ -22,10 +22,7 @@ export const Route = createFileRoute("/api/public/hooks/generate-video")({
           return Response.json({ ok: false, error: "invalid json" }, { status: 400 });
         }
         if (!body.keyword) {
-          return Response.json(
-            { ok: false, error: "keyword is required" },
-            { status: 400 },
-          );
+          return Response.json({ ok: false, error: "keyword is required" }, { status: 400 });
         }
 
         const { db, tables } = await import("@/db");
@@ -52,13 +49,10 @@ export const Route = createFileRoute("/api/public/hooks/generate-video")({
             : levelFromAudience(String(body.audience ?? "")),
           lengthSeconds: Number(body.lengthSeconds ?? 60),
           language: (body.language as string) === "zh" ? "zh" : "ko",
-          focus: ["culture", "grammar", "entertainment", "daily"].includes(
-            String(body.focus),
-          )
+          focus: ["culture", "grammar", "entertainment", "daily"].includes(String(body.focus))
             ? body.focus
             : "culture",
-          resolution:
-            String(body.resolution) === "1920x1080" ? "1920x1080" : "1280x720",
+          resolution: String(body.resolution) === "1920x1080" ? "1920x1080" : "1280x720",
           clipCount: Math.min(20, Math.max(3, Number(body.clipCount ?? 6))),
           voice: String(body.voice ?? "ko-KR-Neural2-A"),
           burnSubtitles: body.burnSubtitles !== false,
@@ -69,8 +63,7 @@ export const Route = createFileRoute("/api/public/hooks/generate-video")({
             ? body.privacy
             : "private",
           courseId: typeof body.courseId === "string" ? body.courseId : null,
-          newCourseTitle:
-            typeof body.newCourseTitle === "string" ? body.newCourseTitle : undefined,
+          newCourseTitle: typeof body.newCourseTitle === "string" ? body.newCourseTitle : undefined,
         };
 
         const [row] = await db

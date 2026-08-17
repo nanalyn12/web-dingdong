@@ -29,9 +29,10 @@ export const LEVEL_LABEL_HSK: Record<Level, string> = {
 };
 
 /** Ready-made <SelectItem> / filter-button data. */
-export const LEVEL_OPTIONS: { value: Level; label: string }[] = LEVEL_ORDER.map(
-  (value) => ({ value, label: LEVEL_LABEL[value] }),
-);
+export const LEVEL_OPTIONS: { value: Level; label: string }[] = LEVEL_ORDER.map((value) => ({
+  value,
+  label: LEVEL_LABEL[value],
+}));
 
 export function isLevel(v: unknown): v is Level {
   return v === "beginner" || v === "intermediate" || v === "advanced";

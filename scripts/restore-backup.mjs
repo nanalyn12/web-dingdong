@@ -35,7 +35,9 @@ if (!process.env.DATABASE_URL) {
     const env = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", ".env"), "utf8");
     const m = env.match(/^DATABASE_URL="?([^"\r\n]+)"?/m);
     if (m) process.env.DATABASE_URL = m[1];
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL이 없습니다 (.env 또는 환경변수).");
@@ -51,7 +53,8 @@ const { rows: colRows } = await client.query(`
   SELECT table_name, column_name, data_type FROM information_schema.columns
   WHERE table_schema = 'public'`);
 const jsonCols = new Set(
-  colRows.filter((c) => c.data_type === "jsonb" || c.data_type === "json")
+  colRows
+    .filter((c) => c.data_type === "jsonb" || c.data_type === "json")
     .map((c) => `${c.table_name}.${c.column_name}`),
 );
 
@@ -65,7 +68,9 @@ for await (const line of rl) {
   if (!byTable.has(obj.table)) byTable.set(obj.table, []);
   byTable.get(obj.table).push(obj.row);
 }
-console.log(`백업 로드: ${[...byTable.keys()].length}개 테이블, ${[...byTable.values()].reduce((s, r) => s + r.length, 0)}행`);
+console.log(
+  `백업 로드: ${[...byTable.keys()].length}개 테이블, ${[...byTable.values()].reduce((s, r) => s + r.length, 0)}행`,
+);
 
 try {
   await client.query("BEGIN");

@@ -19,6 +19,15 @@ function parseList(varName: string): string[] {
 // even when the ADMIN_EMAILS secret hasn't been applied yet.
 const BUILTIN_ADMIN_EMAILS = ["admin@dingdong.local"];
 
+// The admin allowlist is a BOOTSTRAP, not a standing rule. An allowlisted
+// address nobody has registered yet is a free admin account for whoever signs
+// up with it first, so the very first successful promotion writes this row and
+// every later sign-in ignores the allowlist. Further admins are granted in-app.
+// Locked out? Delete this row from app_credentials to re-arm the bootstrap.
+const ADMIN_BOOTSTRAP_KEY = "admin_bootstrap";
+
+type AdminBootstrap = { user_id: string; email: string; claimed_at: string };
+
 /**
  * Called right after sign-in to make sure the auth user has a profile row,
  * applies the TEACHER_EMAILS allowlist, and bumps `last_active_at`.
@@ -32,9 +41,23 @@ export const ensureProfile = createServerFn({ method: "POST" })
 
     const teacherAllow = parseList("TEACHER_EMAILS");
     const adminAllow = [...parseList("ADMIN_EMAILS"), ...BUILTIN_ADMIN_EMAILS];
-    const shouldBeAdmin = !!email && adminAllow.includes(email);
+    const onAdminAllowlist = !!email && adminAllow.includes(email);
     const shouldBeTeacher = !!email && teacherAllow.includes(email);
     const now = new Date().toISOString();
+
+    // Bootstrap already spent? Then the allowlist no longer promotes anyone
+    // except the account that claimed it (so that account can't lose admin).
+    const bootstrapRow = onAdminAllowlist
+      ? (
+          await db
+            .select({ value: tables.app_credentials.value })
+            .from(tables.app_credentials)
+            .where(eq(tables.app_credentials.key, ADMIN_BOOTSTRAP_KEY))
+            .limit(1)
+        )[0]
+      : undefined;
+    const bootstrap = bootstrapRow?.value as AdminBootstrap | undefined;
+    const shouldBeAdmin = onAdminAllowlist && (!bootstrap || bootstrap.user_id === userId);
 
     // Single idempotent path: upsert by primary key. We do NOT set `role`
     // here so we never demote an existing admin/teacher; promotion is a
@@ -65,12 +88,32 @@ export const ensureProfile = createServerFn({ method: "POST" })
       profile = updated;
     }
 
+    // Spend the bootstrap once this account actually holds admin — including
+    // the case where it already did before this change shipped, so an existing
+    // deployment closes the window on the admin's next sign-in rather than
+    // waiting for a promotion that will never happen again.
+    if (shouldBeAdmin && !bootstrap && profile.role === "admin") {
+      await db
+        .insert(tables.app_credentials)
+        .values({
+          key: ADMIN_BOOTSTRAP_KEY,
+          value: {
+            user_id: userId,
+            email,
+            claimed_at: now,
+          } satisfies AdminBootstrap,
+        })
+        .onConflictDoNothing({ target: tables.app_credentials.key });
+    }
+
     console.log("[ensureProfile]", {
       userId,
       email,
       role: profile.role,
+      onAdminAllowlist,
       shouldBeAdmin,
       shouldBeTeacher,
+      adminBootstrapClaimed: !!bootstrap,
     });
 
     const needsOnboarding = !profile.nickname || !profile.job;

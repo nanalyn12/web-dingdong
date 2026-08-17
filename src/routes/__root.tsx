@@ -16,7 +16,6 @@ import { AuthBridge } from "@/lib/auth-client";
 import { DingDongBot } from "@/components/dingdong-bot";
 import { PushManager } from "@/components/push-manager";
 
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -86,11 +85,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "AI-powered Chinese learning platform for Korean adults." },
       { name: "author", content: "DingDong" },
       { property: "og:title", content: "dingdong lms" },
-      { property: "og:description", content: "AI-powered Chinese learning platform for Korean adults." },
+      {
+        property: "og:description",
+        content: "AI-powered Chinese learning platform for Korean adults.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "dingdong lms" },
-      { name: "twitter:description", content: "AI-powered Chinese learning platform for Korean adults." },
+      {
+        name: "twitter:description",
+        content: "AI-powered Chinese learning platform for Korean adults.",
+      },
       { property: "og:image", content: "https://dingdong-production.up.railway.app/og-image.png" },
       { name: "twitter:image", content: "https://dingdong-production.up.railway.app/og-image.png" },
     ],
@@ -136,6 +141,5 @@ function RootComponent() {
       <PushManager />
       <Toaster richColors position="top-center" />
     </QueryClientProvider>
-
   );
 }

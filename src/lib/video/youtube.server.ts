@@ -98,8 +98,7 @@ async function accessToken(): Promise<string> {
     .from(tables.app_credentials)
     .where(eq(tables.app_credentials.key, "youtube"))
     .limit(1);
-  const refresh = (rows[0]?.value as { refresh_token?: string } | undefined)
-    ?.refresh_token;
+  const refresh = (rows[0]?.value as { refresh_token?: string } | undefined)?.refresh_token;
   if (!refresh) {
     // Not connected (or token was cleared after a prior invalid_grant).
     // Same class as an expired token so upload jobs fall back to web-only.
@@ -133,7 +132,9 @@ async function accessToken(): Promise<string> {
         "YouTube 연결이 만료됐어요 (invalid_grant). 스튜디오에서 다시 연결해주세요.",
       );
     }
-    throw new Error(`YouTube 토큰 갱신 실패: ${data.error ?? res.status} — 재연결이 필요할 수 있어요.`);
+    throw new Error(
+      `YouTube 토큰 갱신 실패: ${data.error ?? res.status} — 재연결이 필요할 수 있어요.`,
+    );
   }
   return data.access_token;
 }
@@ -251,24 +252,21 @@ export async function updateVideoDescription(
   description: string,
 ): Promise<void> {
   const token = await accessToken();
-  const res = await fetch(
-    "https://www.googleapis.com/youtube/v3/videos?part=snippet",
-    {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: videoId,
-        snippet: {
-          title: title.slice(0, 100),
-          description: description.slice(0, 4900),
-          categoryId: "27",
-        },
-      }),
+  const res = await fetch("https://www.googleapis.com/youtube/v3/videos?part=snippet", {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      id: videoId,
+      snippet: {
+        title: title.slice(0, 100),
+        description: description.slice(0, 4900),
+        categoryId: "27",
+      },
+    }),
+  });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     throw new Error(`설명 업데이트 실패 (${res.status}): ${t.slice(0, 200)}`);
@@ -321,22 +319,19 @@ export async function addToDingdongPlaylist(videoId: string): Promise<void> {
       });
   }
 
-  const add = await fetch(
-    "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        snippet: {
-          playlistId,
-          resourceId: { kind: "youtube#video", videoId },
-        },
-      }),
+  const add = await fetch("https://www.googleapis.com/youtube/v3/playlistItems?part=snippet", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      snippet: {
+        playlistId,
+        resourceId: { kind: "youtube#video", videoId },
+      },
+    }),
+  });
   if (!add.ok) throw new Error(`재생목록 추가 실패 (${add.status})`);
 }
 

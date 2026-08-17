@@ -9,7 +9,6 @@ import type { Json } from "@/db/schema";
 const TICK_MS = 60_000;
 
 declare global {
-  // eslint-disable-next-line no-var
   var __videoSchedulerStarted: boolean | undefined;
 }
 
@@ -72,19 +71,14 @@ async function tick() {
   // file already exists, so double-fires within the minute are harmless).
   const { isBackupTime, maybeRunDailyBackup } = await import("@/lib/backup.server");
   if (isBackupTime(hhmm)) {
-    void maybeRunDailyBackup(dateKey).catch((e) =>
-      console.error("[backup] failed:", e),
-    );
+    void maybeRunDailyBackup(dateKey).catch((e) => console.error("[backup] failed:", e));
   }
 
   const schedules = await db
     .select()
     .from(tables.video_schedules)
     .where(
-      and(
-        eq(tables.video_schedules.enabled, true),
-        eq(tables.video_schedules.time_kst, hhmm),
-      ),
+      and(eq(tables.video_schedules.enabled, true), eq(tables.video_schedules.time_kst, hhmm)),
     );
 
   for (const s of schedules) {
@@ -168,9 +162,9 @@ export async function runScheduleOnce(
   return jobIds[0];
 }
 
-export async function listSchedulesFor(userIds?: string[]): Promise<
-  (typeof tables.video_schedules.$inferSelect)[]
-> {
+export async function listSchedulesFor(
+  userIds?: string[],
+): Promise<(typeof tables.video_schedules.$inferSelect)[]> {
   if (userIds && userIds.length > 0) {
     return db
       .select()

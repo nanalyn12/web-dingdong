@@ -38,6 +38,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyProfile } from "@/lib/auth-client";
 import { useSongProgress } from "@/lib/song-progress";
+import { shuffle } from "@/lib/shuffle";
 import { listVocabulary, saveVocabulary } from "@/lib/vocab.functions";
 import { addGuestVocab, guessEmoji, loadGuestVocab } from "@/lib/vocab";
 import type { PlayerAPI } from "@/lib/player-api";
@@ -103,9 +104,7 @@ export const Route = createFileRoute("/_app/songs/$id")({
     }),
   component: SongPlayerPage,
   errorComponent: ({ error }) => (
-    <div className="glass rounded-3xl p-6 text-sm text-destructive">
-      {error.message}
-    </div>
+    <div className="glass rounded-3xl p-6 text-sm text-destructive">{error.message}</div>
   ),
   notFoundComponent: () => <div>없습니다.</div>,
 });
@@ -120,8 +119,7 @@ function SongPlayerPage() {
     queryFn: () => getSong({ data: { id } }),
     refetchInterval: (q) => {
       const s = q.state.data as SongRow | undefined;
-      return s &&
-        (s.status === "generating_audio" || s.status === "generating_video")
+      return s && (s.status === "generating_audio" || s.status === "generating_video")
         ? 6000
         : false;
     },
@@ -155,8 +153,7 @@ function SongPlayerPage() {
         console.warn("[suno] poll error", e);
         if (!cancelled) {
           setPollError(msg);
-          if (isRateLimitedMessage(msg))
-            setRetryAt(Date.now() + POLL_INTERVAL_MS);
+          if (isRateLimitedMessage(msg)) setRetryAt(Date.now() + POLL_INTERVAL_MS);
         }
       } finally {
         if (!cancelled) qc.invalidateQueries({ queryKey: ["song", id] });
@@ -172,24 +169,14 @@ function SongPlayerPage() {
   if (!song) return null;
   return (
     <div className="space-y-4">
-      <SongPlayer
-        song={song}
-        pollError={pollError}
-        retryAt={retryAt}
-      />
+      <SongPlayer song={song} pollError={pollError} retryAt={retryAt} />
       <RelatedLessonsCard songId={song.id} isEditor={isEditor} />
     </div>
   );
 }
 
 /** 🔗 연계 학습 — AI가 노래와 이어지는 레슨을 골라 연계성·차이점을 설명. */
-function RelatedLessonsCard({
-  songId,
-  isEditor,
-}: {
-  songId: string;
-  isEditor: boolean;
-}) {
+function RelatedLessonsCard({ songId, isEditor }: { songId: string; isEditor: boolean }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["song-related", songId],
@@ -218,7 +205,12 @@ function RelatedLessonsCard({
     return (
       <section className="glass rounded-3xl p-5 flex items-center justify-between gap-3 text-sm text-muted-foreground">
         <span>연계 학습 데이터가 아직 없어요.</span>
-        <Button size="sm" variant="outline" disabled={regen.isPending} onClick={() => regen.mutate()}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={regen.isPending}
+          onClick={() => regen.mutate()}
+        >
           {regen.isPending && <Loader2 className="size-3.5 mr-1 animate-spin" />}
           분석하기
         </Button>
@@ -231,15 +223,19 @@ function RelatedLessonsCard({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="font-bold text-lg">🔗 연계 학습 — 이 노래와 이어지는 강의</h2>
         {isEditor && (
-          <Button size="sm" variant="ghost" className="text-xs" disabled={regen.isPending} onClick={() => regen.mutate()}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs"
+            disabled={regen.isPending}
+            onClick={() => regen.mutate()}
+          >
             {regen.isPending ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : null}
             다시 분석
           </Button>
         )}
       </div>
-      {data.summary && (
-        <p className="text-sm text-muted-foreground">{data.summary}</p>
-      )}
+      {data.summary && <p className="text-sm text-muted-foreground">{data.summary}</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {data.links.map((l) => (
           <div
@@ -268,9 +264,7 @@ function RelatedLessonsCard({
                 ))}
               </div>
             )}
-            {l.difference && (
-              <p className="text-xs text-muted-foreground">↔ {l.difference}</p>
-            )}
+            {l.difference && <p className="text-xs text-muted-foreground">↔ {l.difference}</p>}
             {l.order_tip && (
               <p className="text-xs text-emerald-700 bg-emerald-500/10 rounded-xl px-2.5 py-1.5">
                 💡 {l.order_tip}
@@ -317,10 +311,7 @@ function SongPlayer({
     onError: (e) => toast.error(e instanceof Error ? e.message : "싱크 저장 실패"),
   });
 
-  const rawLyrics = useMemo(
-    () => (Array.isArray(song.lyrics) ? song.lyrics : []),
-    [song.lyrics],
-  );
+  const rawLyrics = useMemo(() => (Array.isArray(song.lyrics) ? song.lyrics : []), [song.lyrics]);
   const hasRealTimes = rawLyrics.some((l) => typeof l.time === "number");
 
   // Character-weighted timestamps when the song has none (Suno case).
@@ -378,27 +369,30 @@ function SongPlayer({
     [rawLyrics, estimatedTimes],
   );
   const hasTimes = lyrics.some((l) => typeof l.time === "number");
-  const showPinyin =
-    showPinyinPref ?? (song.level !== "advanced");
+  const showPinyin = showPinyinPref ?? song.level !== "advanced";
 
   // Per-line seek target time: use own time, else nearest following timed line,
   // else nearest preceding timed line. Enables clicking on section headers or
   // untimed lines to jump to a sensible position.
   const lineTimes = useMemo<(number | null)[]>(() => {
-    const out: (number | null)[] = lyrics.map((l) =>
-      typeof l.time === "number" ? l.time : null,
-    );
+    const out: (number | null)[] = lyrics.map((l) => (typeof l.time === "number" ? l.time : null));
     for (let i = out.length - 1; i >= 0; i--) {
       if (out[i] === null) {
         for (let j = i + 1; j < out.length; j++) {
-          if (out[j] !== null) { out[i] = out[j]; break; }
+          if (out[j] !== null) {
+            out[i] = out[j];
+            break;
+          }
         }
       }
     }
     for (let i = 0; i < out.length; i++) {
       if (out[i] === null) {
         for (let j = i - 1; j >= 0; j--) {
-          if (out[j] !== null) { out[i] = out[j]; break; }
+          if (out[j] !== null) {
+            out[i] = out[j];
+            break;
+          }
         }
       }
     }
@@ -408,15 +402,12 @@ function SongPlayer({
   const hasAudio = Boolean(song.media_url);
   const hasVideo = Boolean(song.video_url);
   const isCurated = song.source === "curated" && Boolean(song.youtube_id);
-  const [mediaMode, setMediaMode] = useState<"audio" | "video">(
-    hasVideo ? "video" : "audio",
-  );
+  const [mediaMode, setMediaMode] = useState<"audio" | "video">(hasVideo ? "video" : "audio");
   useEffect(() => {
     if (mediaMode === "video" && !hasVideo) setMediaMode("audio");
     if (mediaMode === "audio" && !hasAudio && hasVideo) setMediaMode("video");
   }, [hasAudio, hasVideo, mediaMode]);
-  const activeUrl =
-    mediaMode === "video" ? song.video_url : song.media_url;
+  const activeUrl = mediaMode === "video" ? song.video_url : song.media_url;
 
   // Active line: last line whose time <= currentTime, skipping section headers.
   const activeIdx = useMemo(() => {
@@ -496,9 +487,7 @@ function SongPlayer({
     [],
   );
 
-  const coverBg = song.cover_url
-    ? { backgroundImage: `url(${song.cover_url})` }
-    : undefined;
+  const coverBg = song.cover_url ? { backgroundImage: `url(${song.cover_url})` } : undefined;
 
   return (
     <div className="space-y-4">
@@ -534,29 +523,19 @@ function SongPlayer({
               style={{ animationDuration: "12s" }}
             >
               {song.cover_url ? (
-                <img
-                  src={song.cover_url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                <img src={song.cover_url} alt="" className="w-full h-full object-cover" />
               ) : (
                 <Music className="size-10" />
               )}
             </div>
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold truncate">
-                {song.title}
-              </h1>
+              <h1 className="text-2xl sm:text-3xl font-bold truncate">{song.title}</h1>
               {song.title_zh && (
-                <div className="text-lg text-muted-foreground truncate">
-                  {song.title_zh}
-                </div>
+                <div className="text-lg text-muted-foreground truncate">{song.title_zh}</div>
               )}
               {song.artist && (
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  by {song.artist}
-                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">by {song.artist}</div>
               )}
               <div className="flex gap-1.5 mt-2 flex-wrap">
                 <span className="rounded-full glass-soft px-2 py-0.5 text-[11px] font-semibold">
@@ -589,8 +568,7 @@ function SongPlayer({
                       : "실제 타이밍이 없어 글자 수로 추정한 값이라 조금씩 어긋날 수 있어요."
                   }
                 >
-                  {lyrics.length}줄{" "}
-                  {hasRealTimes ? "· 싱크" : hasTimes ? "· 추정 싱크" : "· 정적"}
+                  {lyrics.length}줄 {hasRealTimes ? "· 싱크" : hasTimes ? "· 추정 싱크" : "· 정적"}
                 </span>
                 {hasVideo && (
                   <span className="rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[11px] font-semibold">
@@ -645,20 +623,14 @@ function SongPlayer({
               <div className="flex gap-1.5 flex-wrap justify-end">
                 {hasAudio && (
                   <Button asChild variant="outline" size="sm">
-                    <a
-                      href={song.media_url!}
-                      download={`${song.title}.mp3`}
-                    >
+                    <a href={song.media_url!} download={`${song.title}.mp3`}>
                       <Download className="size-4 mr-1" /> MP3
                     </a>
                   </Button>
                 )}
                 {hasVideo && (
                   <Button asChild variant="outline" size="sm">
-                    <a
-                      href={song.video_url!}
-                      download={`${song.title}.mp4`}
-                    >
+                    <a href={song.video_url!} download={`${song.title}.mp4`}>
                       <Download className="size-4 mr-1" /> MP4
                     </a>
                   </Button>
@@ -760,13 +732,8 @@ function SongPlayer({
         />
       )}
 
-      {(song.status === "generating_audio" ||
-        song.status === "generating_video") && (
-        <SunoStatusPanel
-          song={song}
-          pollError={pollError ?? null}
-          retryAt={retryAt ?? null}
-        />
+      {(song.status === "generating_audio" || song.status === "generating_video") && (
+        <SunoStatusPanel song={song} pollError={pollError ?? null} retryAt={retryAt ?? null} />
       )}
 
       {/* ─── KARAOKE / LYRICS ─────────────────────────────────────── */}
@@ -780,9 +747,7 @@ function SongPlayer({
                 onClick={() => setShowPinyinPref(!showPinyin)}
                 className={[
                   "rounded-full px-2.5 py-1 font-semibold transition-colors",
-                  showPinyin
-                    ? "bg-primary/20 text-primary"
-                    : "glass-soft text-muted-foreground",
+                  showPinyin ? "bg-primary/20 text-primary" : "glass-soft text-muted-foreground",
                 ].join(" ")}
               >
                 병음 {showPinyin ? "ON" : "OFF"}
@@ -791,9 +756,7 @@ function SongPlayer({
                 onClick={() => setShowKoPref((v) => !v)}
                 className={[
                   "rounded-full px-2.5 py-1 font-semibold transition-colors",
-                  showKoPref
-                    ? "bg-primary/20 text-primary"
-                    : "glass-soft text-muted-foreground",
+                  showKoPref ? "bg-primary/20 text-primary" : "glass-soft text-muted-foreground",
                 ].join(" ")}
               >
                 한국어 {showKoPref ? "ON" : "OFF"}
@@ -801,9 +764,7 @@ function SongPlayer({
             </div>
 
             {lyrics.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-8">
-                가사가 아직 없어요.
-              </div>
+              <div className="text-sm text-muted-foreground py-8">가사가 아직 없어요.</div>
             ) : (
               <KaraokeStage
                 lyrics={lyrics}
@@ -830,10 +791,7 @@ function SongPlayer({
               </span>
             )}
           </div>
-          <div
-            ref={listRef}
-            className="max-h-[52vh] overflow-y-auto pr-1 space-y-1.5"
-          >
+          <div ref={listRef} className="max-h-[52vh] overflow-y-auto pr-1 space-y-1.5">
             {lyrics.map((line, i) => (
               <LyricRow
                 key={i}
@@ -907,11 +865,7 @@ function KaraokeStage({
   const next = nextIdx >= 0 ? lyrics[nextIdx] : null;
 
   if (!cur) {
-    return (
-      <div className="text-sm text-muted-foreground py-8">
-        가사가 아직 없어요.
-      </div>
-    );
+    return <div className="text-sm text-muted-foreground py-8">가사가 아직 없어요.</div>;
   }
 
   return (
@@ -923,33 +877,18 @@ function KaraokeStage({
           </span>
         </div>
       )}
-      {prev && (
-        <div className="text-base text-muted-foreground/60 truncate">
-          {prev.zh}
-        </div>
-      )}
+      {prev && <div className="text-base text-muted-foreground/60 truncate">{prev.zh}</div>}
       <div key={curIdx} className="animate-fade-in space-y-1.5">
-        <div className="text-3xl sm:text-4xl font-black leading-tight break-words">
-          {cur.zh}
-        </div>
+        <div className="text-3xl sm:text-4xl font-black leading-tight break-words">{cur.zh}</div>
         {showPinyin && cur.pinyin && (
-          <div className="text-base font-mono text-primary/80">
-            {cur.pinyin}
-          </div>
+          <div className="text-base font-mono text-primary/80">{cur.pinyin}</div>
         )}
-        {showKo && cur.ko && (
-          <div className="text-sm text-foreground/85">{cur.ko}</div>
-        )}
+        {showKo && cur.ko && <div className="text-sm text-foreground/85">{cur.ko}</div>}
       </div>
-      {next && (
-        <div className="text-base text-muted-foreground/60 truncate">
-          {next.zh}
-        </div>
-      )}
+      {next && <div className="text-base text-muted-foreground/60 truncate">{next.zh}</div>}
     </div>
   );
 }
-
 
 // ─── Player controls ──────────────────────────────────────────────────────
 function PlayerControls({
@@ -1042,11 +981,7 @@ function PlayerControls({
             onClick={onPlayPause}
             aria-label={isPlaying ? "일시정지" : "재생"}
           >
-            {isPlaying ? (
-              <Pause className="size-5" />
-            ) : (
-              <Play className="size-5 ml-0.5" />
-            )}
+            {isPlaying ? <Pause className="size-5" /> : <Play className="size-5 ml-0.5" />}
           </Button>
           <Button
             variant="ghost"
@@ -1086,10 +1021,7 @@ function PlayerControls({
             title={loopLine ? "반복 끄기" : "현재 가사 반복"}
           >
             <Repeat
-              className={[
-                "size-4",
-                loopLine ? "text-primary" : "text-muted-foreground",
-              ].join(" ")}
+              className={["size-4", loopLine ? "text-primary" : "text-muted-foreground"].join(" ")}
             />
           </Button>
           <Button
@@ -1099,11 +1031,7 @@ function PlayerControls({
             onClick={onMuteToggle}
             aria-label={muted ? "음소거 해제" : "음소거"}
           >
-            {muted ? (
-              <VolumeX className="size-4" />
-            ) : (
-              <Volume2 className="size-4" />
-            )}
+            {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
           </Button>
         </div>
       </div>
@@ -1221,11 +1149,7 @@ function NativeMediaSurface({
     );
   }
   return (
-    <audio
-      ref={ref as unknown as React.RefObject<HTMLAudioElement>}
-      src={url}
-      className="hidden"
-    />
+    <audio ref={ref as unknown as React.RefObject<HTMLAudioElement>} src={url} className="hidden" />
   );
 }
 
@@ -1241,13 +1165,7 @@ function triggerCls(done: boolean): string {
 }
 
 // ─── Learning tabs ─────────────────────────────────────────────────────────
-function SongLessonTabs({
-  song,
-  onSeek,
-}: {
-  song: SongRow;
-  onSeek?: (t: number) => void;
-}) {
+function SongLessonTabs({ song, onSeek }: { song: SongRow; onSeek?: (t: number) => void }) {
   const vocab = Array.isArray(song.vocab) ? song.vocab : [];
   const notes = Array.isArray(song.grammar_notes) ? song.grammar_notes : [];
   const lyricLines = Array.isArray(song.lyrics) ? song.lyrics : [];
@@ -1260,32 +1178,18 @@ function SongLessonTabs({
   // read the localStorage list. Clicks add to this set live.
   const { data: savedList } = useQuery({
     queryKey: ["vocab", profile?.id ?? "guest"],
-    queryFn: () =>
-      profile?.id
-        ? listVocabulary()
-        : Promise.resolve(loadGuestVocab()),
+    queryFn: () => (profile?.id ? listVocabulary() : Promise.resolve(loadGuestVocab())),
   });
   const [savedZh, setSavedZh] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (savedList) setSavedZh(new Set(savedList.map((v) => v.zh)));
   }, [savedList]);
-  const markSaved = useCallback(
-    (zh: string) => setSavedZh((prev) => new Set(prev).add(zh)),
-    [],
-  );
+  const markSaved = useCallback((zh: string) => setSavedZh((prev) => new Set(prev).add(zh)), []);
 
-  const {
-    progress,
-    markVocab,
-    markGrammar,
-    markCloze,
-    markOrder,
-    markRepeat,
-    reset,
-  } = useSongProgress(song.id);
+  const { progress, markVocab, markGrammar, markCloze, markOrder, markRepeat, reset } =
+    useSongProgress(song.id);
 
-  const empty =
-    vocab.length === 0 && notes.length === 0 && lyricLines.length === 0;
+  const empty = vocab.length === 0 && notes.length === 0 && lyricLines.length === 0;
 
   if (empty) {
     return (
@@ -1361,12 +1265,16 @@ function SongLessonTabs({
         <TabsList className="w-full flex flex-wrap gap-1.5 h-auto bg-transparent p-0 justify-start">
           <TabsTrigger value="vocab" className={triggerCls(vocabDone)}>
             <span className="text-base leading-none">📖</span> 단어
-            <span className="ml-1 text-[10px] font-mono opacity-75">{progress.vocab.length}/{vocab.length}</span>
+            <span className="ml-1 text-[10px] font-mono opacity-75">
+              {progress.vocab.length}/{vocab.length}
+            </span>
             {vocabDone && <span className="ml-0.5">✅</span>}
           </TabsTrigger>
           <TabsTrigger value="grammar" className={triggerCls(grammarDone)}>
             <span className="text-base leading-none">✍️</span> 문법
-            <span className="ml-1 text-[10px] font-mono opacity-75">{progress.grammar.length}/{notes.length}</span>
+            <span className="ml-1 text-[10px] font-mono opacity-75">
+              {progress.grammar.length}/{notes.length}
+            </span>
             {grammarDone && <span className="ml-0.5">✅</span>}
           </TabsTrigger>
           {vocab.length > 0 && lyricLines.length > 0 && (
@@ -1384,7 +1292,9 @@ function SongLessonTabs({
           {hasTimes && onSeek && (
             <TabsTrigger value="repeat" className={triggerCls(repeatDone)}>
               <span className="text-base leading-none">🎤</span> 따라 부르기
-              <span className="ml-1 text-[10px] font-mono opacity-75">{progress.repeat.length}/{timedLines.length}</span>
+              <span className="ml-1 text-[10px] font-mono opacity-75">
+                {progress.repeat.length}/{timedLines.length}
+              </span>
               {repeatDone && <span className="ml-0.5">✅</span>}
             </TabsTrigger>
           )}
@@ -1464,13 +1374,8 @@ function SongLessonTabs({
   );
 }
 
-
 function EmptyMsg({ text }: { text: string }) {
-  return (
-    <div className="text-center text-sm text-muted-foreground py-8">
-      {text}
-    </div>
-  );
+  return <div className="text-center text-sm text-muted-foreground py-8">{text}</div>;
 }
 
 // ─── Cloze (빈칸 채우기) ────────────────────────────────────────────────
@@ -1500,12 +1405,9 @@ function ClozeActivity({
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [revealed, setRevealed] = useState(false);
 
-  if (items.length === 0)
-    return <EmptyMsg text="가사에서 빈칸을 만들 단어를 찾지 못했어요." />;
+  if (items.length === 0) return <EmptyMsg text="가사에서 빈칸을 만들 단어를 찾지 못했어요." />;
 
-  const correct = items.filter(
-    (it) => (answers[it.idx] ?? "").trim() === it.answer,
-  ).length;
+  const correct = items.filter((it) => (answers[it.idx] ?? "").trim() === it.answer).length;
   const pct = Math.round((correct / items.length) * 100);
 
   return (
@@ -1513,9 +1415,7 @@ function ClozeActivity({
       <div className="flex items-center gap-2 flex-wrap">
         <Sparkles className="size-4 text-primary" />
         <h3 className="font-bold">가사 속 핵심 단어 맞추기</h3>
-        <span className="text-[11px] text-muted-foreground">
-          {items.length}문항
-        </span>
+        <span className="text-[11px] text-muted-foreground">{items.length}문항</span>
         {revealed && (
           <span className="ml-auto text-xs font-semibold text-primary">
             {correct}/{items.length} · {pct}%
@@ -1553,10 +1453,7 @@ function ClozeActivity({
                 <span>{parts.slice(1).join(it.answer)}</span>
                 {revealed && (
                   <span
-                    className={[
-                      "ml-1 text-lg",
-                      ok ? "animate-fade-in" : "opacity-70",
-                    ].join(" ")}
+                    className={["ml-1 text-lg", ok ? "animate-fade-in" : "opacity-70"].join(" ")}
                   >
                     {ok ? "✅" : "❌"}
                   </span>
@@ -1564,10 +1461,7 @@ function ClozeActivity({
               </div>
               {revealed && !ok && (
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  정답:{" "}
-                  <span className="font-semibold text-emerald-600">
-                    {it.answer}
-                  </span>
+                  정답: <span className="font-semibold text-emerald-600">{it.answer}</span>
                 </div>
               )}
             </li>
@@ -1611,17 +1505,14 @@ function LineOrderActivity({
   completed: boolean;
   onComplete: () => void;
 }) {
-  const base = useMemo(
-    () => lyrics.slice(0, Math.min(6, lyrics.length)),
-    [lyrics],
-  );
+  const base = useMemo(() => lyrics.slice(0, Math.min(6, lyrics.length)), [lyrics]);
   const [order, setOrder] = useState<number[]>(() => [...base.keys()]);
   const [revealed, setRevealed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setOrder([...base.keys()].sort(() => Math.random() - 0.5));
+    setOrder(shuffle([...base.keys()]));
   }, [base]);
 
   const move = (from: number, to: number) => {
@@ -1639,14 +1530,10 @@ function LineOrderActivity({
       <div className="flex items-center gap-2">
         <Music className="size-4 text-primary" />
         <h3 className="font-bold">가사 순서 맞추기</h3>
-        <span className="text-[11px] text-muted-foreground">
-          위/아래 버튼으로 원래 순서로 정렬
-        </span>
+        <span className="text-[11px] text-muted-foreground">위/아래 버튼으로 원래 순서로 정렬</span>
       </div>
       {!mounted ? (
-        <div className="text-xs text-muted-foreground py-4 text-center">
-          문제 준비 중…
-        </div>
+        <div className="text-xs text-muted-foreground py-4 text-center">문제 준비 중…</div>
       ) : (
         <ol className="space-y-2 text-sm">
           {order.map((originalIdx, pos) => {
@@ -1683,9 +1570,7 @@ function LineOrderActivity({
                 <div className="flex-1">
                   <div className="font-medium">{line.zh}</div>
                   {line.pinyin && (
-                    <div className="text-[11px] font-mono text-primary/70">
-                      {line.pinyin}
-                    </div>
+                    <div className="text-[11px] font-mono text-primary/70">{line.pinyin}</div>
                   )}
                 </div>
               </li>
@@ -1702,7 +1587,7 @@ function LineOrderActivity({
             size="sm"
             variant="ghost"
             onClick={() => {
-              setOrder([...base.keys()].sort(() => Math.random() - 0.5));
+              setOrder(shuffle([...base.keys()]));
               setRevealed(false);
             }}
           >
@@ -1735,37 +1620,27 @@ function RepeatAfterMe({
   playedKeys: string[];
   onPlayed: (zh: string) => void;
 }) {
-  const timed = useMemo(
-    () => lyrics.filter((l) => typeof l.time === "number"),
-    [lyrics],
-  );
+  const timed = useMemo(() => lyrics.filter((l) => typeof l.time === "number"), [lyrics]);
   const [i, setI] = useState(0);
-  if (timed.length === 0)
-    return <EmptyMsg text="타임코드가 있는 가사가 필요해요." />;
+  if (timed.length === 0) return <EmptyMsg text="타임코드가 있는 가사가 필요해요." />;
   const cur = timed[i];
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Sparkles className="size-4 text-primary" />
         <h3 className="font-bold">따라 부르기</h3>
-        <span className="text-[11px] text-muted-foreground">
-          한 줄씩 재생하며 따라 해보세요
-        </span>
+        <span className="text-[11px] text-muted-foreground">한 줄씩 재생하며 따라 해보세요</span>
       </div>
       <div className="glass-soft rounded-2xl p-5 text-center space-y-1">
         <div className="text-[11px] text-muted-foreground flex items-center justify-center gap-1">
-          <span>{i + 1} / {timed.length}</span>
-          {playedKeys.includes(cur.zh) && (
-            <span className="text-emerald-600">· 재생함 ✅</span>
-          )}
+          <span>
+            {i + 1} / {timed.length}
+          </span>
+          {playedKeys.includes(cur.zh) && <span className="text-emerald-600">· 재생함 ✅</span>}
         </div>
         <div className="text-2xl font-bold">{cur.zh}</div>
-        {cur.pinyin && (
-          <div className="text-sm font-mono text-primary/80">{cur.pinyin}</div>
-        )}
-        {cur.ko && (
-          <div className="text-xs text-muted-foreground">{cur.ko}</div>
-        )}
+        {cur.pinyin && <div className="text-sm font-mono text-primary/80">{cur.pinyin}</div>}
+        {cur.ko && <div className="text-xs text-muted-foreground">{cur.ko}</div>}
       </div>
       <div className="flex items-center justify-center gap-2">
         <Button
@@ -1870,10 +1745,7 @@ function VocabCard({
 
   return (
     <div
-      className={[
-        "song-flip min-h-[140px] relative",
-        flipped ? "is-flipped" : "",
-      ].join(" ")}
+      className={["song-flip min-h-[140px] relative", flipped ? "is-flipped" : ""].join(" ")}
       style={{ perspective: 900 }}
     >
       {/* Save-to-vocab overlay. Kept outside the flip <button> — a button
@@ -1938,14 +1810,8 @@ function VocabCard({
             </span>
           )}
           <div className="relative space-y-1">
-            <div className="text-2xl font-bold leading-tight break-words">
-              {item.zh}
-            </div>
-            {item.pinyin && (
-              <div className="text-xs font-mono text-primary/80">
-                {item.pinyin}
-              </div>
-            )}
+            <div className="text-2xl font-bold leading-tight break-words">{item.zh}</div>
+            {item.pinyin && <div className="text-xs font-mono text-primary/80">{item.pinyin}</div>}
             <div className="text-[10px] text-foreground/60 mt-1 flex items-center gap-1">
               <Volume2 className="size-3" /> 눌러서 뜻 보기
             </div>
@@ -1959,19 +1825,13 @@ function VocabCard({
           ].join(" ")}
         >
           <div className="space-y-1">
-            {item.ko && (
-              <div className="text-base font-semibold text-foreground">
-                {item.ko}
-              </div>
-            )}
+            {item.ko && <div className="text-base font-semibold text-foreground">{item.ko}</div>}
             {item.example && (
               <div className="text-[11px] text-foreground/75 line-clamp-4 leading-relaxed">
                 {item.example}
               </div>
             )}
-            <div className="text-[10px] text-foreground/60 mt-1">
-              다시 눌러 뒤집기
-            </div>
+            <div className="text-[10px] text-foreground/60 mt-1">다시 눌러 뒤집기</div>
           </div>
         </div>
       </button>
@@ -2030,13 +1890,9 @@ function GrammarNoteRow({
             <Volume2 className="size-3.5 opacity-60" />
           </button>
           {note.pinyin && (
-            <div className="text-xs font-mono text-primary/80 mt-0.5">
-              {note.pinyin}
-            </div>
+            <div className="text-xs font-mono text-primary/80 mt-0.5">{note.pinyin}</div>
           )}
-          {note.ko && (
-            <div className="text-sm text-foreground/85 mt-1">{note.ko}</div>
-          )}
+          {note.ko && <div className="text-sm text-foreground/85 mt-1">{note.ko}</div>}
           {note.explanation && (
             <p className="text-xs text-muted-foreground mt-2 leading-relaxed border-l-2 border-primary/20 pl-2">
               {note.explanation}
@@ -2048,8 +1904,6 @@ function GrammarNoteRow({
   );
 }
 
-
-
 function MakeLessonContentButton({ song }: { song: SongRow }) {
   const { data: profile } = useMyProfile();
   const qc = useQueryClient();
@@ -2060,13 +1914,11 @@ function MakeLessonContentButton({ song }: { song: SongRow }) {
       toast.success("강의 콘텐츠를 생성했어요 📚");
       qc.invalidateQueries({ queryKey: ["song", song.id] });
     },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "강의 콘텐츠 생성 실패"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "강의 콘텐츠 생성 실패"),
   });
 
   if (!isEditor) return null;
-  const hasContent =
-    (song.vocab?.length ?? 0) > 0 || (song.grammar_notes?.length ?? 0) > 0;
+  const hasContent = (song.vocab?.length ?? 0) > 0 || (song.grammar_notes?.length ?? 0) > 0;
   return (
     <Button
       size="sm"
@@ -2075,11 +1927,7 @@ function MakeLessonContentButton({ song }: { song: SongRow }) {
       disabled={mutation.isPending}
     >
       <BookOpen className="size-4 mr-1" />
-      {mutation.isPending
-        ? "생성 중…"
-        : hasContent
-          ? "강의 콘텐츠 재생성"
-          : "강의 콘텐츠 생성"}
+      {mutation.isPending ? "생성 중…" : hasContent ? "강의 콘텐츠 재생성" : "강의 콘텐츠 생성"}
     </Button>
   );
 }
@@ -2095,8 +1943,7 @@ function ReannotateButton({ song }: { song: SongRow }) {
       toast.success("병음/번역을 다시 만들었어요 🈶");
       qc.invalidateQueries({ queryKey: ["song", song.id] });
     },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "병음/번역 재생성 실패"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "병음/번역 재생성 실패"),
   });
 
   if (!isEditor) return null;
@@ -2113,7 +1960,6 @@ function ReannotateButton({ song }: { song: SongRow }) {
     </Button>
   );
 }
-
 
 // Editor-only: set the genre / theme a song is filtered under. AI songs infer
 // both from their style preset and lyric keyword, but curated songs have
@@ -2138,15 +1984,10 @@ function TaxonomyEditor({ song }: { song: SongRow }) {
     <>
       <Select
         value={song.genre ?? "_"}
-        onValueChange={(v) =>
-          mutation.mutate({ genre: v === "_" ? null : (v as SongGenre) })
-        }
+        onValueChange={(v) => mutation.mutate({ genre: v === "_" ? null : (v as SongGenre) })}
         disabled={mutation.isPending}
       >
-        <SelectTrigger
-          className="h-8 w-40 text-xs"
-          title="목록에서 이 곡이 묶일 장르예요."
-        >
+        <SelectTrigger className="h-8 w-40 text-xs" title="목록에서 이 곡이 묶일 장르예요.">
           <SelectValue placeholder="장르 지정" />
         </SelectTrigger>
         <SelectContent>
@@ -2160,15 +2001,10 @@ function TaxonomyEditor({ song }: { song: SongRow }) {
       </Select>
       <Select
         value={song.theme ?? "_"}
-        onValueChange={(v) =>
-          mutation.mutate({ theme: v === "_" ? null : (v as SongTheme) })
-        }
+        onValueChange={(v) => mutation.mutate({ theme: v === "_" ? null : (v as SongTheme) })}
         disabled={mutation.isPending}
       >
-        <SelectTrigger
-          className="h-8 w-40 text-xs"
-          title="목록에서 이 곡이 묶일 주제예요."
-        >
+        <SelectTrigger className="h-8 w-40 text-xs" title="목록에서 이 곡이 묶일 주제예요.">
           <SelectValue placeholder="주제 지정" />
         </SelectTrigger>
         <SelectContent>
@@ -2195,8 +2031,7 @@ function ResyncLyricsButton({ song }: { song: SongRow }) {
       toast.success("가사 싱크를 다시 맞췄어요 🎯");
       qc.invalidateQueries({ queryKey: ["song", song.id] });
     },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "싱크 재조정 실패"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "싱크 재조정 실패"),
   });
 
   if (!isEditor) return null;
@@ -2227,8 +2062,7 @@ function RetryMp4Button({ song }: { song: SongRow }) {
       toast.success("MP4 영상 생성을 다시 시작했어요 🎬");
       qc.invalidateQueries({ queryKey: ["song", song.id] });
     },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "영상 재생성 실패"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "영상 재생성 실패"),
   });
 
   if (!isEditor) return null;
@@ -2303,13 +2137,7 @@ function LyricRow({
         pulseClass,
       ].join(" ")}
     >
-
-      <div
-        className={[
-          "font-semibold leading-snug",
-          active ? "text-lg" : "text-base",
-        ].join(" ")}
-      >
+      <div className={["font-semibold leading-snug", active ? "text-lg" : "text-base"].join(" ")}>
         {line.zh}
       </div>
       {showPinyin && line.pinyin && (
@@ -2324,10 +2152,7 @@ function LyricRow({
       )}
       {showKo && line.ko && (
         <div
-          className={[
-            "text-xs mt-0.5",
-            active ? "opacity-90" : "text-muted-foreground",
-          ].join(" ")}
+          className={["text-xs mt-0.5", active ? "opacity-90" : "text-muted-foreground"].join(" ")}
         >
           {line.ko}
         </div>
@@ -2335,7 +2160,6 @@ function LyricRow({
     </button>
   );
 }
-
 
 // ─── Suno status panel (client-only elapsed to avoid hydration mismatch) ──
 function SunoStatusPanel({
@@ -2357,26 +2181,18 @@ function SunoStatusPanel({
   const isVideo = song.status === "generating_video";
   const totalSec = isVideo ? EST_VIDEO_SEC : EST_AUDIO_SEC;
   const start = new Date(song.created_at).getTime();
-  const elapsed =
-    now === null ? 0 : Math.max(0, Math.round((now - start) / 1000));
+  const elapsed = now === null ? 0 : Math.max(0, Math.round((now - start) / 1000));
   const pct =
-    elapsed < totalSec
-      ? (elapsed / totalSec) * 95
-      : Math.min(99.9, 95 + (elapsed - totalSec) / 60);
+    elapsed < totalSec ? (elapsed / totalSec) * 95 : Math.min(99.9, 95 + (elapsed - totalSec) / 60);
   const remaining = Math.max(0, totalSec - elapsed);
   const rateLimited = isRateLimitedMessage(pollError);
-  const retryIn =
-    retryAt && now !== null
-      ? Math.max(0, Math.ceil((retryAt - now) / 1000))
-      : 0;
+  const retryIn = retryAt && now !== null ? Math.max(0, Math.ceil((retryAt - now) / 1000)) : 0;
 
   return (
     <div className="glass rounded-3xl p-4 border border-primary/30 bg-primary/5 space-y-3">
       <div className="flex items-center gap-2 text-sm font-semibold text-primary">
         <Loader2 className="size-4 animate-spin" />
-        {isVideo
-          ? "🎬 Suno가 MP4 영상을 만들고 있어요"
-          : "🎙️ Suno가 음원을 만들고 있어요"}
+        {isVideo ? "🎬 Suno가 MP4 영상을 만들고 있어요" : "🎙️ Suno가 음원을 만들고 있어요"}
         {now !== null && (
           <span className="ml-auto text-[11px] font-normal text-muted-foreground">
             경과 {fmtSecKor(elapsed)}
@@ -2389,8 +2205,7 @@ function SunoStatusPanel({
         <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-100/70 rounded-2xl px-3 py-2">
           <Loader2 className="size-3.5 animate-spin" />
           <span>
-            Suno 요청 한도 초과 —{" "}
-            {retryIn > 0 ? `${retryIn}초 후 자동 재시도` : "재시도 중…"}
+            Suno 요청 한도 초과 — {retryIn > 0 ? `${retryIn}초 후 자동 재시도` : "재시도 중…"}
           </span>
         </div>
       ) : pollError ? (

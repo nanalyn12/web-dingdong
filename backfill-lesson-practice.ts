@@ -40,9 +40,9 @@ const { rows } = await c.query(`
 console.log(`대상 강의: ${rows.length}개${dry ? " (dry run)" : ""}\n`);
 
 if (dry) {
-  rows.slice(0, limit).forEach((r, i) =>
-    console.log(`  ${i + 1}. ${String(r.title).slice(0, 50)}`),
-  );
+  rows
+    .slice(0, limit)
+    .forEach((r, i) => console.log(`  ${i + 1}. ${String(r.title).slice(0, 50)}`));
   const orphan = await c.query(`
     select count(*)::int n from lessons l
      where jsonb_array_length(coalesce(l.slides,'[]'::jsonb)) = 0
@@ -60,22 +60,14 @@ const failed: { title: string; reason: string }[] = [];
 for (const [i, row] of rows.slice(0, limit).entries()) {
   const tag = `[${i + 1}/${Math.min(rows.length, limit)}] ${String(row.title).slice(0, 38)}`;
   try {
-    const e = await buildLessonEnrichment(
-      row.config as VideoJobConfig,
-      row.script as VideoScript,
-    );
+    const e = await buildLessonEnrichment(row.config as VideoJobConfig, row.script as VideoScript);
     if (e.slides.length === 0 && e.dialogues.length === 0) {
       throw new Error("AI가 빈 결과를 반환");
     }
     await c.query(
       `update lessons set dialogues = $1, slides = $2, quiz = $3, updated_at = now()
         where id = $4`,
-      [
-        JSON.stringify(e.dialogues),
-        JSON.stringify(e.slides),
-        JSON.stringify(e.quiz),
-        row.id,
-      ],
+      [JSON.stringify(e.dialogues), JSON.stringify(e.slides), JSON.stringify(e.quiz), row.id],
     );
     filled++;
     console.log(

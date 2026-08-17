@@ -25,16 +25,8 @@ const TeacherApplyInput = z.object({
     .trim()
     .regex(/^[0-9+\-\s()]{9,20}$/, "올바른 전화번호 형식이 아니에요."),
   job: JobEnum,
-  school: z
-    .string()
-    .trim()
-    .min(2, "재직/강의 중인 학교 이름을 입력해 주세요.")
-    .max(100),
-  department: z
-    .string()
-    .trim()
-    .min(1, "학과를 입력해 주세요.")
-    .max(100),
+  school: z.string().trim().min(2, "재직/강의 중인 학교 이름을 입력해 주세요.").max(100),
+  department: z.string().trim().min(1, "학과를 입력해 주세요.").max(100),
 });
 
 /** Student requests teacher role with contact info + application note. */
@@ -133,9 +125,6 @@ export const decideTeacher = createServerFn({ method: "POST" })
       data.decision === "approve"
         ? { role: "teacher" as const, teacher_status: "approved" as const }
         : { teacher_status: "rejected" as const };
-    await db
-      .update(tables.profiles)
-      .set(patch)
-      .where(eq(tables.profiles.id, data.userId));
+    await db.update(tables.profiles).set(patch).where(eq(tables.profiles.id, data.userId));
     return { ok: true };
   });

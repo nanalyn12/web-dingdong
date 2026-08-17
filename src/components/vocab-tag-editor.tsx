@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { Check, Plus, Tag as TagIcon, X } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 

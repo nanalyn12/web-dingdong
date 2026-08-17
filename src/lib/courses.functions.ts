@@ -3,6 +3,7 @@ import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
+import { isEditorRole } from "@/lib/roles";
 
 const LevelEnum = z.enum(["beginner", "intermediate", "advanced"]);
 
@@ -24,8 +25,7 @@ export async function getRole(userId: string): Promise<string | null> {
 }
 
 export async function assertEditor(userId: string) {
-  const role = await getRole(userId);
-  if (role !== "teacher" && role !== "admin") {
+  if (!isEditorRole(await getRole(userId))) {
     throw new Error("권한이 없습니다. teacher 또는 admin만 수행할 수 있어요.");
   }
 }
@@ -361,10 +361,7 @@ async function syncCourseWeeks(tx: SqlRunner, courseId: string) {
     WHERE id = ${courseId}`);
 }
 
-type DbOrTx = Pick<
-  typeof import("@/db").db,
-  "select" | "update" | "insert" | "delete" | "execute"
->;
+type DbOrTx = Pick<typeof import("@/db").db, "select" | "update" | "insert" | "delete" | "execute">;
 
 /** Move lessons into targetCourseId (appended at the end, original order kept). */
 async function moveLessonRows(
@@ -375,10 +372,7 @@ async function moveLessonRows(
   const { tables } = await import("@/db");
   const moving = lessonRows
     .filter((l) => l.course_id !== targetCourseId)
-    .sort(
-      (a, b) =>
-        a.course_id.localeCompare(b.course_id) || a.order_index - b.order_index,
-    );
+    .sort((a, b) => a.course_id.localeCompare(b.course_id) || a.order_index - b.order_index);
   if (moving.length === 0) return { movedCount: 0, sourceCourseIds: [] as string[] };
 
   const [{ maxIdx }] = await tx
@@ -437,9 +431,7 @@ export const moveLessons = createServerFn({ method: "POST" })
       throw new Error("본인이 만든 세부 강의만 이동할 수 있어요.");
     }
 
-    const moved = await db.transaction((tx) =>
-      moveLessonRows(tx, lessons, data.targetCourseId),
-    );
+    const moved = await db.transaction((tx) => moveLessonRows(tx, lessons, data.targetCourseId));
     return { ok: true as const, moved: moved.movedCount };
   });
 
@@ -486,9 +478,7 @@ export const mergeCourses = createServerFn({ method: "POST" })
 
     const moved = await db.transaction(async (tx) => {
       const r = await moveLessonRows(tx, lessons, data.targetCourseId);
-      await tx
-        .delete(tables.courses)
-        .where(eq(tables.courses.id, data.sourceCourseId));
+      await tx.delete(tables.courses).where(eq(tables.courses.id, data.sourceCourseId));
       return r;
     });
     return { ok: true as const, moved: moved.movedCount };

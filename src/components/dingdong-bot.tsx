@@ -11,6 +11,13 @@ import { cn } from "@/lib/utils";
 import { useDraggableFab } from "@/lib/use-draggable-fab";
 import pandaImg from "@/assets/hero-dingdong.png";
 import { FAQ_CATEGORIES, FAQ_ITEMS, type FaqCategory } from "@/lib/dingdong-faq";
+import type {
+  SpeechRecognitionCtor,
+  SpeechRecognitionErrorEventLike,
+  SpeechRecognitionLike,
+  SpeechRecognitionResultEventLike,
+  SpeechRecognitionWindow,
+} from "@/lib/speech-recognition";
 
 // Strip markdown syntax, brackets, and emoji for natural spoken/displayed text.
 function sanitizeForSpeech(raw: string): string {
@@ -21,14 +28,12 @@ function sanitizeForSpeech(raw: string): string {
   s = s.replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, "$1");
   s = s.replace(/[*_#>]+/g, " ");
   // Bracketed emphasis like [강의 목록], 【…】, 「…」, 《…》
-  s = s.replace(/[\[\]【】「」『』《》()()]/g, " ");
+  s = s.replace(/[[\]【】「」『』《》()()]/g, " ");
   // Emoji / pictographs
   s = s.replace(/\p{Extended_Pictographic}/gu, " ");
   // Collapse whitespace
   return s.replace(/\s+/g, " ").trim();
 }
-
-
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 type Segment = { lang: "zh" | "ko"; text: string };
@@ -106,9 +111,10 @@ function speakBilingual(text: string, onDone?: () => void) {
   };
 }
 
-function getSpeechRecognition(): any {
+function getSpeechRecognition(): SpeechRecognitionCtor | null {
   if (typeof window === "undefined") return null;
-  return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const w = window as unknown as SpeechRecognitionWindow;
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
 /** Turn a SpeechRecognition error code into a message that tells the user what
@@ -155,12 +161,11 @@ export function DingDongBot() {
   const [scrolling, setScrolling] = useState(false);
 
   const stopSpeakRef = useRef<(() => void) | null>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const sendFn = useServerFn(assistantChat);
   const navigate = useNavigate();
   const historyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -256,7 +261,6 @@ export function DingDongBot() {
     return () => cancelAnimationFrame(raf);
   }, [speaking]);
 
-
   const lastAssistant = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === "assistant") return messages[i].content;
@@ -298,11 +302,14 @@ export function DingDongBot() {
         }, 50);
       }
       if (res.navigateTo) {
-        setTimeout(() => {
-          navigate({ to: res.navigateTo! as string } as never).catch(() => {});
-          stopSpeaking();
-          setOpen(false);
-        }, fromVoice ? 1800 : 600);
+        setTimeout(
+          () => {
+            navigate({ to: res.navigateTo! as string } as never).catch(() => {});
+            stopSpeaking();
+            setOpen(false);
+          },
+          fromVoice ? 1800 : 600,
+        );
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "응답을 받지 못했어요.";
@@ -321,9 +328,7 @@ export function DingDongBot() {
   const toggleListening = () => {
     const SR = getSpeechRecognition();
     if (!SR) {
-      setMicError(
-        "이 브라우저는 음성 입력을 지원하지 않아요. Chrome이나 Edge에서 열어주세요.",
-      );
+      setMicError("이 브라우저는 음성 입력을 지원하지 않아요. Chrome이나 Edge에서 열어주세요.");
       return;
     }
     if (listening) {
@@ -335,7 +340,7 @@ export function DingDongBot() {
     rec.lang = sttLang;
     rec.interimResults = false;
     rec.maxAlternatives = 1;
-    rec.onresult = (ev: any) => {
+    rec.onresult = (ev: SpeechRecognitionResultEventLike) => {
       const transcript = ev.results[0]?.[0]?.transcript ?? "";
       if (transcript) {
         setMicError(null);
@@ -345,7 +350,7 @@ export function DingDongBot() {
     rec.onend = () => setListening(false);
     // A silent onerror was the whole problem: a blocked mic just stopped with
     // no hint. Map the SpeechRecognition error code to something actionable.
-    rec.onerror = (ev: any) => {
+    rec.onerror = (ev: SpeechRecognitionErrorEventLike) => {
       setListening(false);
       setMicError(micErrorMessage(ev?.error));
     };
@@ -375,10 +380,7 @@ export function DingDongBot() {
     }, 80);
   };
 
-  const faqsInCat = useMemo(
-    () => FAQ_ITEMS.filter((f) => f.category === faqCat),
-    [faqCat],
-  );
+  const faqsInCat = useMemo(() => FAQ_ITEMS.filter((f) => f.category === faqCat), [faqCat]);
 
   return (
     <>
@@ -395,7 +397,9 @@ export function DingDongBot() {
           // Snapped left, the caption has to sit on the button's right or it
           // would run off the screen.
           fab.side === "left" && "flex-row-reverse",
-          fab.dragging ? "cursor-grabbing transition-none" : "cursor-grab transition-[opacity,top,left,right] duration-200",
+          fab.dragging
+            ? "cursor-grabbing transition-none"
+            : "cursor-grab transition-[opacity,top,left,right] duration-200",
           scrolling && !fab.dragging && !hovering ? "opacity-40" : "opacity-100",
           open && "hidden",
         )}
@@ -455,7 +459,6 @@ export function DingDongBot() {
           )}
         </button>
       </div>
-
 
       {/* Center stage overlay */}
       {open && (
@@ -546,7 +549,6 @@ export function DingDongBot() {
               )}
             </div>
 
-
             {/* Mini history (collapsed unless multiple) */}
             {messages.length > 1 && (
               <div
@@ -561,9 +563,7 @@ export function DingDongBot() {
                       m.role === "user" ? "text-right text-primary" : "text-muted-foreground",
                     )}
                   >
-                    <span className="font-medium">
-                      {m.role === "user" ? "나" : "叮叮"}:
-                    </span>{" "}
+                    <span className="font-medium">{m.role === "user" ? "나" : "叮叮"}:</span>{" "}
                     {m.content}
                   </div>
                 ))}
@@ -707,7 +707,6 @@ export function DingDongBot() {
               </>
             )}
           </div>
-
         </div>
       )}
     </>

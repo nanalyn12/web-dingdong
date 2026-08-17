@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import { USERNAME_RE, usernameToEmail } from "@/lib/local-account";
 import { ensureProfile } from "@/lib/profile.functions";
 
 const searchSchema = z.object({
@@ -19,12 +20,6 @@ export const Route = createFileRoute("/auth")({
   }),
   component: AuthPage,
 });
-
-const USERNAME_DOMAIN = "dingdong.local";
-const usernameRegex = /^[a-zA-Z0-9._-]{3,30}$/;
-function usernameToEmail(u: string) {
-  return `${u.trim().toLowerCase()}@${USERNAME_DOMAIN}`;
-}
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -48,7 +43,7 @@ function AuthPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!usernameRegex.test(username)) {
+    if (!USERNAME_RE.test(username)) {
       toast.error("아이디는 영문/숫자/._- 3~30자로 입력해 주세요.");
       return;
     }
@@ -144,9 +139,7 @@ function AuthPage() {
             className="rounded-2xl bg-white/60 border border-border px-4 py-3 outline-none focus:ring-2 focus:ring-ring"
             placeholder="예: admin"
           />
-          <label className="text-xs font-medium text-muted-foreground mt-2">
-            비밀번호
-          </label>
+          <label className="text-xs font-medium text-muted-foreground mt-2">비밀번호</label>
           <input
             type="password"
             required
@@ -169,9 +162,7 @@ function AuthPage() {
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
           className="mt-4 w-full text-sm text-muted-foreground hover:text-foreground"
         >
-          {mode === "login"
-            ? "계정이 없으신가요? 회원가입"
-            : "이미 계정이 있으신가요? 로그인"}
+          {mode === "login" ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인"}
         </button>
       </div>
     </div>
@@ -181,10 +172,22 @@ function AuthPage() {
 function GoogleIcon() {
   return (
     <svg className="size-5" viewBox="0 0 48 48" aria-hidden>
-      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.6 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z" />
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.6 6.5 29 4.5 24 4.5c-7.3 0-13.6 4.1-16.7 10.2z" />
-      <path fill="#4CAF50" d="M24 43.5c5 0 9.5-1.9 12.9-5l-6-4.9c-1.9 1.3-4.3 2-6.9 2-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.7 39.4 16.3 43.5 24 43.5z" />
-      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.4 5.6l6 4.9c-.4.4 6.6-4.8 6.6-14.5 0-1.2-.1-2.4-.4-3.5z" />
+      <path
+        fill="#FFC107"
+        d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.6 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"
+      />
+      <path
+        fill="#FF3D00"
+        d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.6 6.5 29 4.5 24 4.5c-7.3 0-13.6 4.1-16.7 10.2z"
+      />
+      <path
+        fill="#4CAF50"
+        d="M24 43.5c5 0 9.5-1.9 12.9-5l-6-4.9c-1.9 1.3-4.3 2-6.9 2-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.7 39.4 16.3 43.5 24 43.5z"
+      />
+      <path
+        fill="#1976D2"
+        d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.4 5.6l6 4.9c-.4.4 6.6-4.8 6.6-14.5 0-1.2-.1-2.4-.4-3.5z"
+      />
     </svg>
   );
 }

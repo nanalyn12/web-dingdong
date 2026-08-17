@@ -66,10 +66,10 @@ function CurriculumPage() {
     return (
       <div className="glass rounded-3xl p-10 text-center space-y-3">
         <h1 className="text-2xl font-bold">로그인이 필요합니다</h1>
-        <p className="text-muted-foreground">
-          커리큘럼 생성기는 교수자 및 관리자 전용입니다.
-        </p>
-        <Link to="/auth" className="underline">로그인 하러가기</Link>
+        <p className="text-muted-foreground">커리큘럼 생성기는 교수자 및 관리자 전용입니다.</p>
+        <Link to="/auth" className="underline">
+          로그인 하러가기
+        </Link>
       </div>
     );
   }
@@ -78,9 +78,7 @@ function CurriculumPage() {
     return (
       <div className="glass rounded-3xl p-10 text-center space-y-3">
         <h1 className="text-2xl font-bold">교수자 전용 기능</h1>
-        <p className="text-muted-foreground">
-          이 페이지는 교수자 또는 관리자만 사용할 수 있어요.
-        </p>
+        <p className="text-muted-foreground">이 페이지는 교수자 또는 관리자만 사용할 수 있어요.</p>
       </div>
     );
   }
@@ -167,29 +165,56 @@ function CurriculumForm() {
         <div className="space-y-2">
           <Label>학생 학년 / 연령</Label>
           <Select value={studentGrade} onValueChange={setStudentGrade}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+              {GRADES.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {g}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
           <Label>수업 시간</Label>
-          <Select value={String(durationMinutes)} onValueChange={(v) => setDurationMinutes(Number(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={String(durationMinutes)}
+            onValueChange={(v) => setDurationMinutes(Number(v))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d}분</SelectItem>)}
+              {DURATIONS.map((d) => (
+                <SelectItem key={d} value={String(d)}>
+                  {d}분
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label>현재 진도 — 코스 (선택)</Label>
-          <Select value={courseId || "none"} onValueChange={(v) => { setCourseId(v === "none" ? "" : v); setLessonId(""); }}>
-            <SelectTrigger><SelectValue placeholder="선택 안 함" /></SelectTrigger>
+          <Select
+            value={courseId || "none"}
+            onValueChange={(v) => {
+              setCourseId(v === "none" ? "" : v);
+              setLessonId("");
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="선택 안 함" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">선택 안 함</SelectItem>
-              {coursesData?.map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+              {coursesData?.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.title}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -200,10 +225,16 @@ function CurriculumForm() {
             onValueChange={(v) => setLessonId(v === "none" ? "" : v)}
             disabled={!courseId || lessonsForCourse.length === 0}
           >
-            <SelectTrigger><SelectValue placeholder={courseId ? "선택 안 함" : "코스 먼저"} /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder={courseId ? "선택 안 함" : "코스 먼저"} />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">선택 안 함</SelectItem>
-              {lessonsForCourse.map((l) => <SelectItem key={l.id} value={l.id}>{l.title}</SelectItem>)}
+              {lessonsForCourse.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.title}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -232,16 +263,31 @@ function CurriculumForm() {
             placeholder="직접 추가 (예: 축구, 요리)"
             value={interestInput}
             onChange={(e) => setInterestInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addInterest(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addInterest();
+              }
+            }}
           />
-          <Button type="button" variant="outline" onClick={addInterest}>추가</Button>
+          <Button type="button" variant="outline" onClick={addInterest}>
+            추가
+          </Button>
         </div>
         {interests.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {interests.map((i) => (
-              <span key={i} className="text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full flex items-center gap-1">
+              <span
+                key={i}
+                className="text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full flex items-center gap-1"
+              >
                 {i}
-                <button onClick={() => setInterests(interests.filter((x) => x !== i))} className="hover:text-pink-950">×</button>
+                <button
+                  onClick={() => setInterests(interests.filter((x) => x !== i))}
+                  className="hover:text-pink-950"
+                >
+                  ×
+                </button>
               </span>
             ))}
           </div>
@@ -287,15 +333,15 @@ function CurriculumForm() {
         />
       </div>
 
-      <Button
-        onClick={() => m.mutate()}
-        disabled={m.isPending}
-        className="w-full h-12 text-base"
-      >
+      <Button onClick={() => m.mutate()} disabled={m.isPending} className="w-full h-12 text-base">
         {m.isPending ? (
-          <><Loader2 className="size-5 animate-spin" /> AI가 커리큘럼을 만드는 중… (30~60초)</>
+          <>
+            <Loader2 className="size-5 animate-spin" /> AI가 커리큘럼을 만드는 중… (30~60초)
+          </>
         ) : (
-          <><Wand2 className="size-5" /> AI로 커리큘럼 생성</>
+          <>
+            <Wand2 className="size-5" /> AI로 커리큘럼 생성
+          </>
         )}
       </Button>
     </section>
@@ -331,14 +377,11 @@ function HistoryPanel() {
       <ul className="space-y-2">
         {data?.map((c) => (
           <li key={c.id} className="rounded-2xl bg-white/50 p-3 flex items-start gap-2">
-            <Link
-              to="/curriculum/$id"
-              params={{ id: c.id }}
-              className="flex-1 min-w-0"
-            >
+            <Link to="/curriculum/$id" params={{ id: c.id }} className="flex-1 min-w-0">
               <div className="font-medium truncate">{c.title}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                {c.student_grade} · {c.duration_minutes}분 · {new Date(c.created_at).toLocaleDateString("ko-KR")}
+                {c.student_grade} · {c.duration_minutes}분 ·{" "}
+                {new Date(c.created_at).toLocaleDateString("ko-KR")}
               </div>
             </Link>
             <button

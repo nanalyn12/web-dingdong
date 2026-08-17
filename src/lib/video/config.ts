@@ -49,12 +49,13 @@ export const ZH_PAIR_VOICE: Record<string, string> = {
 
 /** Studio level picker: the shared label plus the audience line each level
  * writes into the script prompt. */
-export const LEVELS: { value: VideoLevel; label: string; audience: string }[] =
-  LEVEL_ORDER.map((value) => ({
+export const LEVELS: { value: VideoLevel; label: string; audience: string }[] = LEVEL_ORDER.map(
+  (value) => ({
     value,
     label: LEVEL_LABEL_HSK[value],
     audience: `중국어 ${LEVEL_LABEL[value]} 성인 학습자`,
-  }));
+  }),
+);
 
 /** Older jobs (and the public hook) carry the level only inside the free-text
  * audience string. Kept as the fallback for `levelOf`. */
@@ -68,10 +69,7 @@ export function levelFromAudience(audience: string | null | undefined): VideoLev
 /** Difficulty for one job. Prefers the explicit field the studio now sets —
  * inferring it from the audience text alone filed every video under "입문",
  * because that default string was almost never edited. */
-export function levelOf(cfg: {
-  level?: VideoLevel | null;
-  audience?: string | null;
-}): VideoLevel {
+export function levelOf(cfg: { level?: VideoLevel | null; audience?: string | null }): VideoLevel {
   if (cfg.level === "beginner" || cfg.level === "intermediate" || cfg.level === "advanced") {
     return cfg.level;
   }

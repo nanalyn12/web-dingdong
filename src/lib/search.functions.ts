@@ -26,9 +26,7 @@ const PER_TYPE = 6;
 
 export const searchContent = createServerFn({ method: "GET" })
   .middleware([optionalAuth])
-  .inputValidator((i: unknown) =>
-    z.object({ q: z.string().trim().max(80) }).parse(i),
-  )
+  .inputValidator((i: unknown) => z.object({ q: z.string().trim().max(80) }).parse(i))
   .handler(async ({ data, context }): Promise<SearchResults> => {
     const q = data.q.trim();
     if (q.length < 1) return EMPTY;

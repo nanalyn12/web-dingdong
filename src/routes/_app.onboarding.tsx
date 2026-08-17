@@ -33,7 +33,10 @@ export const Route = createFileRoute("/_app/onboarding")({
   component: OnboardingPage,
 });
 
-const JOBS: { value: "high_school" | "university" | "teacher" | "worker" | "other"; label: string }[] = [
+const JOBS: {
+  value: "high_school" | "university" | "teacher" | "worker" | "other";
+  label: string;
+}[] = [
   { value: "high_school", label: "고등학생" },
   { value: "university", label: "대학생" },
   { value: "teacher", label: "교사" },
@@ -42,8 +45,15 @@ const JOBS: { value: "high_school" | "university" | "teacher" | "worker" | "othe
 ];
 
 const INTERESTS = [
-  "여행", "비즈니스", "드라마/영화", "음악", "음식",
-  "역사·문화", "시험 대비(HSK)", "일상 회화", "유학",
+  "여행",
+  "비즈니스",
+  "드라마/영화",
+  "음악",
+  "음식",
+  "역사·문화",
+  "시험 대비(HSK)",
+  "일상 회화",
+  "유학",
 ];
 
 function OnboardingPage() {
@@ -59,7 +69,7 @@ function OnboardingPage() {
 
   const [realName, setRealName] = useState("");
   const [nickname, setNickname] = useState("");
-  const [job, setJob] = useState<typeof JOBS[number]["value"]>("worker");
+  const [job, setJob] = useState<(typeof JOBS)[number]["value"]>("worker");
   const [goal, setGoal] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   const [hsk, setHsk] = useState(3);
@@ -105,7 +115,7 @@ function OnboardingPage() {
   const [applyOpen, setApplyOpen] = useState(false);
   const [applyName, setApplyName] = useState("");
   const [applyPhone, setApplyPhone] = useState("");
-  const [applyJob, setApplyJob] = useState<typeof JOBS[number]["value"]>("teacher");
+  const [applyJob, setApplyJob] = useState<(typeof JOBS)[number]["value"]>("teacher");
   const [applySchool, setApplySchool] = useState("");
   const [applyDepartment, setApplyDepartment] = useState("");
   const [myEmail, setMyEmail] = useState<string>("");
@@ -129,7 +139,7 @@ function OnboardingPage() {
     mutationFn: (v: {
       realName: string;
       phone: string;
-      job: typeof JOBS[number]["value"];
+      job: (typeof JOBS)[number]["value"];
       school: string;
       department: string;
     }) => apply({ data: v }),
@@ -177,11 +187,23 @@ function OnboardingPage() {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="rn">실명 *</Label>
-              <Input id="rn" value={realName} onChange={(e) => setRealName(e.target.value)} required maxLength={80} />
+              <Input
+                id="rn"
+                value={realName}
+                onChange={(e) => setRealName(e.target.value)}
+                required
+                maxLength={80}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="nn">닉네임 *</Label>
-              <Input id="nn" value={nickname} onChange={(e) => setNickname(e.target.value)} required maxLength={40} />
+              <Input
+                id="nn"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                required
+                maxLength={40}
+              />
             </div>
           </div>
 
@@ -189,10 +211,14 @@ function OnboardingPage() {
             <div className="space-y-2">
               <Label>직업</Label>
               <Select value={job} onValueChange={(v) => setJob(v as typeof job)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {JOBS.map((j) => (
-                    <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>
+                    <SelectItem key={j.value} value={j.value}>
+                      {j.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -256,8 +282,8 @@ function OnboardingPage() {
       <section className="glass rounded-3xl p-6 mt-6 space-y-3">
         <h2 className="font-bold text-lg">교사(교수) 권한 신청</h2>
         <p className="text-sm text-muted-foreground">
-          강의/세부 강의를 직접 만들고 싶다면 신청해 주세요. 관리자 승인 후 활성화됩니다.
-          승인 전까지는 학생과 동일한 권한으로 학습할 수 있어요.
+          강의/세부 강의를 직접 만들고 싶다면 신청해 주세요. 관리자 승인 후 활성화됩니다. 승인
+          전까지는 학생과 동일한 권한으로 학습할 수 있어요.
         </p>
         {profile?.role === "teacher" || profile?.role === "admin" ? (
           <p className="text-sm font-medium text-primary">
@@ -268,10 +294,14 @@ function OnboardingPage() {
         ) : profile?.teacher_status === "rejected" ? (
           <>
             <p className="text-sm font-medium text-rose-600">이전 신청이 거절되었어요.</p>
-            <Button variant="outline" onClick={openApplyDialog}>다시 신청하기</Button>
+            <Button variant="outline" onClick={openApplyDialog}>
+              다시 신청하기
+            </Button>
           </>
         ) : (
-          <Button variant="outline" onClick={openApplyDialog}>교사 권한 신청하기</Button>
+          <Button variant="outline" onClick={openApplyDialog}>
+            교사 권한 신청하기
+          </Button>
         )}
       </section>
 
@@ -280,8 +310,8 @@ function OnboardingPage() {
           <DialogHeader>
             <DialogTitle>교사 권한 신청</DialogTitle>
             <DialogDescription>
-              관리자가 검토할 수 있도록 아래 정보를 입력해 주세요. 이메일은 현재 로그인
-              계정으로 자동 전송돼요.
+              관리자가 검토할 수 있도록 아래 정보를 입력해 주세요. 이메일은 현재 로그인 계정으로
+              자동 전송돼요.
             </DialogDescription>
           </DialogHeader>
 
@@ -298,8 +328,7 @@ function OnboardingPage() {
                 return toast.error("올바른 전화번호를 입력해 주세요.");
               if (school.length < 2)
                 return toast.error("재직/강의 중인 학교 이름을 입력해 주세요.");
-              if (!department)
-                return toast.error("학과를 입력해 주세요.");
+              if (!department) return toast.error("학과를 입력해 주세요.");
               applyMutation.mutate({
                 realName: name,
                 phone,
@@ -340,14 +369,15 @@ function OnboardingPage() {
 
             <div className="space-y-2">
               <Label>직업 *</Label>
-              <Select
-                value={applyJob}
-                onValueChange={(v) => setApplyJob(v as typeof applyJob)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={applyJob} onValueChange={(v) => setApplyJob(v as typeof applyJob)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {JOBS.map((j) => (
-                    <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>
+                    <SelectItem key={j.value} value={j.value}>
+                      {j.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -6,11 +6,7 @@ import { toast } from "sonner";
 import { AppSidebar } from "./app-sidebar";
 import { HeaderSearch } from "./header-search";
 import { authClient, useMyProfile, useSession } from "@/lib/auth-client";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { resetTour, runTour, type TourName } from "@/lib/coachmark";
 import {
   landingTourSteps,

@@ -99,9 +99,7 @@ export const listDramas = createServerFn({ method: "GET" }).handler(
 );
 
 export const getDrama = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) =>
-    z.object({ id: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }): Promise<DramaRow> => {
     const { db, tables } = await import("@/db");
     const rows = await db
@@ -115,9 +113,7 @@ export const getDrama = createServerFn({ method: "GET" })
 
 export const deleteDrama = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ id: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { db, tables } = await import("@/db");
     const isAdmin = (await getRole(context.userId)) === "admin";
@@ -141,12 +137,40 @@ export const deleteDrama = createServerFn({ method: "POST" })
     const { getMediaDir } = await import("@/lib/suno.server");
     for (const u of [rows[0].media_url, rows[0].thumbnail_url]) {
       if (u?.startsWith("/media/dramas/")) {
-        await rm(join(getMediaDir(), u.slice("/media/".length)), { force: true }).catch(
-          () => {},
-        );
+        await rm(join(getMediaDir(), u.slice("/media/".length)), { force: true }).catch(() => {});
       }
     }
     return { ok: true as const };
+  });
+
+/** Fix a drama's 난이도 after the fact.
+ *
+ * Registration picks the level once from a dropdown that defaults to 초급, so
+ * bulk-generated videos ended up labelled 초급 whether or not they were — with
+ * no way to correct one short of editing the database. Deliberately narrow:
+ * it writes `level` and nothing else. */
+export const updateDramaLevel = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        level: z.enum(["beginner", "intermediate", "advanced"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({ id: tables.dramas.id })
+      .from(tables.dramas)
+      .where(eq(tables.dramas.id, data.id))
+      .limit(1);
+    if (!rows[0]) throw new Error("드라마를 찾을 수 없습니다.");
+
+    await db.update(tables.dramas).set({ level: data.level }).where(eq(tables.dramas.id, data.id));
+    return { ok: true as const, level: data.level };
   });
 
 export const updateDramaLineTime = createServerFn({ method: "POST" })

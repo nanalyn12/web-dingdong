@@ -90,7 +90,9 @@ function VocabularyPage() {
   }, [store.items, search.q, search.tag, search.hsk, search.status, search.sort]);
 
   const counts = useMemo(() => {
-    let due = 0, fresh = 0, learned = 0;
+    let due = 0,
+      fresh = 0,
+      learned = 0;
     for (const v of store.items) {
       const s = srsStatus(v.srs, now);
       if (s === "due") due++;
@@ -107,7 +109,6 @@ function VocabularyPage() {
 
   const setSearch = (patch: Partial<z.infer<typeof searchSchema>>) =>
     navigate({ search: (prev: z.infer<typeof searchSchema>) => ({ ...prev, ...patch }) });
-
 
   const activeFilters =
     (search.tag ? 1 : 0) + (search.hsk !== "all" ? 1 : 0) + (search.status !== "all" ? 1 : 0);
@@ -128,7 +129,9 @@ function VocabularyPage() {
             <BookOpen className="size-7 text-primary" /> 단어장
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            총 <b>{store.items.length}</b>개 · 복습 예정 <b className="text-rose-500">{counts.due}</b> · 신규 <b>{counts.fresh}</b> · 암기 <b className="text-emerald-600">{counts.learned}</b>
+            총 <b>{store.items.length}</b>개 · 복습 예정{" "}
+            <b className="text-rose-500">{counts.due}</b> · 신규 <b>{counts.fresh}</b> · 암기{" "}
+            <b className="text-emerald-600">{counts.learned}</b>
             {store.authed === false && (
               <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-semibold">
                 게스트 — 이 브라우저에만 저장
@@ -137,10 +140,7 @@ function VocabularyPage() {
           </p>
         </div>
         <Button asChild disabled={counts.today === 0} size="lg" className="gap-2">
-          <Link
-            to="/vocabulary/review"
-            search={{ mode: "flash", scope: "due", limit: 20 }}
-          >
+          <Link to="/vocabulary/review" search={{ mode: "flash", scope: "due", limit: 20 }}>
             <Play className="size-4" />
             오늘 복습 {counts.today > 0 && `(${counts.today})`}
           </Link>
@@ -184,7 +184,9 @@ function VocabularyPage() {
           <SelectContent>
             <SelectItem value="all">HSK 전체</SelectItem>
             {[1, 2, 3, 4, 5, 6].map((n) => (
-              <SelectItem key={n} value={String(n)}>HSK {n}</SelectItem>
+              <SelectItem key={n} value={String(n)}>
+                HSK {n}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -310,7 +312,12 @@ function VocabCard({
       </div>
 
       <div className="mt-3 flex items-center flex-wrap gap-1.5">
-        <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold", badge.cls)}>
+        <span
+          className={cn(
+            "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+            badge.cls,
+          )}
+        >
           {badge.text}
           {status === "learning" && days > 0 && ` · ${days}일 후`}
         </span>
@@ -320,14 +327,11 @@ function VocabCard({
           </span>
         )}
         {(v.tags ?? []).map((t) => (
-          <span key={t} className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px]">#{t}</span>
+          <span key={t} className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px]">
+            #{t}
+          </span>
         ))}
-        <VocabTagEditor
-          tags={v.tags ?? []}
-          allTags={allTags}
-          onChange={onSetTags}
-          compact
-        />
+        <VocabTagEditor tags={v.tags ?? []} allTags={allTags} onChange={onSetTags} compact />
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">

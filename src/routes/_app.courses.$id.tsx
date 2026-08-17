@@ -4,10 +4,7 @@ import { ArrowLeft, BookOpen, Check, GraduationCap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
-import {
-  listCoursesWithCounts,
-  listCoursesWithLessons,
-} from "@/lib/courses.functions";
+import { listCoursesWithCounts, listCoursesWithLessons } from "@/lib/courses.functions";
 import { listMyLessonProgress } from "@/lib/lesson-progress.functions";
 import { levelLabelHsk } from "@/lib/levels";
 
@@ -47,21 +44,16 @@ function CourseDetail() {
 
   const course = courses?.find((c) => c.id === id);
   const lessons = withLessons?.find((c) => c.id === id)?.lessons ?? [];
-  const progress = new Map(
-    (progressList ?? []).map((p) => [p.lesson_id, p]),
-  );
+  const progress = new Map((progressList ?? []).map((p) => [p.lesson_id, p]));
   const doneCount = lessons.filter((l) => progress.get(l.id)?.completed).length;
 
   // The reader resumes at the first lesson they have not finished, so the CTA
   // does not send them back to lesson 1 every time.
-  const nextLesson =
-    lessons.find((l) => !progress.get(l.id)?.completed) ?? lessons[0];
+  const nextLesson = lessons.find((l) => !progress.get(l.id)?.completed) ?? lessons[0];
 
   if (loadingCourses || loadingLessons) {
     return (
-      <div className="glass rounded-3xl p-8 text-center text-muted-foreground">
-        불러오는 중…
-      </div>
+      <div className="glass rounded-3xl p-8 text-center text-muted-foreground">불러오는 중…</div>
     );
   }
 
@@ -107,21 +99,16 @@ function CourseDetail() {
             {course.title}
           </h1>
           {course.description && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {course.description}
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{course.description}</p>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          세부 강의 {lessons.length}개
-          {session && lessons.length > 0 && ` · ${doneCount}개 완료`}
+          세부 강의 {lessons.length}개{session && lessons.length > 0 && ` · ${doneCount}개 완료`}
         </p>
         {nextLesson && (
           <Button
             className="rounded-2xl"
-            onClick={() =>
-              navigate({ to: "/lessons/$id", params: { id: nextLesson.id } })
-            }
+            onClick={() => navigate({ to: "/lessons/$id", params: { id: nextLesson.id } })}
           >
             {doneCount > 0 ? "이어서 학습 →" : "학습 시작 →"}
           </Button>
@@ -129,9 +116,7 @@ function CourseDetail() {
       </header>
 
       <section className="glass rounded-3xl p-4 sm:p-5">
-        <h2 className="px-1 pb-2 text-sm font-semibold text-muted-foreground">
-          세부 강의 목록
-        </h2>
+        <h2 className="px-1 pb-2 text-sm font-semibold text-muted-foreground">세부 강의 목록</h2>
         {lessons.length === 0 ? (
           <p className="px-1 py-6 text-center text-sm text-muted-foreground">
             아직 세부 강의가 준비되지 않았어요.
@@ -151,9 +136,7 @@ function CourseDetail() {
                       {i + 1}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {l.title}
-                      </span>
+                      <span className="block truncate text-sm font-medium">{l.title}</span>
                       {l.description && (
                         <span className="block truncate text-xs text-muted-foreground">
                           {l.description}

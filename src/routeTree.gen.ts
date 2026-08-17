@@ -36,6 +36,7 @@ import { Route as AppCurriculumIdRouteImport } from './routes/_app.curriculum.$i
 import { Route as AppCoursesIdRouteImport } from './routes/_app.courses.$id'
 import { Route as ApiPublicHooksReengagementPushRouteImport } from './routes/api/public/hooks/reengagement-push'
 import { Route as ApiPublicHooksGenerateVideoRouteImport } from './routes/api/public/hooks/generate-video'
+import { Route as ApiBackupsIdDownloadRouteImport } from './routes/api/backups.$id.download'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -173,6 +174,11 @@ const ApiPublicHooksGenerateVideoRoute =
     path: '/api/public/hooks/generate-video',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiBackupsIdDownloadRoute = ApiBackupsIdDownloadRouteImport.update({
+  id: '/api/backups/$id/download',
+  path: '/api/backups/$id/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/curriculum/': typeof AppCurriculumIndexRoute
   '/dramas/': typeof AppDramasIndexRoute
   '/songs/': typeof AppSongsIndexRoute
+  '/api/backups/$id/download': typeof ApiBackupsIdDownloadRoute
   '/api/public/hooks/generate-video': typeof ApiPublicHooksGenerateVideoRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
 }
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/curriculum': typeof AppCurriculumIndexRoute
   '/dramas': typeof AppDramasIndexRoute
   '/songs': typeof AppSongsIndexRoute
+  '/api/backups/$id/download': typeof ApiBackupsIdDownloadRoute
   '/api/public/hooks/generate-video': typeof ApiPublicHooksGenerateVideoRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
 }
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/_app/curriculum/': typeof AppCurriculumIndexRoute
   '/_app/dramas/': typeof AppDramasIndexRoute
   '/_app/songs/': typeof AppSongsIndexRoute
+  '/api/backups/$id/download': typeof ApiBackupsIdDownloadRoute
   '/api/public/hooks/generate-video': typeof ApiPublicHooksGenerateVideoRoute
   '/api/public/hooks/reengagement-push': typeof ApiPublicHooksReengagementPushRoute
 }
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/curriculum/'
     | '/dramas/'
     | '/songs/'
+    | '/api/backups/$id/download'
     | '/api/public/hooks/generate-video'
     | '/api/public/hooks/reengagement-push'
   fileRoutesByTo: FileRoutesByTo
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/curriculum'
     | '/dramas'
     | '/songs'
+    | '/api/backups/$id/download'
     | '/api/public/hooks/generate-video'
     | '/api/public/hooks/reengagement-push'
   id:
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/_app/curriculum/'
     | '/_app/dramas/'
     | '/_app/songs/'
+    | '/api/backups/$id/download'
     | '/api/public/hooks/generate-video'
     | '/api/public/hooks/reengagement-push'
   fileRoutesById: FileRoutesById
@@ -355,6 +367,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiYoutubeCallbackRoute: typeof ApiYoutubeCallbackRoute
   ApiYoutubeConnectRoute: typeof ApiYoutubeConnectRoute
+  ApiBackupsIdDownloadRoute: typeof ApiBackupsIdDownloadRoute
   ApiPublicHooksGenerateVideoRoute: typeof ApiPublicHooksGenerateVideoRoute
   ApiPublicHooksReengagementPushRoute: typeof ApiPublicHooksReengagementPushRoute
 }
@@ -550,6 +563,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksGenerateVideoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/backups/$id/download': {
+      id: '/api/backups/$id/download'
+      path: '/api/backups/$id/download'
+      fullPath: '/api/backups/$id/download'
+      preLoaderRoute: typeof ApiBackupsIdDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -606,6 +626,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiYoutubeCallbackRoute: ApiYoutubeCallbackRoute,
   ApiYoutubeConnectRoute: ApiYoutubeConnectRoute,
+  ApiBackupsIdDownloadRoute: ApiBackupsIdDownloadRoute,
   ApiPublicHooksGenerateVideoRoute: ApiPublicHooksGenerateVideoRoute,
   ApiPublicHooksReengagementPushRoute: ApiPublicHooksReengagementPushRoute,
 }

@@ -113,9 +113,7 @@ export type TestResult = { ok: boolean; message: string };
 /** 연동별 실연결 테스트. 과금 없는 조회 엔드포인트만 사용. */
 export const testIntegration = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((i: unknown) =>
-    z.object({ id: z.enum(INTEGRATION_IDS) }).parse(i),
-  )
+  .inputValidator((i: unknown) => z.object({ id: z.enum(INTEGRATION_IDS) }).parse(i))
   .handler(async ({ data, context }): Promise<TestResult> => {
     await assertEditor(context.userId);
     try {
@@ -123,10 +121,9 @@ export const testIntegration = createServerFn({ method: "POST" })
         case "gemini": {
           const key = process.env.GEMINI_API_KEY;
           if (!key) return { ok: false, message: "GEMINI_API_KEY 미설정" };
-          const r = await fetch(
-            "https://generativelanguage.googleapis.com/v1beta/models",
-            { headers: { "x-goog-api-key": key } },
-          );
+          const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+            headers: { "x-goog-api-key": key },
+          });
           return r.ok
             ? { ok: true, message: "정상 — 모델 목록 조회 성공" }
             : { ok: false, message: `인증 실패 (HTTP ${r.status})` };
@@ -148,10 +145,9 @@ export const testIntegration = createServerFn({ method: "POST" })
         case "pexels": {
           const key = process.env.PEXELS_API_KEY;
           if (!key) return { ok: false, message: "PEXELS_API_KEY 미설정" };
-          const r = await fetch(
-            "https://api.pexels.com/videos/search?query=test&per_page=1",
-            { headers: { Authorization: key } },
-          );
+          const r = await fetch("https://api.pexels.com/videos/search?query=test&per_page=1", {
+            headers: { Authorization: key },
+          });
           return r.ok
             ? { ok: true, message: "정상 — 검색 응답 확인" }
             : { ok: false, message: `인증 실패 (HTTP ${r.status})` };

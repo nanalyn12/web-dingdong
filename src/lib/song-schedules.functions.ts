@@ -80,10 +80,7 @@ export const listSongSchedules = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertEditor(context.userId);
     const { db, tables } = await import("@/db");
-    return db
-      .select()
-      .from(tables.song_schedules)
-      .orderBy(desc(tables.song_schedules.created_at));
+    return db.select().from(tables.song_schedules).orderBy(desc(tables.song_schedules.created_at));
   });
 
 export const toggleSongSchedule = createServerFn({ method: "POST" })
@@ -107,9 +104,7 @@ export const deleteSongSchedule = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertEditor(context.userId);
     const { db, tables } = await import("@/db");
-    await db
-      .delete(tables.song_schedules)
-      .where(eq(tables.song_schedules.id, data.id));
+    await db.delete(tables.song_schedules).where(eq(tables.song_schedules.id, data.id));
     return { ok: true as const };
   });
 

@@ -15,7 +15,6 @@ import { runTour } from "@/lib/coachmark";
 import { landingTourSteps } from "@/lib/tour-steps";
 import { COURSE_CATEGORIES } from "@/lib/course-categories";
 
-
 import heroDingdong from "@/assets/hero-dingdong.png";
 import { listCoursesWithCounts } from "@/lib/courses.functions";
 import { WidgetPanel } from "@/components/widget-panel";
@@ -40,13 +39,22 @@ export const Route = createFileRoute("/_app/")({
   component: Landing,
 });
 
-const LEVEL_META: Record<
-  string,
-  { label: string; emoji: string; chip: string }
-> = {
-  beginner: { label: `${LEVEL_LABEL.beginner} · ${LEVEL_HSK.beginner}`, emoji: "🌱", chip: "bg-mint/60" },
-  intermediate: { label: `${LEVEL_LABEL.intermediate} · ${LEVEL_HSK.intermediate}`, emoji: "🌿", chip: "bg-sky/60" },
-  advanced: { label: `${LEVEL_LABEL.advanced} · ${LEVEL_HSK.advanced}`, emoji: "🌳", chip: "bg-lavender/60" },
+const LEVEL_META: Record<string, { label: string; emoji: string; chip: string }> = {
+  beginner: {
+    label: `${LEVEL_LABEL.beginner} · ${LEVEL_HSK.beginner}`,
+    emoji: "🌱",
+    chip: "bg-mint/60",
+  },
+  intermediate: {
+    label: `${LEVEL_LABEL.intermediate} · ${LEVEL_HSK.intermediate}`,
+    emoji: "🌿",
+    chip: "bg-sky/60",
+  },
+  advanced: {
+    label: `${LEVEL_LABEL.advanced} · ${LEVEL_HSK.advanced}`,
+    emoji: "🌳",
+    chip: "bg-lavender/60",
+  },
 };
 
 function Landing() {
@@ -56,8 +64,7 @@ function Landing() {
   });
 
   const totalCourses = courses?.length ?? 0;
-  const totalLessons =
-    courses?.reduce((sum, c) => sum + (c.lesson_count ?? 0), 0) ?? 0;
+  const totalLessons = courses?.reduce((sum, c) => sum + (c.lesson_count ?? 0), 0) ?? 0;
   const featured = (courses ?? []).slice(0, 6);
 
   useEffect(() => {
@@ -74,7 +81,6 @@ function Landing() {
 
       {/* HERO */}
       <section data-tour="hero" className="glass rounded-4xl p-8 md:p-12 relative overflow-hidden">
-
         <div className="absolute -top-24 -right-24 size-80 rounded-full bg-pink/60 blur-3xl" />
         <div className="absolute -bottom-32 -left-20 size-80 rounded-full bg-sky/60 blur-3xl" />
         <div className="absolute top-1/3 left-1/2 size-72 rounded-full bg-lavender/40 blur-3xl" />
@@ -85,16 +91,13 @@ function Landing() {
               <Sparkles className="size-3.5" /> 叮叮과 함께 배우는 AI 중국어
             </div>
             <h1 className="mt-4 text-4xl md:text-6xl font-extrabold tracking-tight leading-tight">
-              띵동!{" "}
-              <span className="inline-block">🛎️</span>
+              띵동! <span className="inline-block">🛎️</span>
               <br />
-              <span className="text-gradient-primary">
-                오늘도 중국어 한 입.
-              </span>
+              <span className="text-gradient-primary">오늘도 중국어 한 입.</span>
             </h1>
             <p className="mt-5 max-w-xl text-muted-foreground text-base md:text-lg">
-              한국인 성인 학습자를 위해 설계된 맞춤형 강의 · 실전 회화 · HSK
-              대비까지. AI가 당신의 속도에 맞춰 매일 한 조각씩 떠먹여 드려요. 🥢
+              한국인 성인 학습자를 위해 설계된 맞춤형 강의 · 실전 회화 · HSK 대비까지. AI가 당신의
+              속도에 맞춰 매일 한 조각씩 떠먹여 드려요. 🥢
             </p>
 
             <div className="mt-7 flex flex-wrap gap-3" data-tour="hero-cta">
@@ -142,7 +145,6 @@ function Landing() {
           subtitle="관심사로 시작해 보세요. 카테고리별로 맞춤 강의를 추천해 드려요."
         />
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-
           {/* These used to be six identical links to the unfiltered course
               list, under a heading promising per-category recommendations. */}
           {COURSE_CATEGORIES.map((cat) => (
@@ -165,7 +167,6 @@ function Landing() {
 
       {/* FEATURED COURSES (dynamic) */}
       <section className="space-y-4" data-tour="featured">
-
         <div className="flex items-end justify-between flex-wrap gap-3">
           <SectionHeader
             eyebrow="🔥 새로 나온 강의"
@@ -185,8 +186,7 @@ function Landing() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {featured.map((c, i) => {
-              const meta =
-                LEVEL_META[c.level] ?? LEVEL_META.beginner;
+              const meta = LEVEL_META[c.level] ?? LEVEL_META.beginner;
               const accents = ["bg-pink/50", "bg-sky/50", "bg-mint/50", "bg-lavender/50"];
               return (
                 <Link
@@ -256,9 +256,7 @@ function Landing() {
             },
           ].map((lv) => (
             <div key={lv.k} className="glass rounded-3xl p-6">
-              <div
-                className={`size-16 rounded-2xl ${lv.c} grid place-items-center text-4xl mb-4`}
-              >
+              <div className={`size-16 rounded-2xl ${lv.c} grid place-items-center text-4xl mb-4`}>
                 {lv.emoji}
               </div>
               <div className="flex items-baseline gap-2">
@@ -297,9 +295,7 @@ function Landing() {
           },
         ].map((f) => (
           <div key={f.t} className="glass rounded-3xl p-6">
-            <div
-              className={`size-12 rounded-2xl ${f.c} grid place-items-center text-2xl mb-3`}
-            >
+            <div className={`size-12 rounded-2xl ${f.c} grid place-items-center text-2xl mb-3`}>
               {f.e}
             </div>
             <div className="flex items-center gap-2 font-semibold">
@@ -324,8 +320,7 @@ function Landing() {
               你好! 첫 강의로 입을 풀어볼까요? 🥟
             </h2>
             <p className="mt-2 text-muted-foreground max-w-xl">
-              가입은 무료, 강의 보기도 무료. 마음에 들면 단어장에 차곡차곡
-              모아두세요.
+              가입은 무료, 강의 보기도 무료. 마음에 들면 단어장에 차곡차곡 모아두세요.
             </p>
           </div>
           <Link
@@ -340,15 +335,7 @@ function Landing() {
   );
 }
 
-function Stat({
-  emoji,
-  label,
-  value,
-}: {
-  emoji: string;
-  label: string;
-  value: number | string;
-}) {
+function Stat({ emoji, label, value }: { emoji: string; label: string; value: number | string }) {
   return (
     <div className="glass-soft rounded-2xl px-3 py-2.5">
       <div className="text-lg">{emoji}</div>
@@ -370,12 +357,8 @@ function SectionHeader({
   return (
     <div>
       <div className="text-xs font-semibold text-primary mb-1">{eyebrow}</div>
-      <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-        {title}
-      </h2>
-      {subtitle && (
-        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
-      )}
+      <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">{title}</h2>
+      {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
     </div>
   );
 }

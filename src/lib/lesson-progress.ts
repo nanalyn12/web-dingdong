@@ -14,8 +14,7 @@ export function loadProgress(lessonId: string): LessonProgress {
     return { completedTabs: [], updatedAt: new Date().toISOString() };
   try {
     const raw = localStorage.getItem(KEY(lessonId));
-    if (!raw)
-      return { completedTabs: [], updatedAt: new Date().toISOString() };
+    if (!raw) return { completedTabs: [], updatedAt: new Date().toISOString() };
     return JSON.parse(raw) as LessonProgress;
   } catch {
     return { completedTabs: [], updatedAt: new Date().toISOString() };

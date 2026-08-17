@@ -31,8 +31,7 @@ export const getMyDramaProgress = createServerFn({ method: "GET" })
     return {
       last_seconds: r.last_seconds,
       completed_scenes: (r.completed_scenes as number[]) ?? [],
-      quiz_scores:
-        (r.quiz_scores as Record<string, { score: number; total: number }>) ?? {},
+      quiz_scores: (r.quiz_scores as Record<string, { score: number; total: number }>) ?? {},
     };
   });
 

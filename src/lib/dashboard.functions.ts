@@ -46,9 +46,7 @@ export type DashboardData = {
 };
 
 function kstDateNDaysAgo(n: number): string {
-  return new Date(Date.now() + 9 * 3600_000 - n * 86400_000)
-    .toISOString()
-    .slice(0, 10);
+  return new Date(Date.now() + 9 * 3600_000 - n * 86400_000).toISOString().slice(0, 10);
 }
 
 export const getMyDashboard = createServerFn({ method: "GET" })
@@ -107,7 +105,7 @@ export const getMyDashboard = createServerFn({ method: "GET" })
     // 스트릭: 오늘(또는 어제)부터 연속으로 활동 기록이 있는 날 수.
     const activeDates = new Set(actRows.map((r) => r.activity_date));
     let streak = 0;
-    let cursor = activeDates.has(kstToday()) ? 0 : 1;
+    const cursor = activeDates.has(kstToday()) ? 0 : 1;
     while (streak < 84 && activeDates.has(kstDateNDaysAgo(cursor + streak))) {
       streak++;
     }
@@ -135,10 +133,7 @@ export const getMyDashboard = createServerFn({ method: "GET" })
     let quizScoreSum = 0;
     let quizTotalSum = 0;
     for (const w of watchRows) {
-      const scores = (w.quiz_scores ?? {}) as Record<
-        string,
-        { score: number; total: number }
-      >;
+      const scores = (w.quiz_scores ?? {}) as Record<string, { score: number; total: number }>;
       for (const s of Object.values(scores)) {
         quizScoreSum += s.score;
         quizTotalSum += s.total;
@@ -192,8 +187,7 @@ export const getMyDashboard = createServerFn({ method: "GET" })
       vocabTotal,
       vocabAdded7d,
       vocabByHsk,
-      quizAvgPct:
-        quizTotalSum > 0 ? Math.round((quizScoreSum / quizTotalSum) * 100) : null,
+      quizAvgPct: quizTotalSum > 0 ? Math.round((quizScoreSum / quizTotalSum) * 100) : null,
       activity,
       continueWatching,
       lessons: {

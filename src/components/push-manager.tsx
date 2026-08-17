@@ -69,7 +69,9 @@ export function PushManager() {
   // Check existing subscription
   useEffect(() => {
     if (!session) return;
-    status({}).then((r) => setSubscribed(!!r?.hasSubscription)).catch(() => {});
+    status({})
+      .then((r) => setSubscribed(!!r?.hasSubscription))
+      .catch(() => {});
   }, [session, status]);
 
   // Auto-prompt the modal once (gently) after sign-in
@@ -192,7 +194,12 @@ export function PushManager() {
               3일 이상 안 오면 판다가 살짝 알림을 보낼게요. 하루 한 번만요!
             </p>
             {subscribed ? (
-              <Button onClick={unsubscribe} disabled={busy} variant="outline" className="w-full rounded-2xl">
+              <Button
+                onClick={unsubscribe}
+                disabled={busy}
+                variant="outline"
+                className="w-full rounded-2xl"
+              >
                 알림 끄기
               </Button>
             ) : (

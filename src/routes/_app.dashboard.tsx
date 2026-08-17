@@ -1,16 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  BookOpen,
-  Brain,
-  Film,
-  Flame,
-  GraduationCap,
-  LogIn,
-  Play,
-  Sparkles,
-} from "lucide-react";
+import { BookOpen, Brain, Film, Flame, GraduationCap, LogIn, Play, Sparkles } from "lucide-react";
 
 import { getMyDashboard, type DashboardData } from "@/lib/dashboard.functions";
 import { useSession } from "@/lib/auth-client";
@@ -67,9 +58,7 @@ function DashboardPage() {
       <section className="glass rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">학습 대시보드</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            오늘도 딩동과 함께 조금씩, 꾸준히!
-          </p>
+          <p className="text-sm text-muted-foreground mt-0.5">오늘도 딩동과 함께 조금씩, 꾸준히!</p>
         </div>
         <div
           className={[
@@ -92,12 +81,8 @@ function DashboardPage() {
               <Brain className="size-5" />
             </div>
             <div>
-              <div className="font-bold">
-                오늘 복습할 단어 {data.todayDue}개가 기다리고 있어요
-              </div>
-              <div className="text-xs text-muted-foreground">
-                SRS 복습은 하루 5분이면 충분해요.
-              </div>
+              <div className="font-bold">오늘 복습할 단어 {data.todayDue}개가 기다리고 있어요</div>
+              <div className="text-xs text-muted-foreground">SRS 복습은 하루 5분이면 충분해요.</div>
             </div>
           </div>
           <Button asChild className="rounded-2xl">
@@ -221,9 +206,7 @@ function DashboardPage() {
                     <div className="font-medium text-sm truncate">{l.title}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">
                       학습 탭 {l.tabs_done}개 완료
-                      {l.quiz_total
-                        ? ` · 퀴즈 ${l.quiz_correct}/${l.quiz_total}`
-                        : ""}
+                      {l.quiz_total ? ` · 퀴즈 ${l.quiz_correct}/${l.quiz_total}` : ""}
                     </div>
                   </div>
                   {l.completed ? (
@@ -256,8 +239,7 @@ function DashboardPage() {
                   key={k}
                   className="rounded-full bg-white/60 border border-border px-3 py-1 text-xs font-medium"
                 >
-                  {k === "기타" ? "기타" : `HSK ${k}급`}{" "}
-                  <b className="text-primary">{n}</b>
+                  {k === "기타" ? "기타" : `HSK ${k}급`} <b className="text-primary">{n}</b>
                 </span>
               ))}
           </div>
@@ -299,9 +281,7 @@ function grassColor(total: number): string {
 function ActivityGrass({ activity }: { activity: DashboardData["activity"] }) {
   // activity is oldest→newest, 84 entries. Pad the first column so rows align
   // to weekdays (Sunday at the top, like GitHub's graph).
-  const lead = activity.length
-    ? new Date(`${activity[0].date}T12:00:00+09:00`).getDay()
-    : 0;
+  const lead = activity.length ? new Date(`${activity[0].date}T12:00:00+09:00`).getDay() : 0;
   return (
     <div className="overflow-x-auto pb-1">
       <div className="grid grid-rows-7 grid-flow-col gap-1 w-max">
@@ -346,9 +326,7 @@ function Last7Days({ activity }: { activity: DashboardData["activity"] }) {
                 title={`${d.date} · ${d.total}회`}
               />
             </div>
-            <span className="text-[10px] text-muted-foreground">
-              {DAY_LABEL[day]}
-            </span>
+            <span className="text-[10px] text-muted-foreground">{DAY_LABEL[day]}</span>
           </div>
         );
       })}

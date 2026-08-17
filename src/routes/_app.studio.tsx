@@ -115,7 +115,9 @@ function CourseLinkSelect({
       <div className="space-y-2">
         <Label>강의 연동 (선택 — 영상이 세부 강의로 추가돼요)</Label>
         <Select value={courseLink} onValueChange={setCourseLink}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">연동 안 함</SelectItem>
             {(courses.data ?? []).map((c) => (
@@ -161,18 +163,14 @@ function StudioPage() {
     queryFn: () => callList({}),
     enabled: isEditor,
     refetchInterval: (q) =>
-      (q.state.data ?? []).some((j) =>
-        ["queued", "running", "uploading"].includes(j.status),
-      )
+      (q.state.data ?? []).some((j) => ["queued", "running", "uploading"].includes(j.status))
         ? 3000
         : 15000,
   });
 
   if (!isEditor) {
     return (
-      <div className="p-8 text-muted-foreground">
-        교수자(teacher/admin) 전용 페이지입니다.
-      </div>
+      <div className="p-8 text-muted-foreground">교수자(teacher/admin) 전용 페이지입니다.</div>
     );
   }
 
@@ -329,14 +327,12 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
   const [lengthSeconds, setLengthSeconds] = useState(60);
   const [language, setLanguage] = useState<VideoLanguage>("ko");
   const [focus, setFocus] = useState<VideoFocus>("culture");
-  const [resolution, setResolution] =
-    useState<VideoJobConfig["resolution"]>("1280x720");
+  const [resolution, setResolution] = useState<VideoJobConfig["resolution"]>("1280x720");
   const [clipCount, setClipCount] = useState(6);
   const [voice, setVoice] = useState(VOICES.ko[0].value);
   const [burnSubtitles, setBurnSubtitles] = useState(true);
   const [bgm, setBgm] = useState(true);
-  const [uploadMode, setUploadMode] =
-    useState<VideoJobConfig["uploadMode"]>("approval");
+  const [uploadMode, setUploadMode] = useState<VideoJobConfig["uploadMode"]>("approval");
   const [privacy, setPrivacy] = useState<VideoJobConfig["privacy"]>("unlisted");
   const [courseLink, setCourseLink] = useState(initialCourseId || "none");
   const [newCourseTitle, setNewCourseTitle] = useState("");
@@ -369,17 +365,17 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
             bgm,
             uploadMode,
             privacy,
-            courseId:
-              courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
-            newCourseTitle:
-              courseLink === "__new__" ? newCourseTitle.trim() : undefined,
+            courseId: courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
+            newCourseTitle: courseLink === "__new__" ? newCourseTitle.trim() : undefined,
             speakingRate,
             repeatZh,
           },
         },
       }),
     onSuccess: (r) => {
-      toast.success(`영상 생성 작업 ${r.ids.length}건을 시작했어요. [작업 현황] 탭에서 확인하세요.`);
+      toast.success(
+        `영상 생성 작업 ${r.ids.length}건을 시작했어요. [작업 현황] 탭에서 확인하세요.`,
+      );
       qc.invalidateQueries({ queryKey: ["video-jobs"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "생성 실패"),
@@ -402,17 +398,21 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
         <div className="space-y-2">
           <Label>생성 개수</Label>
           <Select value={String(count)} onValueChange={(v) => setCount(Number(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
-                <SelectItem key={n} value={String(n)}>{n}개</SelectItem>
+                <SelectItem key={n} value={String(n)}>
+                  {n}개
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {count >= 6 && (
             <p className="text-xs text-muted-foreground">
-              YouTube 업로드는 하루 약 6개 한도가 있어요. 초과분은 업로드 단계에서
-              실패할 수 있으니 [승인 후 업로드]를 권장해요.
+              YouTube 업로드는 하루 약 6개 한도가 있어요. 초과분은 업로드 단계에서 실패할 수 있으니
+              [승인 후 업로드]를 권장해요.
             </p>
           )}
         </div>
@@ -475,10 +475,14 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
               }
             }}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {LEVELS.map((l) => (
-                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                <SelectItem key={l.value} value={l.value}>
+                  {l.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -492,14 +496,15 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
         </div>
         <div className="space-y-2">
           <Label>영상 길이</Label>
-          <Select
-            value={String(lengthSeconds)}
-            onValueChange={(v) => setLengthSeconds(Number(v))}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select value={String(lengthSeconds)} onValueChange={(v) => setLengthSeconds(Number(v))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {LENGTHS.map((l) => (
-                <SelectItem key={l.value} value={String(l.value)}>{l.label}</SelectItem>
+                <SelectItem key={l.value} value={String(l.value)}>
+                  {l.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -514,7 +519,9 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
               setVoice(VOICES[lang][0].value);
             }}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="ko">한국어</SelectItem>
               <SelectItem value="zh">중국어</SelectItem>
@@ -527,10 +534,14 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
         <div className="space-y-2">
           <Label>④ 대본 중점</Label>
           <Select value={focus} onValueChange={(v) => setFocus(v as VideoFocus)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {Object.entries(FOCUS_LABEL).map(([v, l]) => (
-                <SelectItem key={v} value={v}>{l}</SelectItem>
+                <SelectItem key={v} value={v}>
+                  {l}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -541,10 +552,14 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
             value={resolution}
             onValueChange={(v) => setResolution(v as VideoJobConfig["resolution"])}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {RESOLUTIONS.map((r) => (
-                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                <SelectItem key={r.value} value={r.value}>
+                  {r.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -552,10 +567,14 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
         <div className="space-y-2">
           <Label>클립(장면) 수</Label>
           <Select value={String(clipCount)} onValueChange={(v) => setClipCount(Number(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {[3, 4, 5, 6, 8, 10, 12, 15, 20].map((n) => (
-                <SelectItem key={n} value={String(n)}>{n}개</SelectItem>
+                <SelectItem key={n} value={String(n)}>
+                  {n}개
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -563,10 +582,14 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
         <div className="space-y-2">
           <Label>⑦ 음성</Label>
           <Select value={voice} onValueChange={setVoice}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {voices.map((v) => (
-                <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                <SelectItem key={v.value} value={v.value}>
+                  {v.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -576,14 +599,15 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
       <div className="grid md:grid-cols-3 gap-4 items-end">
         <div className="space-y-2">
           <Label>말하기 속도</Label>
-          <Select
-            value={String(speakingRate)}
-            onValueChange={(v) => setSpeakingRate(Number(v))}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select value={String(speakingRate)} onValueChange={(v) => setSpeakingRate(Number(v))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {SPEAKING_RATES.map((r) => (
-                <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
+                <SelectItem key={r.value} value={String(r.value)}>
+                  {r.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -612,7 +636,9 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
             value={uploadMode}
             onValueChange={(v) => setUploadMode(v as VideoJobConfig["uploadMode"])}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="web">웹 전용 (딩동에서 바로 재생 — 유튜브 안 감)</SelectItem>
               <SelectItem value="approval">미리보기 후 승인 업로드</SelectItem>
@@ -627,7 +653,9 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
               value={privacy}
               onValueChange={(v) => setPrivacy(v as VideoJobConfig["privacy"])}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="unlisted">일부 공개 (권장 — 학습 페이지 재생 가능)</SelectItem>
                 <SelectItem value="private">비공개 (본인만 재생 가능)</SelectItem>
@@ -721,7 +749,10 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
                 <div className="text-sm font-medium truncate">{title}</div>
                 <div className="text-[11px] text-muted-foreground">
                   {new Date(j.created_at).toLocaleString("ko-KR", {
-                    month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+                    month: "numeric",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
                   {busy && ` · ${j.step}`}
                 </div>
@@ -735,20 +766,27 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
                 )}
               </div>
 
-              <span
-                className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${meta.cls}`}
-              >
+              <span className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${meta.cls}`}>
                 {meta.label}
               </span>
 
               <div className="flex items-center gap-1 shrink-0">
                 {j.status === "awaiting_approval" && (
-                  <Button size="sm" className="h-7 px-2 text-xs" onClick={() => act(callApprove, j.id)}>
+                  <Button
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => act(callApprove, j.id)}
+                  >
                     <Upload className="size-3.5 mr-1" /> 승인
                   </Button>
                 )}
                 {j.status === "failed" && (
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => act(callRetry, j.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => act(callRetry, j.id)}
+                  >
                     <RefreshCcw className="size-3.5" />
                   </Button>
                 )}
@@ -758,16 +796,16 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
                   className="p-1.5 rounded-lg hover:bg-white/50 text-muted-foreground"
                   aria-label="상세 보기"
                 >
-                  <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`size-4 transition-transform ${open ? "rotate-180" : ""}`}
+                  />
                 </button>
               </div>
             </div>
 
             {open && (
               <div className="mt-3 ml-19 pl-0 md:pl-19 space-y-2">
-                {j.error && (
-                  <p className="text-xs text-red-600 whitespace-pre-wrap">{j.error}</p>
-                )}
+                {j.error && <p className="text-xs text-red-600 whitespace-pre-wrap">{j.error}</p>}
                 {j.video_path && (
                   <video
                     src={`/media/${j.video_path}`}
@@ -853,8 +891,7 @@ function SchedulePanel() {
   const [lengthSeconds, setLengthSeconds] = useState(60);
   const [language, setLanguage] = useState<VideoLanguage>("ko");
   const [focus, setFocus] = useState<VideoFocus>("culture");
-  const [uploadMode, setUploadMode] =
-    useState<VideoJobConfig["uploadMode"]>("auto");
+  const [uploadMode, setUploadMode] = useState<VideoJobConfig["uploadMode"]>("auto");
   const [privacy, setPrivacy] = useState<VideoJobConfig["privacy"]>("unlisted");
   const [courseLink, setCourseLink] = useState("none");
   const [newCourseTitle, setNewCourseTitle] = useState("");
@@ -891,11 +928,7 @@ function SchedulePanel() {
     setLanguage(cfg.language === "zh" ? "zh" : "ko");
     setFocus((cfg.focus as VideoFocus) ?? "culture");
     setUploadMode(cfg.uploadMode === "approval" ? "approval" : "auto");
-    setPrivacy(
-      cfg.privacy === "private" || cfg.privacy === "public"
-        ? cfg.privacy
-        : "unlisted",
-    );
+    setPrivacy(cfg.privacy === "private" || cfg.privacy === "public" ? cfg.privacy : "unlisted");
     setCourseLink(cfg.courseId ?? "none");
     setNewCourseTitle("");
     const cpr = Number((s.config as Record<string, unknown> | null)?.countPerRun);
@@ -926,10 +959,8 @@ function SchedulePanel() {
         burnSubtitles: true,
         uploadMode,
         privacy,
-        courseId:
-          courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
-        newCourseTitle:
-          courseLink === "__new__" ? newCourseTitle.trim() : undefined,
+        courseId: courseLink !== "none" && courseLink !== "__new__" ? courseLink : null,
+        newCourseTitle: courseLink === "__new__" ? newCourseTitle.trim() : undefined,
         countPerRun,
       },
     };
@@ -949,9 +980,7 @@ function SchedulePanel() {
   });
 
   function toggleWeekday(d: number) {
-    setWeekdays((prev) =>
-      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort(),
-    );
+    setWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
   }
 
   return (
@@ -980,16 +1009,14 @@ function SchedulePanel() {
           </div>
           <div className="space-y-2">
             <Label>실행 시간 (한국 시간) *</Label>
-            <Input
-              type="time"
-              value={timeKst}
-              onChange={(e) => setTimeKst(e.target.value)}
-            />
+            <Input type="time" value={timeKst} onChange={(e) => setTimeKst(e.target.value)} />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>키워드 목록 * (줄바꿈/쉼표 구분 — 실행마다 하나씩 순환, 주제는 AI가 자동 선정)</Label>
+          <Label>
+            키워드 목록 * (줄바꿈/쉼표 구분 — 실행마다 하나씩 순환, 주제는 AI가 자동 선정)
+          </Label>
           <Textarea
             value={keywordsRaw}
             onChange={(e) => setKeywordsRaw(e.target.value)}
@@ -1002,7 +1029,9 @@ function SchedulePanel() {
           <div className="space-y-2">
             <Label>반복 주기</Label>
             <Select value={frequency} onValueChange={(v) => setFrequency(v as "daily" | "weekly")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="daily">매일</SelectItem>
                 <SelectItem value="weekly">매주 (요일 선택)</SelectItem>
@@ -1036,10 +1065,14 @@ function SchedulePanel() {
           <div className="space-y-2">
             <Label>회당 영상 개수</Label>
             <Select value={String(countPerRun)} onValueChange={(v) => setCountPerRun(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                  <SelectItem key={n} value={String(n)}>{n}개</SelectItem>
+                  <SelectItem key={n} value={String(n)}>
+                    {n}개
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1052,21 +1085,32 @@ function SchedulePanel() {
           <div className="space-y-2">
             <Label>난이도</Label>
             <Select value={level} onValueChange={(v) => setLevel(v as VideoLevel)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {LEVELS.map((l) => (
-                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                  <SelectItem key={l.value} value={l.value}>
+                    {l.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>영상 길이</Label>
-            <Select value={String(lengthSeconds)} onValueChange={(v) => setLengthSeconds(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={String(lengthSeconds)}
+              onValueChange={(v) => setLengthSeconds(Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {LENGTHS.map((l) => (
-                  <SelectItem key={l.value} value={String(l.value)}>{l.label}</SelectItem>
+                  <SelectItem key={l.value} value={String(l.value)}>
+                    {l.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1074,7 +1118,9 @@ function SchedulePanel() {
           <div className="space-y-2">
             <Label>언어</Label>
             <Select value={language} onValueChange={(v) => setLanguage(v as VideoLanguage)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ko">한국어</SelectItem>
                 <SelectItem value="zh">중국어</SelectItem>
@@ -1084,10 +1130,14 @@ function SchedulePanel() {
           <div className="space-y-2">
             <Label>중점</Label>
             <Select value={focus} onValueChange={(v) => setFocus(v as VideoFocus)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {Object.entries(FOCUS_LABEL).map(([v, l]) => (
-                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1095,16 +1145,26 @@ function SchedulePanel() {
           <div className="space-y-2">
             <Label>업로드 / 공개</Label>
             <div className="flex gap-2">
-              <Select value={uploadMode} onValueChange={(v) => setUploadMode(v as VideoJobConfig["uploadMode"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={uploadMode}
+                onValueChange={(v) => setUploadMode(v as VideoJobConfig["uploadMode"])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="web">웹 전용</SelectItem>
                   <SelectItem value="auto">자동</SelectItem>
                   <SelectItem value="approval">승인</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={privacy} onValueChange={(v) => setPrivacy(v as VideoJobConfig["privacy"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={privacy}
+                onValueChange={(v) => setPrivacy(v as VideoJobConfig["privacy"])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unlisted">일부공개</SelectItem>
                   <SelectItem value="private">비공개</SelectItem>
@@ -1153,7 +1213,10 @@ function SchedulePanel() {
         )}
         <ul className="space-y-2">
           {(schedules.data ?? []).map((s: VideoSchedule) => (
-            <li key={s.id} className="glass rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
+            <li
+              key={s.id}
+              className="glass rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap"
+            >
               <Switch
                 checked={s.enabled}
                 onCheckedChange={(v) =>

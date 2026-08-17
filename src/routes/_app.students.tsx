@@ -113,13 +113,38 @@ function StudentsPage() {
               <table className="w-full text-sm min-w-[720px]">
                 <thead>
                   <tr className="text-muted-foreground text-xs">
-                    <Th label="학생" k="name" sort={sort} asc={asc} onClick={toggleSort} align="left" />
-                    <Th label="마지막 활동" k="daysIdle" sort={sort} asc={asc} onClick={toggleSort} />
+                    <Th
+                      label="학생"
+                      k="name"
+                      sort={sort}
+                      asc={asc}
+                      onClick={toggleSort}
+                      align="left"
+                    />
+                    <Th
+                      label="마지막 활동"
+                      k="daysIdle"
+                      sort={sort}
+                      asc={asc}
+                      onClick={toggleSort}
+                    />
                     <Th label="스트릭" k="streak" sort={sort} asc={asc} onClick={toggleSort} />
                     <Th label="최근 7일" k="actions7d" sort={sort} asc={asc} onClick={toggleSort} />
                     <Th label="단어" k="vocabTotal" sort={sort} asc={asc} onClick={toggleSort} />
-                    <Th label="완료 레슨" k="lessonsCompleted" sort={sort} asc={asc} onClick={toggleSort} />
-                    <Th label="퀴즈 평균" k="quizAvgPct" sort={sort} asc={asc} onClick={toggleSort} />
+                    <Th
+                      label="완료 레슨"
+                      k="lessonsCompleted"
+                      sort={sort}
+                      asc={asc}
+                      onClick={toggleSort}
+                    />
+                    <Th
+                      label="퀴즈 평균"
+                      k="quizAvgPct"
+                      sort={sort}
+                      asc={asc}
+                      onClick={toggleSort}
+                    />
                   </tr>
                 </thead>
                 <tbody>
@@ -146,11 +171,7 @@ function SummaryCard({
   tone?: "default" | "good" | "warn";
 }) {
   const cls =
-    tone === "warn"
-      ? "text-amber-700"
-      : tone === "good"
-        ? "text-emerald-700"
-        : "text-foreground";
+    tone === "warn" ? "text-amber-700" : tone === "good" ? "text-emerald-700" : "text-foreground";
   return (
     <div className="glass rounded-2xl p-4">
       <div className={`text-2xl font-bold ${cls}`}>{value}</div>
@@ -191,14 +212,7 @@ function Th({
 
 function StudentRowView({ s }: { s: StudentRow }) {
   const idle = s.daysIdle;
-  const idleLabel =
-    idle == null
-      ? "—"
-      : idle === 0
-        ? "오늘"
-        : idle === 1
-          ? "어제"
-          : `${idle}일 전`;
+  const idleLabel = idle == null ? "—" : idle === 0 ? "오늘" : idle === 1 ? "어제" : `${idle}일 전`;
   const idleCls =
     idle == null
       ? "text-muted-foreground/60"
@@ -223,9 +237,7 @@ function StudentRowView({ s }: { s: StudentRow }) {
           )}
         </div>
         {s.email && (
-          <div className="text-[11px] text-muted-foreground truncate max-w-[200px]">
-            {s.email}
-          </div>
+          <div className="text-[11px] text-muted-foreground truncate max-w-[200px]">{s.email}</div>
         )}
       </td>
       <td className={`px-3 py-2.5 text-center ${idleCls}`}>{idleLabel}</td>
@@ -246,11 +258,7 @@ function StudentRowView({ s }: { s: StudentRow }) {
         {s.quizAvgPct == null ? (
           <span className="text-muted-foreground/60">—</span>
         ) : (
-          <span
-            className={
-              s.quizAvgPct >= 70 ? "text-emerald-700" : "text-amber-700"
-            }
-          >
+          <span className={s.quizAvgPct >= 70 ? "text-emerald-700" : "text-amber-700"}>
             {s.quizAvgPct}%
           </span>
         )}

@@ -70,12 +70,9 @@ export function useVocabStore() {
     },
   });
 
-  const loading =
-    authed === null || (authed === true ? authedQuery.isLoading : !guestReady);
-  const items: VocabItem[] =
-    authed === true ? (authedQuery.data ?? []) : guestItems;
-  const tags: string[] =
-    authed === true ? (authedTags.data ?? []) : guestTags;
+  const loading = authed === null || (authed === true ? authedQuery.isLoading : !guestReady);
+  const items: VocabItem[] = authed === true ? (authedQuery.data ?? []) : guestItems;
+  const tags: string[] = authed === true ? (authedTags.data ?? []) : guestTags;
 
   const deleteByZh = useCallback(
     (zh: string) => {
@@ -111,7 +108,6 @@ export function useVocabStore() {
     },
     [authed, setTags],
   );
-
 
   return {
     authed,

@@ -45,10 +45,7 @@ function load(id: string): SongProgress {
 function save(id: string, next: SongProgress) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(
-      KEY(id),
-      JSON.stringify({ ...next, updatedAt: new Date().toISOString() }),
-    );
+    localStorage.setItem(KEY(id), JSON.stringify({ ...next, updatedAt: new Date().toISOString() }));
   } catch {
     /* ignore */
   }
@@ -75,28 +72,19 @@ export function useSongProgress(songId: string) {
       save(songId, next);
       setState(next);
       if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent(EVENT, { detail: { id: songId } }),
-        );
+        window.dispatchEvent(new CustomEvent(EVENT, { detail: { id: songId } }));
       }
     },
     [songId],
   );
 
   const markVocab = useCallback(
-    (zh: string) =>
-      mutate((p) =>
-        p.vocab.includes(zh) ? p : { ...p, vocab: [...p.vocab, zh] },
-      ),
+    (zh: string) => mutate((p) => (p.vocab.includes(zh) ? p : { ...p, vocab: [...p.vocab, zh] })),
     [mutate],
   );
   const markGrammar = useCallback(
     (title: string) =>
-      mutate((p) =>
-        p.grammar.includes(title)
-          ? p
-          : { ...p, grammar: [...p.grammar, title] },
-      ),
+      mutate((p) => (p.grammar.includes(title) ? p : { ...p, grammar: [...p.grammar, title] })),
     [mutate],
   );
   const markCloze = useCallback(
@@ -109,9 +97,7 @@ export function useSongProgress(songId: string) {
   );
   const markRepeat = useCallback(
     (zh: string) =>
-      mutate((p) =>
-        p.repeat.includes(zh) ? p : { ...p, repeat: [...p.repeat, zh] },
-      ),
+      mutate((p) => (p.repeat.includes(zh) ? p : { ...p, repeat: [...p.repeat, zh] })),
     [mutate],
   );
   const reset = useCallback(() => mutate(() => ({ ...EMPTY })), [mutate]);

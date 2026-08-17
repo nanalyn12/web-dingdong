@@ -10,7 +10,6 @@ const BACKUP_TIME_KST = "04:30";
 const KEEP_FILES = 7;
 
 declare global {
-  // eslint-disable-next-line no-var
   var __dailyBackupBootChecked: boolean | undefined;
 }
 
@@ -80,9 +79,7 @@ async function runDbBackup(dateKey: string): Promise<void> {
     SELECT table_name FROM information_schema.tables
     WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
     ORDER BY table_name`);
-  const tableNames = (tablesRes.rows as Array<{ table_name: string }>).map(
-    (r) => r.table_name,
-  );
+  const tableNames = (tablesRes.rows as Array<{ table_name: string }>).map((r) => r.table_name);
 
   let totalRows = 0;
   await write({ type: "meta", app: "dingdong", date: dateKey, tables: tableNames });

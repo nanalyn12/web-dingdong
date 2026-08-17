@@ -31,10 +31,7 @@ export const Route = createFileRoute("/api/public/hooks/reengagement-push")({
           })
           .from(tables.profiles)
           .where(
-            or(
-              isNull(tables.profiles.last_active_at),
-              lt(tables.profiles.last_active_at, cutoff),
-            ),
+            or(isNull(tables.profiles.last_active_at), lt(tables.profiles.last_active_at, cutoff)),
           );
         if (!profiles.length) return Response.json({ ok: true, sent: 0 });
 

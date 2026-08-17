@@ -5,10 +5,7 @@ import { BookOpen, Film, Loader2, Music, NotebookPen, Search } from "lucide-reac
 
 import { searchContent, type SearchHit } from "@/lib/search.functions";
 
-const TYPE_META: Record<
-  SearchHit["type"],
-  { label: string; icon: typeof BookOpen }
-> = {
+const TYPE_META: Record<SearchHit["type"], { label: string; icon: typeof BookOpen }> = {
   lesson: { label: "레슨", icon: BookOpen },
   drama: { label: "영상 학습", icon: Film },
   song: { label: "학습송", icon: Music },

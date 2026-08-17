@@ -35,13 +35,8 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
 
   const index = course.lessons.findIndex((l) => l.id === lessonId);
   const prev = index > 0 ? course.lessons[index - 1] : null;
-  const next =
-    index >= 0 && index < course.lessons.length - 1
-      ? course.lessons[index + 1]
-      : null;
-  const done = new Set(
-    (progressList ?? []).filter((p) => p.completed).map((p) => p.lesson_id),
-  );
+  const next = index >= 0 && index < course.lessons.length - 1 ? course.lessons[index + 1] : null;
+  const done = new Set((progressList ?? []).filter((p) => p.completed).map((p) => p.lesson_id));
 
   return (
     <nav className="rounded-2xl border border-border/60 bg-accent/30">
@@ -70,9 +65,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
             className="h-8 px-2"
             disabled={!prev}
             title={prev ? prev.title : "첫 강의예요"}
-            onClick={() =>
-              prev && navigate({ to: "/lessons/$id", params: { id: prev.id } })
-            }
+            onClick={() => prev && navigate({ to: "/lessons/$id", params: { id: prev.id } })}
           >
             <ChevronLeft className="size-4" />
             <span className="sr-only">이전 강의</span>
@@ -83,9 +76,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
             className="h-8 px-2"
             disabled={!next}
             title={next ? next.title : "마지막 강의예요"}
-            onClick={() =>
-              next && navigate({ to: "/lessons/$id", params: { id: next.id } })
-            }
+            onClick={() => next && navigate({ to: "/lessons/$id", params: { id: next.id } })}
           >
             <ChevronRight className="size-4" />
             <span className="sr-only">다음 강의</span>

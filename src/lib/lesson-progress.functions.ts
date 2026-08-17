@@ -90,8 +90,7 @@ export const saveMyLessonProgress = createServerFn({ method: "POST" })
     const quizCorrect = data.quizScore?.correct ?? prev?.quiz_correct ?? null;
     const quizTotal = data.quizScore?.total ?? prev?.quiz_total ?? null;
     const passed =
-      data.quizScore &&
-      data.quizScore.correct >= Math.ceil(data.quizScore.total * 0.7);
+      data.quizScore && data.quizScore.correct >= Math.ceil(data.quizScore.total * 0.7);
 
     const values = {
       user_id: context.userId,

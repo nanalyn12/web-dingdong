@@ -4,14 +4,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { BookmarkPlus, BookmarkCheck, Mic, Volume2, Check, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import {
-  addGuestVocab,
-  guessEmoji,
-  loadGuestVocab,
-  scorePronunciation,
-} from "@/lib/vocab";
+import { addGuestVocab, guessEmoji, loadGuestVocab, scorePronunciation } from "@/lib/vocab";
 import { hasVocabZh, saveVocabulary } from "@/lib/vocab.functions";
 import { VocabPracticeDialog } from "@/components/vocab-practice-dialog";
+import type {
+  SpeechRecognitionErrorEventLike,
+  SpeechRecognitionLike,
+  SpeechRecognitionResultEventLike,
+  SpeechRecognitionWindow,
+} from "@/lib/speech-recognition";
 
 type KeyExpression = {
   zh: string;
@@ -28,27 +29,12 @@ type Tone = {
   ring: string;
 };
 
-/* ----- Web Speech typings (minimal) ----- */
-type SR = {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  continuous: boolean;
-  onresult: ((e: any) => void) | null;
-  onerror: ((e: any) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-};
-
-function getRecognition(): SR | null {
+function getRecognition(): SpeechRecognitionLike | null {
   if (typeof window === "undefined") return null;
-  const Ctor =
-    (window as any).SpeechRecognition ||
-    (window as any).webkitSpeechRecognition;
+  const w = window as unknown as SpeechRecognitionWindow;
+  const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
   if (!Ctor) return null;
-  const r: SR = new Ctor();
+  const r: SpeechRecognitionLike = new Ctor();
   r.lang = "zh-CN";
   r.interimResults = false;
   r.maxAlternatives = 1;
@@ -100,7 +86,9 @@ export function KeyExpressionCard({
     return () => {
       alive = false;
     };
-  }, [k.zh]);
+    // callHasVocab is stable — useServerFn memoises on [router, serverFn], both
+    // of which outlive this component — so listing it cannot re-trigger the fetch.
+  }, [k.zh, callHasVocab]);
 
   const saveMut = useMutation({
     mutationFn: async () => {
@@ -130,7 +118,7 @@ export function KeyExpressionCard({
   });
 
   /* ---------- Pronunciation test ---------- */
-  const recRef = useRef<SR | null>(null);
+  const recRef = useRef<SpeechRecognitionLike | null>(null);
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState<string | null>(null);
   const [score, setScore] = useState<number | null>(null);
@@ -146,17 +134,13 @@ export function KeyExpressionCard({
       return;
     }
     recRef.current = rec;
-    rec.onresult = (e: any) => {
+    rec.onresult = (e: SpeechRecognitionResultEventLike) => {
       const transcript = e?.results?.[0]?.[0]?.transcript ?? "";
       setHeard(transcript);
       setScore(scorePronunciation(k.zh, transcript));
     };
-    rec.onerror = (e: any) => {
-      setErr(
-        e?.error === "not-allowed"
-          ? "마이크 권한이 필요해요."
-          : "다시 시도해주세요.",
-      );
+    rec.onerror = (e: SpeechRecognitionErrorEventLike) => {
+      setErr(e?.error === "not-allowed" ? "마이크 권한이 필요해요." : "다시 시도해주세요.");
     };
     rec.onend = () => setListening(false);
     try {
@@ -296,9 +280,7 @@ export function KeyExpressionCard({
           </button>
         </div>
 
-        {err && (
-          <p className="mt-2 text-[11px] text-rose-600">{err}</p>
-        )}
+        {err && <p className="mt-2 text-[11px] text-rose-600">{err}</p>}
 
         {heard != null && (
           <div className="mt-2 space-y-1.5">
