@@ -1,4 +1,5 @@
 import { pickAiKey, type AiKeyChoice } from "./api-key-choice";
+import { SunoApiError, classifySunoFailure, sunoFailureMessage } from "./suno-failure";
 
 // Suno API client + media storage helpers. SERVER-ONLY (.server.ts).
 // Docs: https://docs.sunoapi.org/suno-api/
@@ -86,40 +87,24 @@ async function sunoFetch<T>(
     payload = { raw: text };
   }
   const snippet = (s: string) => (s.length > 240 ? s.slice(0, 240) + "…" : s);
-  const httpHint =
-    res.status === 401
-      ? "Suno API 키가 올바르지 않거나 만료되었습니다."
-      : res.status === 402 || res.status === 429
-        ? "Suno 크레딧이 부족하거나 요청 한도를 초과했어요."
-        : res.status === 400
-          ? "Suno 요청 형식이 잘못되었습니다 (가사/스타일/모델 값 확인)."
-          : res.status >= 500
-            ? "Suno 서버 오류입니다. 잠시 후 다시 시도해주세요."
-            : null;
-  if (!res.ok) {
+  const apiCode = typeof payload?.code === "number" ? payload.code : undefined;
+
+  // 성격 판정은 상태 코드에서 한 번만 하고, 그 뒤로는 문장이 아니라 kind로
+  // 나른다 (suno-failure.ts의 주석 참고).
+  if (!res.ok || (apiCode !== undefined && apiCode !== 200)) {
+    const kind = classifySunoFailure({ httpStatus: res.status, apiCode });
     const apiMsg = payload?.msg || payload?.message;
     const raw = typeof payload?.raw === "string" ? snippet(payload.raw) : null;
-    const detail = apiMsg || raw || `(HTTP ${res.status})`;
-    throw new Error(
-      `Suno API 오류 [${res.status}] — ${httpHint ?? detail}${apiMsg && httpHint ? ` (${apiMsg})` : ""}`,
-    );
-  }
-  if (payload && typeof payload === "object" && "code" in payload && payload.code !== 200) {
-    const codeHint =
-      payload.code === 401
-        ? "API 키 인증 실패"
-        : payload.code === 402
-          ? "크레딧 부족"
-          : payload.code === 429
-            ? "요청 한도 초과 — 잠시 후 다시 시도"
-            : payload.code === 430
-              ? "민감 단어가 포함되어 거부됨"
-              : payload.code === 451
-                ? "다운로드 실패 (Suno 측 자산 만료 가능)"
-                : payload.code === 455
-                  ? "Suno 시스템 점검 중"
-                  : null;
-    throw new Error(`Suno: ${codeHint ?? payload.msg ?? "알 수 없는 오류"} (code ${payload.code})`);
+    // Suno가 준 원문은 뒤에 붙여 둔다 — 우리 분류가 놓친 사정이 거기 남는다.
+    const detail = apiMsg || raw;
+    const where =
+      apiCode !== undefined && apiCode !== 200 ? `code ${apiCode}` : `HTTP ${res.status}`;
+    throw new SunoApiError({
+      kind,
+      httpStatus: res.status,
+      apiCode,
+      message: `${sunoFailureMessage(kind)} (${where}${detail ? `: ${detail}` : ""})`,
+    });
   }
   return (payload?.data ?? payload) as T;
 }

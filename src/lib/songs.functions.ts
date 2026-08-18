@@ -178,12 +178,12 @@ export const generateSongWithSuno = createServerFn({ method: "POST" })
       });
       taskId = res.taskId;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Suno 요청 실패";
-      const retryable = /429|한도|초과|점검|5\d\d/.test(msg);
+      // 실패의 성격은 suno.server.ts가 상태 코드에서 이미 정해 실어 보낸다.
+      // 문장을 다시 파싱하면 문구를 고칠 때마다 판정이 조용히 어긋난다.
+      const { SunoApiError, isRetryableSunoFailure } = await import("@/lib/suno-failure");
+      const retryable = e instanceof SunoApiError ? isRetryableSunoFailure(e.kind) : false;
       return {
-        error: retryable
-          ? "Suno 서버가 지금 바빠요 (요청 한도 초과). 1~2분 후 다시 시도해주세요."
-          : msg,
+        error: e instanceof Error ? e.message : "Suno 요청 실패",
         retryable,
       } as const;
     }
