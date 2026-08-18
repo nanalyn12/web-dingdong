@@ -18,15 +18,21 @@ export const SUPPORTED_BACKUP_VERSIONS: number[] = [1];
 
 /** 업로드·파싱 상한. 넘으면 DB를 건드리기 전에 거부한다. */
 export const LIMITS = {
-  /** 압축을 푼 JSON 텍스트 기준 */
-  maxBytes: 16 * 1024 * 1024,
+  /** 압축을 푼 JSON 텍스트 기준. 실측(2026-08): 콘텐츠 940행이 약 9MB였다.
+   *  디스크에는 gzip으로 1/3 이하가 되어 남고, 이 값은 메모리에 펼친 문자열의
+   *  상한일 뿐이라 넉넉하게 잡는다 — 여유가 없으면 콘텐츠가 늘 때 백업이
+   *  "크기 초과"로 실패한다. */
+  maxBytes: 64 * 1024 * 1024,
   /** 백업 전체 행 수 */
   maxRows: 100_000,
   /** JSON 중첩 깊이 (jsonb 컬럼 안의 폭탄 방어) */
   maxDepth: 40,
-  /** 업로드 본문(gzip base64) 기준 */
-  maxUploadBytes: 12 * 1024 * 1024,
+  /** 업로드 본문(gzip base64) 기준. gzip이 원본의 30% 수준이고 base64가 거기서
+   *  4/3배가 되므로, maxBytes를 채운 백업도 여유 있게 들어온다. */
+  maxUploadBytes: 32 * 1024 * 1024,
 } as const;
+
+export type BackupLimits = typeof LIMITS;
 
 // 백업 대상은 **제작자가 만든 콘텐츠**뿐이다. 학습자의 개인 데이터(단어장·진행률·
 // 프로필)는 다루지 않는다 — 그건 학습자의 것이고, 진행률 테이블을 범위에 넣으면
@@ -392,13 +398,13 @@ function asString(value: unknown, field: string): string {
  * 백업 파일 텍스트를 검증해 파싱한다. DB를 건드리기 전에 형식·버전·테이블
  * 허용 목록·크기·깊이를 모두 통과해야 한다. 실패하면 BackupError를 던진다.
  */
-export function parseBackupFile(text: string): BackupFile {
+export function parseBackupFile(text: string, limits: BackupLimits = LIMITS): BackupFile {
   if (typeof text !== "string" || text.length === 0) {
     throw new BackupError("백업 파일이 비어 있습니다.", "malformed");
   }
-  if (text.length > LIMITS.maxBytes) {
+  if (text.length > limits.maxBytes) {
     throw new BackupError(
-      `백업 파일 크기가 상한(${Math.round(LIMITS.maxBytes / 1024 / 1024)}MB)을 넘습니다.`,
+      `백업 파일 크기가 상한(${Math.round(limits.maxBytes / 1024 / 1024)}MB)을 넘습니다.`,
       "too_large",
     );
   }
@@ -448,18 +454,18 @@ export function parseBackupFile(text: string): BackupFile {
       }
     }
     totalRows += rows.length;
-    if (totalRows > LIMITS.maxRows) {
+    if (totalRows > limits.maxRows) {
       throw new BackupError(
-        `백업 행 수가 상한(${LIMITS.maxRows.toLocaleString("ko-KR")}건)을 넘습니다.`,
+        `백업 행 수가 상한(${limits.maxRows.toLocaleString("ko-KR")}건)을 넘습니다.`,
         "too_many_rows",
       );
     }
     cleanData[name] = rows as BackupRow[];
   }
 
-  if (depthOf(envelope, LIMITS.maxDepth) > LIMITS.maxDepth) {
+  if (depthOf(envelope, limits.maxDepth) > limits.maxDepth) {
     throw new BackupError(
-      `백업 파일의 중첩 깊이가 상한(${LIMITS.maxDepth})을 넘습니다.`,
+      `백업 파일의 중첩 깊이가 상한(${limits.maxDepth})을 넘습니다.`,
       "too_deep",
     );
   }
@@ -482,6 +488,16 @@ export function parseBackupFile(text: string): BackupFile {
     rowCounts,
     data: cleanData,
   };
+}
+
+/**
+ * 백업 파일을 문자열로 만든다. 들여쓰기를 넣지 않는 이유: 이 파일은 사람이
+ * 읽으라고 만드는 것이 아니라 기계가 되읽는 것이고, 실측에서 들여쓰기가
+ * 전체의 23%를 차지해 그만큼 크기 상한에 먼저 부딪혔다. 내용을 보려면
+ * 압축을 풀고 포매터에 넣으면 된다.
+ */
+export function serializeBackupFile(file: BackupFile): string {
+  return JSON.stringify(file);
 }
 
 /** 남의 백업 파일을 내 계정에 들이지 않는다. 파일의 ownerId는 서명으로

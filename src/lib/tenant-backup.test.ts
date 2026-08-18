@@ -15,6 +15,7 @@ import {
   keyOf,
   parseBackupFile,
   planRestore,
+  serializeBackupFile,
   safeJsonParse,
   tableSpec,
   type BackupFile,
@@ -235,8 +236,11 @@ describe("parseBackupFile", () => {
   });
 
   it("파일 크기 상한을 넘으면 거부한다", () => {
-    const big = "x".repeat(LIMITS.maxBytes + 1);
-    expect(() => parseBackupFile(big)).toThrow(/크/);
+    // 상한을 주입해 검증한다 — 실제 상한(수십 MB)만큼 문자열을 만들면
+    // 테스트가 그 자체로 무거워진다.
+    const text = JSON.stringify(envelope());
+    expect(() => parseBackupFile(text, { ...LIMITS, maxBytes: 10 })).toThrow(/크/);
+    expect(() => parseBackupFile(text)).not.toThrow();
   });
 
   it("행 수 상한을 넘으면 거부한다", () => {
@@ -262,6 +266,28 @@ describe("parseBackupFile", () => {
       envelope({ data: { courses: { id: "x" } } as unknown as BackupFile["data"] }),
     );
     expect(() => parseBackupFile(text)).toThrow();
+  });
+});
+
+// ── 직렬화: 파일은 사람이 아니라 기계가 읽는다 ─────────────────────────────
+
+describe("serializeBackupFile", () => {
+  const file = () => envelope({ data: { courses: [{ id: "c1", title: "A" }] } });
+
+  it("들여쓰기를 넣지 않는다", () => {
+    // 실측: 들여쓰기가 파일의 23%를 차지했고, 그만큼 크기 상한에 먼저 부딪힌다.
+    const text = serializeBackupFile(file());
+    expect(text).toBe(JSON.stringify(JSON.parse(text)));
+  });
+
+  it("직렬화 → 파싱 왕복이 데이터를 보존한다", () => {
+    const parsed = parseBackupFile(serializeBackupFile(file()));
+    expect(parsed.data).toEqual(file().data);
+    expect(parsed.ownerId).toBe(ME);
+  });
+
+  it("같은 파일은 언제나 같은 문자열이 된다", () => {
+    expect(serializeBackupFile(file())).toBe(serializeBackupFile(file()));
   });
 });
 

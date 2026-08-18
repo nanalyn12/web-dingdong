@@ -19,6 +19,7 @@ import {
   insertOrder,
   keyOf,
   parseBackupFile,
+  serializeBackupFile,
   planRestore,
   tableSpec,
   type BackupFile,
@@ -223,7 +224,7 @@ async function buildBackupFile(userId: string): Promise<{
     rowCounts,
     data,
   };
-  const text = JSON.stringify(file, null, 2);
+  const text = serializeBackupFile(file);
   if (text.length > LIMITS.maxBytes) {
     throw new BackupError(
       `백업이 파일 크기 상한(${Math.round(LIMITS.maxBytes / 1024 / 1024)}MB)을 넘었어요.`,
@@ -350,7 +351,7 @@ export async function importBackupForOwner(input: {
   const backupId = inserted[0].id;
 
   // 파일 안의 ownerId/서명은 그대로 두고 저장한다 — 다시 읽을 때 같은 검증을 통과해야 한다.
-  const { bytes } = await writeBackupFile(input.userId, backupId, JSON.stringify(file));
+  const { bytes } = await writeBackupFile(input.userId, backupId, serializeBackupFile(file));
   await db
     .update(tables.tenant_backups)
     .set({
