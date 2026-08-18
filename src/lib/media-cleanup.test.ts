@@ -107,3 +107,32 @@ describe("Supabase 잔재 정리", () => {
     expect(filesContaining(/cleanupOrphanVideoFiles/)).toContain("server.ts");
   });
 });
+
+// ── 제거한 외부 서비스: Supadata (계정 없음 → 항상 실패하던 폴백) ──────────
+
+describe("Supadata 폴백 제거", () => {
+  it("소스 어디에도 supadata 언급이 남지 않는다", () => {
+    expect(filesContaining(/supadata/i)).toEqual([]);
+  });
+
+  it("ENV_SPEC에 SUPADATA_API_KEY가 없다", () => {
+    const spec = readFileSync(join(SRC, "lib", "env.server.ts"), "utf8");
+    expect(spec).not.toContain("SUPADATA_API_KEY");
+  });
+
+  it("ENV_SPEC의 모든 키가 .env.example에도 있다", () => {
+    // 한쪽에만 남은 키는 "설정해야 하나?" 하는 혼란만 남긴다.
+    const spec = readFileSync(join(SRC, "lib", "env.server.ts"), "utf8");
+    const example = readFileSync(join(process.cwd(), ".env.example"), "utf8");
+    const names = [...spec.matchAll(/name: "([A-Z_]+)"/g)].map((m) => m[1]);
+    expect(names.length).toBeGreaterThan(5);
+    expect(names.filter((n) => !example.includes(n))).toEqual([]);
+  });
+
+  it("자막 수집 자체는 살아남아 드라마 생성이 계속 쓴다", () => {
+    // 폴백과 같은 파일에 있었다는 이유로 진입점까지 지우면 영상 등록이 죽는다.
+    expect(filesContaining(/fetchYouTubeCaptions/)).toContain(
+      join("lib", "generate-drama.functions.ts"),
+    );
+  });
+});

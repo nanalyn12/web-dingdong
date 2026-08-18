@@ -49,7 +49,6 @@ export const ENV_SPEC: EnvEntry[] = [
   { name: "PEXELS_API_KEY", required: false, feature: "영상 스튜디오 배경 영상 소스" },
   { name: "GOOGLE_TTS_API_KEY", required: false, feature: "영상 내레이션 음성 합성" },
   { name: "SUNO_API_KEY", required: false, feature: "학습송 음원 생성" },
-  { name: "SUPADATA_API_KEY", required: false, feature: "유튜브 자막 수집" },
   { name: "VAPID_PUBLIC_KEY", required: false, feature: "웹 푸시 알림" },
   { name: "VAPID_PRIVATE_KEY", required: false, feature: "웹 푸시 알림" },
   { name: "VAPID_SUBJECT", required: false, feature: "웹 푸시 알림 발신자 정보" },

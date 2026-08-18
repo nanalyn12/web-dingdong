@@ -20,7 +20,6 @@ export type ProbeResult =
       languageCode: string;
       segmentCount: number;
       trackCount: number;
-      source: "youtube" | "supadata";
     }
   | {
       ok: false;
@@ -50,7 +49,6 @@ export const probeCaptions = createServerFn({ method: "POST" })
         languageCode: r.languageCode,
         segmentCount: r.segmentCount,
         trackCount: r.trackCount,
-        source: r.source,
       };
     }
     if (r.status === "no-tracks") {

@@ -558,20 +558,6 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
                   <span className="text-emerald-700">
                     자막 있음 · {probe.languageCode} · {probe.segmentCount}줄
                   </span>
-                  <span
-                    className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                      probe.source === "supadata"
-                        ? "bg-violet-100 text-violet-700"
-                        : "bg-sky-100 text-sky-700"
-                    }`}
-                    title={
-                      probe.source === "supadata"
-                        ? "Supadata 프록시로 자막을 가져왔어요"
-                        : "YouTube에서 직접 자막을 가져왔어요"
-                    }
-                  >
-                    {probe.source === "supadata" ? "Supadata" : "YouTube"}
-                  </span>
                 </>
               ) : probe && !probe.ok ? (
                 <>

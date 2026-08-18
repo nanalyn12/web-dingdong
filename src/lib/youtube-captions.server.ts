@@ -100,19 +100,10 @@ function pickBestTrack(tracks: CaptionTrack[], pref: PreferredLang = "auto"): Ca
   return tracks[0];
 }
 
-export type CaptionSource = "youtube" | "supadata";
-
-// For Supadata, we try aliases in order. `auto` uses the module default.
-function supadataLangCandidates(pref: PreferredLang): string[] {
-  const explicit = langAliases(pref);
-  return explicit.length > 0 ? explicit : [];
-}
-
 export async function fetchYouTubeCaptions(
   videoId: string,
   preferredLang: PreferredLang = "auto",
-): Promise<{ segments: CaptionSegment[]; languageCode: string; source: CaptionSource } | null> {
-  // 1) Direct YouTube scrape (free, fastest when it works).
+): Promise<{ segments: CaptionSegment[]; languageCode: string } | null> {
   const tracks = await fetchTracksFromWatchPage(videoId);
   const track = pickBestTrack(tracks, preferredLang);
   if (track?.baseUrl) {
@@ -123,111 +114,12 @@ export async function fetchYouTubeCaptions(
     if (xml) {
       const segments = parseTimedTextXml(xml);
       if (segments.length > 0) {
-        return { segments, languageCode: track.languageCode, source: "youtube" };
+        return { segments, languageCode: track.languageCode };
       }
     }
-  }
-
-  // 2) Supadata fallback — handles PoToken-protected auto-captions, region
-  //    blocks, and videos where YouTube returns empty bodies.
-  try {
-    const candidates = supadataLangCandidates(preferredLang);
-    if (candidates.length > 0) {
-      for (const lang of candidates) {
-        const sup = await fetchViaSupadata(videoId, lang);
-        if (sup && sup.segments.length > 0) {
-          return { segments: sup.segments, languageCode: sup.languageCode, source: "supadata" };
-        }
-      }
-    } else {
-      const sup = await fetchViaSupadata(videoId);
-      if (sup && sup.segments.length > 0) {
-        return { segments: sup.segments, languageCode: sup.languageCode, source: "supadata" };
-      }
-    }
-  } catch (err) {
-    console.error("[youtube-captions] Supadata fallback failed:", err);
   }
 
   return null;
-}
-
-// ---------------------------------------------------------------------------
-// Supadata fallback (https://supadata.ai)
-// Used when the direct YouTube scrape returns no tracks or empty bodies
-// (PoToken-protected auto-captions, region blocks, etc.).
-// ---------------------------------------------------------------------------
-
-type SupadataSegment = {
-  text: string;
-  offset: number; // ms
-  duration: number; // ms
-  lang?: string;
-};
-
-type SupadataResponse = {
-  content?: SupadataSegment[];
-  lang?: string;
-  availableLangs?: string[];
-};
-
-const SUPADATA_PREFERRED_LANGS = ["zh-Hans", "zh-CN", "zh", "zh-Hant", "zh-TW", "en"];
-
-export async function fetchViaSupadata(
-  videoId: string,
-  lang?: string,
-): Promise<{ segments: CaptionSegment[]; languageCode: string; availableLangs: string[] } | null> {
-  const apiKey = process.env.SUPADATA_API_KEY;
-  if (!apiKey) {
-    throw new Error("SUPADATA_API_KEY is not configured");
-  }
-
-  const langsToTry = lang ? [lang] : SUPADATA_PREFERRED_LANGS;
-  let lastAvailable: string[] = [];
-
-  for (const tryLang of langsToTry) {
-    const url = new URL("https://api.supadata.ai/v1/youtube/transcript");
-    url.searchParams.set("videoId", videoId);
-    url.searchParams.set("lang", tryLang);
-    url.searchParams.set("text", "false");
-
-    const res = await fetch(url.toString(), {
-      headers: { "x-api-key": apiKey },
-    });
-
-    if (!res.ok) {
-      // 404 = language not available for this video, keep trying others.
-      // Other errors propagate so callers can surface the reason.
-      if (res.status === 404) continue;
-      const body = await res.text().catch(() => "");
-      throw new Error(`Supadata ${res.status}: ${body.slice(0, 200)}`);
-    }
-
-    const json = (await res.json()) as SupadataResponse;
-    if (Array.isArray(json.availableLangs)) lastAvailable = json.availableLangs;
-    const content = json.content ?? [];
-    if (content.length === 0) continue;
-
-    const segments: CaptionSegment[] = content
-      .map((s) => ({
-        start: (s.offset ?? 0) / 1000,
-        dur: (s.duration ?? 0) / 1000,
-        text: decodeEntities(s.text ?? ""),
-      }))
-      .filter((s) => s.text);
-
-    if (segments.length === 0) continue;
-
-    return {
-      segments,
-      languageCode: json.lang || tryLang,
-      availableLangs: lastAvailable,
-    };
-  }
-
-  return lastAvailable.length > 0
-    ? { segments: [], languageCode: "", availableLangs: lastAvailable }
-    : null;
 }
 
 export type CaptionProbe =
@@ -236,14 +128,13 @@ export type CaptionProbe =
       languageCode: string;
       trackCount: number;
       segmentCount: number;
-      source: CaptionSource;
     }
   | { status: "no-tracks"; trackCount: 0 }
   | { status: "empty-response"; languageCode: string; trackCount: number };
 
 // Diagnostic probe used by the UI to decide whether a video can be turned
-// into a drama. Tries direct YouTube first, then Supadata as a fallback so
-// PoToken-protected / auto-caption videos can still be validated.
+// into a drama. YouTube가 내보내는 자막 트랙이 유일한 출처다 — 트랙이 없거나
+// 비어 있는 영상은 등록할 수 없고, 등록을 누르기 전에 그 사실을 알려준다.
 export async function probeYouTubeCaptions(
   videoId: string,
   preferredLang: PreferredLang = "auto",
@@ -263,42 +154,8 @@ export async function probeYouTubeCaptions(
         languageCode: track.languageCode,
         trackCount: tracks.length,
         segmentCount: segments.length,
-        source: "youtube",
       };
     }
-  }
-
-  // Fallback: ask Supadata. Even if the direct scrape found no tracks,
-  // Supadata can often surface auto-generated captions.
-  try {
-    const candidates = supadataLangCandidates(preferredLang);
-    if (candidates.length > 0) {
-      for (const lang of candidates) {
-        const sup = await fetchViaSupadata(videoId, lang);
-        if (sup && sup.segments.length > 0) {
-          return {
-            status: "ok",
-            languageCode: sup.languageCode,
-            trackCount: Math.max(tracks.length, sup.availableLangs.length),
-            segmentCount: sup.segments.length,
-            source: "supadata",
-          };
-        }
-      }
-    } else {
-      const sup = await fetchViaSupadata(videoId);
-      if (sup && sup.segments.length > 0) {
-        return {
-          status: "ok",
-          languageCode: sup.languageCode,
-          trackCount: Math.max(tracks.length, sup.availableLangs.length),
-          segmentCount: sup.segments.length,
-          source: "supadata",
-        };
-      }
-    }
-  } catch (err) {
-    console.error("[youtube-captions] Supadata probe failed:", err);
   }
 
   if (tracks.length === 0) return { status: "no-tracks", trackCount: 0 };
