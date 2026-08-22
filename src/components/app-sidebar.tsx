@@ -1,41 +1,16 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  BookOpen,
-  CalendarClock,
-  ChevronRight,
-  Clapperboard,
-  Film,
-  GraduationCap,
-  Home,
-  KeyRound,
-  LayoutDashboard,
-  Music,
-  Plug,
-  ShieldCheck,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { ChevronRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import { listCoursesWithLessons } from "@/lib/courses.functions";
-import { useIsEditor, useMyProfile } from "@/lib/auth-client";
+import { useMyProfile } from "@/lib/auth-client";
 import { WidgetPanel } from "@/components/widget-panel";
-
-const items = [
-  { title: "홈", url: "/", icon: Home },
-  { title: "대시보드", url: "/dashboard", icon: LayoutDashboard },
-  { title: "강의", url: "/courses", icon: GraduationCap },
-  { title: "영상 학습", url: "/dramas", icon: Film },
-  { title: "학습송", url: "/songs", icon: Music },
-  { title: "단어장", url: "/vocabulary", icon: BookOpen },
-];
+import { NavLinks } from "@/components/nav-links";
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: profile } = useMyProfile();
-  const isAdmin = profile?.role === "admin";
-  const isEditor = useIsEditor();
 
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col gap-2 p-4" data-tour="sidebar">
@@ -55,108 +30,7 @@ export function AppSidebar() {
       </Link>
 
       <nav className="glass rounded-3xl p-2 flex flex-col gap-1" data-tour="sidebar-nav">
-        {items.map((item) => {
-          const active = item.url === "/" ? pathname === "/" : pathname.startsWith(item.url);
-          return (
-            <Link
-              key={item.url}
-              to={item.url}
-              data-tour={`nav-${item.url.replace("/", "") || "home"}`}
-              className={[
-                "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
-                active
-                  ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                  : "text-foreground/80 hover:bg-white/40",
-              ].join(" ")}
-            >
-              <item.icon className="size-4" />
-              <span>{item.title}</span>
-            </Link>
-          );
-        })}
-        {isEditor && (
-          <Link
-            to="/students"
-            className={[
-              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
-              pathname.startsWith("/students")
-                ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                : "text-foreground/80 hover:bg-white/40",
-            ].join(" ")}
-          >
-            <Users className="size-4" />
-            <span>학생 현황</span>
-          </Link>
-        )}
-        {isEditor && (
-          <Link
-            to="/curriculum"
-            className={[
-              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
-              pathname.startsWith("/curriculum")
-                ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                : "text-foreground/80 hover:bg-white/40",
-            ].join(" ")}
-          >
-            <CalendarClock className="size-4" />
-            <span>커리큘럼 생성기</span>
-          </Link>
-        )}
-        {isEditor && (
-          <Link
-            to="/studio"
-            className={[
-              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
-              pathname.startsWith("/studio")
-                ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                : "text-foreground/80 hover:bg-white/40",
-            ].join(" ")}
-          >
-            <Clapperboard className="size-4" />
-            <span>영상 스튜디오</span>
-          </Link>
-        )}
-        {isEditor && (
-          <Link
-            to="/integrations"
-            className={[
-              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
-              pathname.startsWith("/integrations")
-                ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                : "text-foreground/80 hover:bg-white/40",
-            ].join(" ")}
-          >
-            <Plug className="size-4" />
-            <span>연동 상태</span>
-          </Link>
-        )}
-        <Link
-          to="/settings"
-          className={[
-            "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
-            pathname.startsWith("/settings")
-              ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-              : "text-foreground/80 hover:bg-white/40",
-          ].join(" ")}
-        >
-          <KeyRound className="size-4" />
-          <span>AI 설정</span>
-        </Link>
-        {/* 교수자도 이 화면에서 자기 콘텐츠를 백업·복원한다 (교사 승인 탭은 관리자만 보인다). */}
-        {isEditor && (
-          <Link
-            to="/admin"
-            className={[
-              "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
-              pathname.startsWith("/admin")
-                ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                : "text-foreground/80 hover:bg-white/40",
-            ].join(" ")}
-          >
-            <ShieldCheck className="size-4" />
-            <span>{isAdmin ? "관리자" : "데이터 관리"}</span>
-          </Link>
-        )}
+        <NavLinks role={profile?.role} pathname={pathname} />
       </nav>
 
       <WidgetPanel />
@@ -182,7 +56,7 @@ function LessonList({ pathname }: { pathname: string }) {
       {data && data.length === 0 && (
         <div className="px-2 py-1 text-xs text-muted-foreground">아직 강의가 없습니다.</div>
       )}
-      <div className="flex flex-col gap-1 max-h-[50vh] overflow-y-auto pr-1">
+      <div className="flex flex-col gap-1 max-h-[50dvh] overflow-y-auto pr-1">
         {data?.map((c) => (
           <CourseNode
             key={c.id}

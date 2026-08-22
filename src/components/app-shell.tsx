@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import { AppSidebar } from "./app-sidebar";
 import { HeaderSearch } from "./header-search";
+import { MobileNav } from "./mobile-nav";
+import { MobileTabBar } from "./mobile-tab-bar";
 import { authClient, useMyProfile, useSession } from "@/lib/auth-client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { resetTour, runTour, type TourName } from "@/lib/coachmark";
@@ -27,10 +29,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/" });
   }
 
-  // Auto-run sidebar tour once on first md+ visit
+  // Auto-run the sidebar tour once. runTour() decides whether the viewport is
+  // wide enough — see coachmark-visibility.ts.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.innerWidth < 768) return;
     const t = setTimeout(() => runTour("sidebar", sidebarTourSteps()), 1200);
     return () => clearTimeout(t);
   }, []);
@@ -48,17 +49,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-40 px-4 pt-4">
-        <div className="glass rounded-3xl px-4 py-2.5 flex items-center gap-3">
-          <Link to="/" className="md:hidden font-bold text-lg">
-            DingDong
-          </Link>
+      {/* pt-safe sits on its own element: it sets padding-top outright, so
+          stacking it on the px-4 pt-4 row would replace that padding rather
+          than add to it. */}
+      <header className="sticky top-0 z-40 pt-safe">
+        <div className="glass mx-3 mt-3 sm:mx-4 sm:mt-4 rounded-3xl px-4 py-2.5 flex items-center gap-3">
+          <MobileNav onOpenHelp={() => startTourForRoute(true)} />
           <HeaderSearch />
 
           <Popover>
             <PopoverTrigger asChild>
               <button
-                className="inline-flex items-center gap-1.5 rounded-2xl bg-white/60 border border-border px-3 py-2 text-sm hover:bg-white transition"
+                // Hidden on a phone: four items in one 375px row squeezed the
+                // search field down to a single visible character. The tour is
+                // reachable from the nav instead.
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-2xl bg-white/60 border border-border px-3 py-2 text-sm hover:bg-white transition"
                 title="둘러보기 다시 보기"
                 data-tour="help-button"
               >
@@ -131,7 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
               <button
                 onClick={logout}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white/60 border border-border px-3 py-2 text-sm hover:bg-white transition"
+                className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white/60 border border-border px-3 py-2 text-sm transition hover:bg-white md:min-h-0"
               >
                 <LogOut className="size-4" />
                 <span className="hidden sm:inline">로그아웃</span>
@@ -143,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             // per line on narrow phones.
             <Link
               to="/auth"
-              className="shrink-0 whitespace-nowrap inline-flex items-center gap-2 rounded-2xl gradient-primary text-primary-foreground px-3 sm:px-4 py-2 text-sm font-medium shadow-[var(--shadow-soft)] hover:opacity-90 transition"
+              className="shrink-0 whitespace-nowrap inline-flex min-h-11 items-center gap-2 rounded-2xl gradient-primary text-primary-foreground px-3 sm:px-4 py-2 text-sm font-medium shadow-[var(--shadow-soft)] transition hover:opacity-90 md:min-h-0"
             >
               <LogIn className="size-4" />
               로그인
@@ -157,8 +162,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* min-w-0: without it this flex item refuses to shrink below its
             content's min-content width, so one wide child scrolls the whole
             page sideways on a phone instead of being contained. */}
-        <main className="min-w-0 flex-1 p-4 md:pl-0">{children}</main>
+        {/* The tab bar is fixed, so the page has to end above it or the last
+            row of every screen sits underneath. */}
+        <main className="min-w-0 flex-1 p-3 pb-[calc(var(--tab-bar-height)+env(safe-area-inset-bottom,0px)+0.75rem)] sm:p-4 md:pb-4 md:pl-0">
+          {children}
+        </main>
       </div>
+
+      <MobileTabBar />
     </div>
   );
 }
