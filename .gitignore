@@ -41,7 +41,6 @@ _workspace_*/
 # 논문 원고 (로컬 문서, 저장소에 올리지 않는다)
 write.md
 new-write.md
-소개.md
 
 # Editor directories and files
 .vscode/*
