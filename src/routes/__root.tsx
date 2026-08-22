@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthBridge } from "@/lib/auth-client";
 import { DingDongBot } from "@/components/dingdong-bot";
 import { PushManager } from "@/components/push-manager";
+import { VIEWPORT_CONTENT } from "@/lib/mobile-ui";
 
 function NotFoundComponent() {
   return (
@@ -80,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: VIEWPORT_CONTENT },
       { title: "dingdong lms" },
       { name: "description", content: "AI-powered Chinese learning platform for Korean adults." },
       { name: "author", content: "DingDong" },

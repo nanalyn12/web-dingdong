@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useDraggableFab } from "@/lib/use-draggable-fab";
 import pandaImg from "@/assets/hero-dingdong.png";
 import { FAQ_CATEGORIES, FAQ_ITEMS, type FaqCategory } from "@/lib/dingdong-faq";
+import { MOBILE_TEXT_INPUT_CLASS } from "@/lib/mobile-ui";
 import type {
   SpeechRecognitionCtor,
   SpeechRecognitionErrorEventLike,
@@ -393,7 +394,7 @@ export function DingDongBot() {
         onPointerEnter={() => setHovering(true)}
         onPointerLeave={() => setHovering(false)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex items-center gap-2 touch-none select-none",
+          "fixed bottom-safe right-safe z-50 flex items-center gap-2 touch-none select-none",
           // Snapped left, the caption has to sit on the button's right or it
           // would run off the screen.
           fab.side === "left" && "flex-row-reverse",
@@ -693,12 +694,12 @@ export function DingDongBot() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="🎙️ 말하거나 입력해서 물어보세요…"
-                    className="flex-1 h-10 px-4 rounded-full bg-white/70 border border-white/50 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                    className={`flex-1 h-11 px-4 rounded-full bg-white/70 border border-white/50 ${MOBILE_TEXT_INPUT_CLASS} outline-none focus:ring-2 focus:ring-primary/40 md:h-10`}
                   />
                   <Button
                     type="submit"
                     size="icon"
-                    className="h-10 w-10 rounded-full shrink-0"
+                    className="rounded-full shrink-0 md:h-10 md:w-10"
                     disabled={loading || !input.trim()}
                   >
                     <Send className="h-4 w-4" />

@@ -7,9 +7,10 @@
 // floating mid-screen, and the spot is remembered per browser.
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { clampFabY, FAB_MARGIN } from "./fab-placement";
+
 const KEY = "dingdong:fab-pos:v1";
-/** Gap kept between the button and the viewport edge. */
-const MARGIN = 24;
+const MARGIN = FAB_MARGIN;
 /** Pointer travel that turns a tap into a drag (and cancels the click). */
 const DRAG_THRESHOLD = 6;
 
@@ -17,6 +18,27 @@ export type FabSide = "left" | "right";
 type Placement = { side: FabSide; y: number };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+
+function readRootPx(name: string): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return Number.parseFloat(raw) || 0;
+}
+
+/**
+ * The home-indicator strip, in px. `env(safe-area-inset-bottom)` cannot be
+ * read from script, so styles.css exposes it as `--safe-area-bottom`.
+ */
+function readBottomInset(): number {
+  return readRootPx("--safe-area-bottom");
+}
+
+/**
+ * The phone tab bar, in px. Declared in CSS (0 from md up) so the layout and
+ * this clamp cannot disagree about how much room it takes.
+ */
+function readBottomReserved(): number {
+  return readRootPx("--tab-bar-height");
+}
 
 function loadPlacement(): Placement | null {
   try {
@@ -41,8 +63,20 @@ export function useDraggableFab() {
   const movedRef = useRef(false);
   const startRef = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
 
-  const maxY = useCallback(
-    () => window.innerHeight - (ref.current?.offsetHeight ?? 64) - MARGIN,
+  /**
+   * Hold a spot inside the usable viewport. The bottom inset comes from CSS
+   * rather than being measured here — `env()` is not readable from script, so
+   * styles.css publishes it as a custom property.
+   */
+  const settleY = useCallback(
+    (y: number) =>
+      clampFabY({
+        y,
+        viewportHeight: window.innerHeight,
+        fabHeight: ref.current?.offsetHeight ?? 64,
+        bottomInset: readBottomInset(),
+        bottomReserved: readBottomReserved(),
+      }),
     [],
   );
 
@@ -50,15 +84,15 @@ export function useDraggableFab() {
   // against, and applying it during render would break hydration.
   useEffect(() => {
     const saved = loadPlacement();
-    if (saved) setPlacement({ side: saved.side, y: clamp(saved.y, MARGIN, maxY()) });
-  }, [maxY]);
+    if (saved) setPlacement({ side: saved.side, y: settleY(saved.y) });
+  }, [settleY]);
 
   // A remembered spot must survive the window getting shorter or narrower.
   useEffect(() => {
-    const onResize = () => setPlacement((p) => (p ? { ...p, y: clamp(p.y, MARGIN, maxY()) } : p));
+    const onResize = () => setPlacement((p) => (p ? { ...p, y: settleY(p.y) } : p));
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [maxY]);
+  }, [settleY]);
 
   const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -95,7 +129,7 @@ export function useDraggableFab() {
     movedRef.current = true;
     const next = {
       x: clamp(start.x + dx, MARGIN, window.innerWidth - el.offsetWidth - MARGIN),
-      y: clamp(start.y + dy, MARGIN, maxY()),
+      y: settleY(start.y + dy),
     };
     dragRef.current = next;
     setDrag(next);
@@ -113,7 +147,7 @@ export function useDraggableFab() {
     }
     const width = el?.offsetWidth ?? 64;
     const side: FabSide = dropped.x + width / 2 < window.innerWidth / 2 ? "left" : "right";
-    const next: Placement = { side, y: clamp(dropped.y, MARGIN, maxY()) };
+    const next: Placement = { side, y: settleY(dropped.y) };
     setPlacement(next);
     setDrag(null);
     try {

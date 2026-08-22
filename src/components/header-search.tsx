@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, Film, Loader2, Music, NotebookPen, Search } from "lucide-react";
 
 import { searchContent, type SearchHit } from "@/lib/search.functions";
+import { MOBILE_TEXT_INPUT_CLASS } from "@/lib/mobile-ui";
 
 const TYPE_META: Record<SearchHit["type"], { label: string; icon: typeof BookOpen }> = {
   lesson: { label: "레슨", icon: BookOpen },
@@ -70,7 +71,14 @@ export function HeaderSearch() {
     // min-w-0 lets this shrink first when the header runs out of room, instead
     // of pushing the buttons beside it down to one character per line.
     <div ref={boxRef} className="relative flex-1 min-w-0 max-w-md">
-      <div className="flex items-center gap-2 rounded-2xl bg-white/40 px-3 py-2">
+      {/* min-w-0 on the row and the field: an <input> carries an intrinsic
+          min-content width (~20 characters), so without it the text keeps its
+          full width and bleeds out over the buttons beside it once the header
+          runs out of room on a phone. */}
+      {/* A label, not a div: the pill is 44px tall but the field itself is
+          28px, so on a phone the padding strips above and below would
+          swallow taps that look like they land on the search box. */}
+      <label className="flex min-h-11 min-w-0 cursor-text items-center gap-2 rounded-2xl bg-white/40 px-3 py-2 md:min-h-0">
         <Search className="size-4 text-muted-foreground shrink-0" />
         <input
           value={q}
@@ -94,15 +102,15 @@ export function HeaderSearch() {
             }
           }}
           placeholder="레슨, 영상, 노래, 단어 검색…"
-          className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
+          className={`min-w-0 flex-1 self-stretch bg-transparent outline-none ${MOBILE_TEXT_INPUT_CLASS} placeholder:text-muted-foreground`}
         />
         {isFetching && showPanel && (
           <Loader2 className="size-3.5 animate-spin text-muted-foreground shrink-0" />
         )}
-      </div>
+      </label>
 
       {showPanel && (
-        <div className="absolute left-0 right-0 top-full mt-2 glass rounded-2xl border border-white/60 shadow-lg p-2 max-h-[70vh] overflow-y-auto z-50">
+        <div className="absolute left-0 right-0 top-full mt-2 glass rounded-2xl border border-white/60 shadow-lg p-2 max-h-[70dvh] overflow-y-auto z-50">
           {!data || data.total === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">
               {isFetching ? "검색 중…" : `"${debounced}" 결과가 없어요.`}

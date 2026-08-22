@@ -421,3 +421,57 @@
 .song-stripe-1 { background: linear-gradient(180deg, oklch(0.82 0.14 15), oklch(0.75 0.15 355)); }
 .song-stripe-2 { background: linear-gradient(180deg, oklch(0.82 0.14 300), oklch(0.75 0.15 275)); }
 
+
+/*
+ * Safe-area utilities.
+ *
+ * The manifest declares `display: standalone`, so on a notched phone the app
+ * owns the full screen including the home-indicator strip. These read the
+ * insets the browser only reports once the viewport meta opts in with
+ * `viewport-fit=cover` (see VIEWPORT_CONTENT in src/lib/mobile-ui.ts); on a
+ * device without insets they resolve to 0 and nothing moves.
+ *
+ * Plain CSS rather than Tailwind `@utility`: neither needs a variant.
+ */
+
+/* Script cannot read env(); publish the one inset that JS needs. */
+:root {
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  /* Height of the phone tab bar. One number, read by the layout (to keep the
+     page clear of it) and by the FAB (to stay above it). */
+  --tab-bar-height: 3.5rem;
+}
+@media (min-width: 768px) {
+  :root {
+    --tab-bar-height: 0px;
+  }
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+/* For fixed chrome positioned from an edge: adds the inset to the 1.5rem offset. */
+.bottom-safe {
+  bottom: calc(1.5rem + var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
+}
+.right-safe {
+  right: calc(1.5rem + env(safe-area-inset-right, 0px));
+}
+
+/* driver.js coachmark popover.
+ *
+ * The library ships 28px footer buttons. Tours no longer auto-start on a phone
+ * (see coachmark-visibility.ts), but a learner can still open one from the
+ * mobile nav sheet, and when they do the buttons have to be tappable. */
+@media (max-width: 767px) {
+  .driver-popover.dingdong-coach .driver-popover-footer button,
+  .driver-popover.dingdong-coach .driver-popover-close-btn {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
