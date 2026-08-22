@@ -21,6 +21,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { SpeakButton } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -113,7 +114,7 @@ export function VocabPracticeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-xl border-white rounded-3xl">
+      <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-xl border-white rounded-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <span className="text-2xl">{word.emoji || "📝"}</span>
@@ -123,16 +124,12 @@ export function VocabPracticeDialog({
               </span>
               {word.pinyin && <span className="text-xs italic text-slate-500">{word.pinyin}</span>}
             </div>
-            <button
-              type="button"
-              onClick={() => speak(word.zh, word.zh)}
-              className={cn(
-                "ml-1 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1 text-xs cursor-pointer",
-                speakingId === word.zh && "animate-pulse bg-primary/30",
-              )}
-            >
-              <Volume2 className="size-3.5" /> 듣기
-            </button>
+            <SpeakButton
+              text={word.zh}
+              speak={speak}
+              active={speakingId === word.zh}
+              className="ml-1"
+            />
           </DialogTitle>
           <DialogDescription className="text-slate-600 flex items-center justify-between gap-3 flex-wrap">
             <span>{word.ko || "AI가 학습 자료를 만들어드려요."}</span>
@@ -312,16 +309,13 @@ function ExamplesPanel({
                 >
                   {ex.zh}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => speak(ex.zh, ex.zh)}
-                  className={cn(
-                    "shrink-0 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 px-2 py-0.5 text-[11px] cursor-pointer",
-                    speakingId === ex.zh && "animate-pulse bg-primary/30",
-                  )}
-                >
-                  <Volume2 className="size-3" />
-                </button>
+                <SpeakButton
+                  text={ex.zh}
+                  speak={speak}
+                  active={speakingId === ex.zh}
+                  size="sm"
+                  iconOnly
+                />
               </div>
               {ex.pinyin && <p className="text-[11px] italic text-slate-500 mt-0.5">{ex.pinyin}</p>}
               {ex.ko && <p className="text-xs text-slate-600 mt-1">{ex.ko}</p>}
@@ -406,7 +400,7 @@ function FlashcardPanel({
       <button
         type="button"
         onClick={() => setFlipped((f) => !f)}
-        className="w-full min-h-[180px] rounded-3xl bg-gradient-to-br from-rose-50 via-pink-50 to-sky-50 border border-white shadow-[0_12px_40px_-12px_rgba(244,114,182,0.25)] p-6 text-center transition-transform hover:scale-[1.01] cursor-pointer"
+        className="w-full min-h-[180px] rounded-3xl bg-gradient-to-br from-rose-50 via-pink-50 to-sky-50 border border-white shadow-[0_12px_40px_-12px_rgba(244,114,182,0.25)] p-4 sm:p-6 text-center transition-transform hover:scale-[1.01] cursor-pointer"
       >
         {!flipped ? (
           <>
@@ -457,16 +451,7 @@ function FlashcardPanel({
             🎤 따라 말하기
           </p>
           <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => speak(card.zh, card.zh)}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1 text-xs cursor-pointer",
-                speakingId === card.zh && "animate-pulse bg-primary/30",
-              )}
-            >
-              <Volume2 className="size-3" /> 듣기
-            </button>
+            <SpeakButton text={card.zh} speak={speak} active={speakingId === card.zh} />
             <button
               type="button"
               onClick={listening ? () => recRef.current?.stop() : start}
@@ -665,16 +650,13 @@ function FillQ({
           <p className="text-base font-semibold text-slate-900 flex-1" lang="zh-CN">
             {q.blanked_zh}
           </p>
-          <button
-            type="button"
-            onClick={() => speak(q.sentence_zh, q.sentence_zh)}
-            className={cn(
-              "shrink-0 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 px-2 py-0.5 text-[11px] cursor-pointer",
-              speakingId === q.sentence_zh && "animate-pulse bg-primary/30",
-            )}
-          >
-            <Volume2 className="size-3" />
-          </button>
+          <SpeakButton
+            text={q.sentence_zh}
+            speak={speak}
+            active={speakingId === q.sentence_zh}
+            size="sm"
+            iconOnly
+          />
         </div>
         {q.pinyin && <p className="text-[11px] italic text-slate-500 mt-1">{q.pinyin}</p>}
         {q.ko && <p className="text-xs text-slate-600 mt-1">{q.ko}</p>}

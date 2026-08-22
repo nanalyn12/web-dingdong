@@ -35,7 +35,7 @@ export function VocabTagEditor({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] cursor-pointer",
+          "inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] md:min-h-0",
           "border-slate-200 bg-white/70 text-slate-600 hover:bg-white",
         )}
         aria-label="태그 편집"

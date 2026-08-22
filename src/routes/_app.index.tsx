@@ -193,7 +193,7 @@ function Landing() {
                   key={c.id}
                   to="/courses/$id"
                   params={{ id: c.id }}
-                  className="glass rounded-3xl p-6 hover:scale-[1.02] transition group"
+                  className="glass rounded-3xl p-4 sm:p-6 hover:scale-[1.02] transition group"
                 >
                   <div
                     className={`size-14 rounded-2xl ${accents[i % accents.length]} grid place-items-center text-3xl mb-4 group-hover:rotate-6 transition`}
@@ -255,7 +255,7 @@ function Landing() {
               desc: "전문 어휘와 비즈니스. 원어민 수준의 표현 다루기.",
             },
           ].map((lv) => (
-            <div key={lv.k} className="glass rounded-3xl p-6">
+            <div key={lv.k} className="glass rounded-3xl p-4 sm:p-6">
               <div className={`size-16 rounded-2xl ${lv.c} grid place-items-center text-4xl mb-4`}>
                 {lv.emoji}
               </div>
@@ -294,7 +294,7 @@ function Landing() {
             e: "🏆",
           },
         ].map((f) => (
-          <div key={f.t} className="glass rounded-3xl p-6">
+          <div key={f.t} className="glass rounded-3xl p-4 sm:p-6">
             <div className={`size-12 rounded-2xl ${f.c} grid place-items-center text-2xl mb-3`}>
               {f.e}
             </div>

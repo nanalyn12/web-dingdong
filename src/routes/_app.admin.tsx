@@ -55,7 +55,7 @@ function AdminPage() {
   if (!isEditor) {
     return (
       <div className="max-w-2xl mx-auto">
-        <section className="glass rounded-3xl p-8 text-center">
+        <section className="glass rounded-3xl p-5 sm:p-8 text-center">
           <ShieldCheck className="size-10 mx-auto text-muted-foreground" />
           <h1 className="mt-3 text-2xl font-bold">관리자 전용 페이지</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -68,7 +68,7 @@ function AdminPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <header className="glass rounded-3xl p-6">
+      <header className="glass rounded-3xl p-4 sm:p-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <ShieldCheck className="size-6 text-primary" /> {isAdmin ? "관리자" : "교수자"}
         </h1>

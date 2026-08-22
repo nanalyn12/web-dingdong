@@ -125,7 +125,7 @@ function CurriculumDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="glass rounded-3xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex-1 min-w-0">
           <Link
             to="/curriculum"
@@ -190,7 +190,7 @@ function CurriculumDetail() {
 
       <LinkedContentSection id={id} />
 
-      <section className="glass rounded-3xl p-6">
+      <section className="glass rounded-3xl p-4 sm:p-6">
         <h2 className="text-xl font-bold mb-3">🎯 수업 목표</h2>
         <ul className="space-y-2">
           {objectives.map((o, i) => (
@@ -202,7 +202,7 @@ function CurriculumDetail() {
         </ul>
       </section>
 
-      <section className="glass rounded-3xl p-6">
+      <section className="glass rounded-3xl p-4 sm:p-6">
         <h2 className="text-xl font-bold mb-3">🧰 준비물</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {materials.map((m, i) => (
@@ -217,7 +217,7 @@ function CurriculumDetail() {
         </div>
       </section>
 
-      <section className="glass rounded-3xl p-6">
+      <section className="glass rounded-3xl p-4 sm:p-6">
         <h2 className="text-xl font-bold mb-3">⏱️ 시간 블록별 계획</h2>
         <div className="overflow-x-auto">
           <Table>
@@ -252,7 +252,7 @@ function CurriculumDetail() {
         </div>
       </section>
 
-      <section className="glass rounded-3xl p-6">
+      <section className="glass rounded-3xl p-4 sm:p-6">
         <h2 className="text-xl font-bold mb-3">🎲 인터랙티브 활동 추천</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {activities.map((a, i) => (
@@ -300,7 +300,7 @@ function CurriculumDetail() {
         </div>
       </section>
 
-      <section className="glass rounded-3xl p-6">
+      <section className="glass rounded-3xl p-4 sm:p-6">
         <h2 className="text-xl font-bold mb-3">📝 평가 방법</h2>
         <div className="space-y-2 text-sm">
           {assessment.formative && (
@@ -326,7 +326,7 @@ function CurriculumDetail() {
         </div>
       </section>
 
-      <section className="glass rounded-3xl p-6">
+      <section className="glass rounded-3xl p-4 sm:p-6">
         <h2 className="text-xl font-bold mb-3">📄 학생 배포용 유인물</h2>
         <pre className="whitespace-pre-wrap text-sm font-sans bg-white/50 rounded-2xl p-4">
           {row.handout_markdown}
@@ -363,7 +363,7 @@ function LinkedContentSection({ id }: { id: string }) {
   const busy = isLoading || regen.isPending;
 
   return (
-    <section className="glass rounded-3xl p-6">
+    <section className="glass rounded-3xl p-4 sm:p-6">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <h2 className="text-xl font-bold">🔗 이 수업에 쓸 콘텐츠</h2>

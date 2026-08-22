@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { BookmarkPlus, BookmarkCheck, Mic, Volume2, Check, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SpeakButton } from "@/components/speak-button";
 import { authClient } from "@/lib/auth-client";
 import { addGuestVocab, guessEmoji, loadGuestVocab, scorePronunciation } from "@/lib/vocab";
 import { hasVocabZh, saveVocabulary } from "@/lib/vocab.functions";
@@ -187,7 +188,7 @@ export function KeyExpressionCard({
           <button
             type="button"
             onClick={() => setPracticeOpen(true)}
-            className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-400 to-pink-400 text-white px-2 py-0.5 text-[10px] font-bold shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full bg-gradient-to-r from-rose-400 to-pink-400 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm transition-shadow hover:shadow-md md:min-h-0"
             aria-label="AI 학습"
           >
             <Sparkles className="size-3" /> AI
@@ -237,17 +238,7 @@ export function KeyExpressionCard({
             >
               {k.zh}
             </p>
-            <button
-              type="button"
-              onClick={() => speak(k.zh, k.zh)}
-              className={cn(
-                "shrink-0 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors px-2 py-0.5 text-[11px] cursor-pointer",
-                speaking && "animate-pulse bg-primary/30",
-              )}
-              aria-label="중국어 듣기"
-            >
-              <Volume2 className="size-3" /> 듣기
-            </button>
+            <SpeakButton text={k.zh} speak={speak} active={speaking} size="sm" />
           </div>
           {k.pinyin && (
             <p className={cn("text-xs font-medium italic tracking-wide mt-0.5", tone.pin)}>

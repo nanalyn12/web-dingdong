@@ -165,7 +165,7 @@ function OnboardingPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <section className="glass rounded-3xl p-8 space-y-6">
+      <section className="glass rounded-3xl p-5 sm:p-8 space-y-6">
         <header>
           <h1 className="text-3xl font-bold">叮叮과 처음 만나요</h1>
           <p className="mt-2 text-muted-foreground text-sm">
@@ -279,7 +279,7 @@ function OnboardingPage() {
         </form>
       </section>
 
-      <section className="glass rounded-3xl p-6 mt-6 space-y-3">
+      <section className="glass rounded-3xl p-4 sm:p-6 mt-6 space-y-3">
         <h2 className="font-bold text-lg">교사(교수) 권한 신청</h2>
         <p className="text-sm text-muted-foreground">
           강의/세부 강의를 직접 만들고 싶다면 신청해 주세요. 관리자 승인 후 활성화됩니다. 승인

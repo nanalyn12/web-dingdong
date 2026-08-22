@@ -47,7 +47,7 @@ function DashboardPage() {
 
   if (isLoading || !data) {
     return (
-      <section className="glass rounded-3xl p-8">
+      <section className="glass rounded-3xl p-5 sm:p-8">
         <p className="text-muted-foreground">대시보드를 불러오는 중…</p>
       </section>
     );
@@ -55,7 +55,7 @@ function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <section className="glass rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4">
+      <section className="glass rounded-3xl p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">학습 대시보드</h1>
           <p className="text-sm text-muted-foreground mt-0.5">오늘도 딩동과 함께 조금씩, 꾸준히!</p>
@@ -75,7 +75,7 @@ function DashboardPage() {
 
       {/* 오늘 복습 CTA */}
       {data.todayDue > 0 && (
-        <section className="glass rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 border border-primary/30">
+        <section className="glass rounded-3xl p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4 border border-primary/30">
           <div className="flex items-center gap-3">
             <div className="size-11 rounded-2xl gradient-primary grid place-items-center text-primary-foreground">
               <Brain className="size-5" />
@@ -122,7 +122,7 @@ function DashboardPage() {
       </section>
 
       {/* 활동 잔디 */}
-      <section className="glass rounded-3xl p-6 space-y-3">
+      <section className="glass rounded-3xl p-4 sm:p-6 space-y-3">
         <h2 className="font-bold flex items-center gap-2">
           <Flame className="size-4 text-primary" /> 최근 12주 학습 활동
         </h2>
@@ -132,7 +132,7 @@ function DashboardPage() {
 
       <div className="grid lg:grid-cols-2 gap-4">
         {/* 이어보기 */}
-        <section className="glass rounded-3xl p-6 space-y-3">
+        <section className="glass rounded-3xl p-4 sm:p-6 space-y-3">
           <h2 className="font-bold flex items-center gap-2">
             <Film className="size-4 text-primary" /> 영상 학습 이어보기
           </h2>
@@ -182,7 +182,7 @@ function DashboardPage() {
         </section>
 
         {/* 최근 레슨 */}
-        <section className="glass rounded-3xl p-6 space-y-3">
+        <section className="glass rounded-3xl p-4 sm:p-6 space-y-3">
           <h2 className="font-bold flex items-center gap-2">
             <GraduationCap className="size-4 text-primary" /> 최근 학습한 레슨
           </h2>
@@ -227,7 +227,7 @@ function DashboardPage() {
 
       {/* HSK 분포 */}
       {data.vocabTotal > 0 && (
-        <section className="glass rounded-3xl p-6 space-y-3">
+        <section className="glass rounded-3xl p-4 sm:p-6 space-y-3">
           <h2 className="font-bold flex items-center gap-2">
             <BookOpen className="size-4 text-primary" /> 단어장 HSK 분포
           </h2>

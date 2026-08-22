@@ -1,4 +1,6 @@
 import { driver, type DriveStep, type Config } from "driver.js";
+
+import { shouldAutoRunTour } from "./coachmark-visibility";
 import "driver.js/dist/driver.css";
 
 const KO_LABELS: Partial<Config> = {
@@ -37,6 +39,10 @@ export function resetTour(name: TourName) {
 export function runTour(name: TourName, steps: DriveStep[], opts: { force?: boolean } = {}) {
   if (typeof window === "undefined") return;
   if (!opts.force && isTourDone(name)) return;
+  // The width check lives here rather than at each call site. It used to sit
+  // in app-shell only, so the landing and courses tours still auto-started on
+  // a phone — and a fourth caller would have missed it too.
+  if (!opts.force && !shouldAutoRunTour(window.innerWidth)) return;
   // Filter out steps whose targets don't exist yet
   const valid = steps.filter((s) => {
     if (!s.element) return true;

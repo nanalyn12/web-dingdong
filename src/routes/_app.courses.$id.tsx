@@ -53,7 +53,9 @@ function CourseDetail() {
 
   if (loadingCourses || loadingLessons) {
     return (
-      <div className="glass rounded-3xl p-8 text-center text-muted-foreground">불러오는 중…</div>
+      <div className="glass rounded-3xl p-5 sm:p-8 text-center text-muted-foreground">
+        불러오는 중…
+      </div>
     );
   }
 
@@ -75,12 +77,12 @@ function CourseDetail() {
     <div className="space-y-5">
       <Link
         to="/courses"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground md:min-h-0"
       >
         <ArrowLeft className="size-4" /> 강의 목록
       </Link>
 
-      <header className="glass rounded-3xl p-6 space-y-4">
+      <header className="glass rounded-3xl p-4 sm:p-6 space-y-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <span
             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${

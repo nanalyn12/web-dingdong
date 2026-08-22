@@ -16,9 +16,11 @@ import { addGuestVocab, guessEmoji } from "@/lib/vocab";
 export const Route = createFileRoute("/_app/dramas/$id")({
   component: DramaDetail,
   errorComponent: ({ error }) => (
-    <div className="glass rounded-3xl p-6 text-sm text-destructive">{error.message}</div>
+    <div className="glass rounded-3xl p-4 sm:p-6 text-sm text-destructive">{error.message}</div>
   ),
-  notFoundComponent: () => <div className="glass rounded-3xl p-6">드라마를 찾을 수 없어요.</div>,
+  notFoundComponent: () => (
+    <div className="glass rounded-3xl p-4 sm:p-6">드라마를 찾을 수 없어요.</div>
+  ),
 });
 
 function fmtTime(sec: number) {
@@ -228,8 +230,8 @@ function DramaDetail() {
     }).catch(() => {});
   };
 
-  if (isLoading) return <div className="glass rounded-3xl p-6">불러오는 중…</div>;
-  if (!drama) return <div className="glass rounded-3xl p-6">드라마를 찾을 수 없어요.</div>;
+  if (isLoading) return <div className="glass rounded-3xl p-4 sm:p-6">불러오는 중…</div>;
+  if (!drama) return <div className="glass rounded-3xl p-4 sm:p-6">드라마를 찾을 수 없어요.</div>;
 
   return (
     <div className="space-y-4">
@@ -333,8 +335,8 @@ function DramaDetail() {
               <span>⏱️ 지난번 {fmtTime(progress.last_seconds)}까지 학습했어요.</span>
               <span className="flex gap-2">
                 <Button
-                  size="sm"
-                  className="h-7 px-3 text-xs"
+                  size="xs"
+                  className="px-3 text-xs"
                   onClick={() => {
                     seek(progress.last_seconds);
                     setResumeDismissed(true);
@@ -343,9 +345,9 @@ function DramaDetail() {
                   ▶ 이어보기
                 </Button>
                 <Button
-                  size="sm"
+                  size="xs"
                   variant="ghost"
-                  className="h-7 px-2 text-xs text-muted-foreground"
+                  className="px-2 text-xs text-muted-foreground"
                   onClick={() => setResumeDismissed(true)}
                 >
                   처음부터

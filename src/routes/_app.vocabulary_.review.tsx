@@ -80,7 +80,7 @@ function ReviewPage() {
 
   if (store.loading || !queue) {
     return (
-      <section className="glass rounded-3xl p-8">
+      <section className="glass rounded-3xl p-5 sm:p-8">
         <p className="text-muted-foreground">불러오는 중…</p>
       </section>
     );
@@ -103,7 +103,7 @@ function ReviewPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <Link
           to="/vocabulary"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground md:min-h-0"
         >
           <ArrowLeft className="size-4" /> 단어장
         </Link>
@@ -245,7 +245,7 @@ function FlashSession({
   return (
     <SessionShell progress={p}>
       {cur && (
-        <div className="glass rounded-3xl p-8 min-h-[280px] flex flex-col items-center justify-center gap-4">
+        <div className="glass rounded-3xl p-5 sm:p-8 min-h-[280px] flex flex-col items-center justify-center gap-4">
           <button
             onClick={() => speak(cur.zh, cur.zh)}
             className="absolute right-6 mt-2 self-end p-2 rounded-full hover:bg-white/60"
@@ -331,7 +331,7 @@ function ClozeSession({
   return (
     <SessionShell progress={p}>
       {cur && (
-        <div className="glass rounded-3xl p-6 space-y-4">
+        <div className="glass rounded-3xl p-4 sm:p-6 space-y-4">
           <div className="text-center space-y-1">
             <p className="text-xs text-muted-foreground">뜻</p>
             <p className="text-lg font-semibold">{cur.ko || "(뜻 정보 없음)"}</p>
@@ -445,7 +445,7 @@ function MatchSession({
 
   if (chunks.length === 0) {
     return (
-      <div className="glass rounded-3xl p-8 text-center text-muted-foreground text-sm">
+      <div className="glass rounded-3xl p-5 sm:p-8 text-center text-muted-foreground text-sm">
         뜻이 없는 단어들이라 매칭을 만들 수 없어요.
       </div>
     );
@@ -514,7 +514,7 @@ function MatchSession({
         </div>
       )}
       {chunkIdx >= chunks.length && (
-        <div className="glass rounded-3xl p-8 text-center space-y-2">
+        <div className="glass rounded-3xl p-5 sm:p-8 text-center space-y-2">
           <div className="text-3xl">✨</div>
           <p className="font-semibold">매칭 완료!</p>
           <Button asChild>
@@ -561,7 +561,7 @@ function DictateSession({
   return (
     <SessionShell progress={p}>
       {cur && (
-        <div className="glass rounded-3xl p-6 space-y-4 text-center">
+        <div className="glass rounded-3xl p-4 sm:p-6 space-y-4 text-center">
           <p className="text-xs text-muted-foreground">🎧 들리는 대로 한자로 입력하세요</p>
           <Button variant="outline" className="gap-2 mx-auto" onClick={() => speak(cur.zh, cur.zh)}>
             <Volume2 className="size-4" /> 다시 듣기

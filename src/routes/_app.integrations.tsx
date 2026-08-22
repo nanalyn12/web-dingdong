@@ -39,7 +39,7 @@ function IntegrationsPage() {
 
   if (!loading && !pLoading && session && !isEditor) {
     return (
-      <div className="glass rounded-3xl p-8 text-center text-muted-foreground">
+      <div className="glass rounded-3xl p-5 sm:p-8 text-center text-muted-foreground">
         교수자(teacher/admin) 전용 페이지입니다.
       </div>
     );
@@ -49,7 +49,7 @@ function IntegrationsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="glass rounded-3xl p-6 flex items-center gap-3 flex-wrap">
+      <header className="glass rounded-3xl p-4 sm:p-6 flex items-center gap-3 flex-wrap">
         <div className="size-10 rounded-2xl gradient-primary grid place-items-center text-primary-foreground">
           <Plug className="size-5" />
         </div>
@@ -129,9 +129,9 @@ function IntegrationCard({ item }: { item: IntegrationStatus }) {
       {item.testable && (
         <div className="flex items-center gap-2 flex-wrap pt-1">
           <Button
-            size="sm"
+            size="xs"
             variant="outline"
-            className="h-7 px-2 text-xs"
+            className="px-2 text-xs"
             disabled={test.isPending}
             onClick={() => test.mutate(item.id)}
           >

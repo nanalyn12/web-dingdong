@@ -44,7 +44,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:min-h-0"
           aria-expanded={open}
         >
           <List className="size-4 shrink-0 text-muted-foreground" />
@@ -62,7 +62,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-8 px-2"
+            className="px-2"
             disabled={!prev}
             title={prev ? prev.title : "첫 강의예요"}
             onClick={() => prev && navigate({ to: "/lessons/$id", params: { id: prev.id } })}
@@ -73,7 +73,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-8 px-2"
+            className="px-2"
             disabled={!next}
             title={next ? next.title : "마지막 강의예요"}
             onClick={() => next && navigate({ to: "/lessons/$id", params: { id: next.id } })}
@@ -118,7 +118,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
         <Link
           to="/courses/$id"
           params={{ id: course.id }}
-          className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          className="inline-flex min-h-11 items-center text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline md:min-h-0"
         >
           강의 전체 보기
         </Link>
@@ -126,7 +126,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 rounded-xl text-xs"
+            className="rounded-xl text-xs"
             onClick={() => navigate({ to: "/lessons/$id", params: { id: next.id } })}
           >
             다음 강의 →

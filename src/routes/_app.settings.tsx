@@ -52,7 +52,7 @@ function SettingsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="glass rounded-3xl p-6 flex items-center gap-3 flex-wrap">
+      <header className="glass rounded-3xl p-4 sm:p-6 flex items-center gap-3 flex-wrap">
         <div className="size-10 rounded-2xl gradient-primary grid place-items-center text-primary-foreground">
           <KeyRound className="size-5" />
         </div>
@@ -68,7 +68,7 @@ function SettingsPage() {
       {isLoading && <p className="text-muted-foreground px-2">불러오는 중…</p>}
 
       {usage && (
-        <section className="glass rounded-3xl p-6 space-y-3">
+        <section className="glass rounded-3xl p-4 sm:p-6 space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />
             <h2 className="font-semibold">오늘의 叮叮 대화</h2>
@@ -145,7 +145,7 @@ function ApiKeyCard({ provider, state }: { provider: ApiKeyProvider; state?: Api
   });
 
   return (
-    <section className="glass rounded-3xl p-6 space-y-4">
+    <section className="glass rounded-3xl p-4 sm:p-6 space-y-4">
       <div>
         <h2 className="font-semibold">내 {meta.label} API 키</h2>
         <p className="text-sm text-muted-foreground mt-1">

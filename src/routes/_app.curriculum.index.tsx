@@ -150,7 +150,7 @@ function CurriculumForm() {
   };
 
   return (
-    <section className="glass rounded-3xl p-6 lg:p-8 space-y-6">
+    <section className="glass rounded-3xl p-4 sm:p-6 lg:p-8 space-y-6">
       <div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Sparkles className="size-4" /> AI 커리큘럼 생성
@@ -368,7 +368,7 @@ function HistoryPanel() {
   });
 
   return (
-    <aside className="glass rounded-3xl p-6 space-y-4 h-fit">
+    <aside className="glass rounded-3xl p-4 sm:p-6 space-y-4 h-fit">
       <h2 className="text-lg font-bold">최근 커리큘럼</h2>
       {isLoading && <p className="text-sm text-muted-foreground">불러오는 중…</p>}
       {data && data.length === 0 && (

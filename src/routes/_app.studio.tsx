@@ -200,7 +200,7 @@ function StudioPage() {
               {/* Reconnecting is the only way to widen an existing token's
                   scopes — captions.insert needs force-ssl, which connections
                   made before that was requested do not carry. */}
-              <Button asChild size="sm" variant="ghost" className="text-xs h-7">
+              <Button asChild size="sm" variant="ghost" className="text-xs h-11 md:h-7">
                 <a
                   href="/api/youtube/connect"
                   title="자막(CC) 업로드 권한이 필요하면 다시 연결해 권한을 추가하세요."
@@ -384,7 +384,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
   const voices = VOICES[language];
 
   return (
-    <div className="glass rounded-3xl p-6 space-y-5">
+    <div className="glass rounded-3xl p-4 sm:p-6 space-y-5">
       <div className="grid md:grid-cols-3 gap-4">
         <div className="space-y-2 md:col-span-2">
           <Label>① 핵심 키워드 *</Label>
@@ -714,7 +714,7 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
 
   if (jobs.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground glass rounded-3xl p-6">
+      <p className="text-sm text-muted-foreground glass rounded-3xl p-4 sm:p-6">
         아직 생성한 영상이 없어요. [새 영상] 탭에서 시작해보세요.
       </p>
     );
@@ -772,19 +772,15 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
 
               <div className="flex items-center gap-1 shrink-0">
                 {j.status === "awaiting_approval" && (
-                  <Button
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => act(callApprove, j.id)}
-                  >
+                  <Button size="xs" className="px-2 text-xs" onClick={() => act(callApprove, j.id)}>
                     <Upload className="size-3.5 mr-1" /> 승인
                   </Button>
                 )}
                 {j.status === "failed" && (
                   <Button
-                    size="sm"
+                    size="xs"
                     variant="outline"
-                    className="h-7 px-2 text-xs"
+                    className="px-2 text-xs"
                     onClick={() => act(callRetry, j.id)}
                   >
                     <RefreshCcw className="size-3.5" />
@@ -846,9 +842,9 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
                   )}
                   {!busy && (
                     <Button
-                      size="sm"
+                      size="xs"
                       variant="ghost"
-                      className="h-7 px-2 text-xs text-muted-foreground"
+                      className="px-2 text-xs text-muted-foreground"
                       onClick={() => act(callDelete, j.id)}
                     >
                       <Trash2 className="size-3.5 mr-1" /> 삭제
@@ -986,7 +982,7 @@ function SchedulePanel() {
   return (
     <div className="space-y-5">
       {/* 등록 폼 */}
-      <div className="glass rounded-3xl p-6 space-y-4">
+      <div className="glass rounded-3xl p-4 sm:p-6 space-y-4">
         <h3 className="font-semibold flex items-center gap-2">
           <CalendarClock className="size-4" />
           {editingId ? "예약 수정" : "새 예약 만들기"}
@@ -1239,17 +1235,17 @@ function SchedulePanel() {
                 </div>
               </div>
               <Button
-                size="sm"
+                size="xs"
                 variant="outline"
-                className="h-7 px-2 text-xs"
+                className="px-2 text-xs"
                 onClick={() => startEdit(s)}
               >
                 <Pencil className="size-3.5 mr-1" /> 수정
               </Button>
               <Button
-                size="sm"
+                size="xs"
                 variant="outline"
-                className="h-7 px-2 text-xs"
+                className="px-2 text-xs"
                 onClick={() =>
                   callRunNow({ data: { id: s.id } })
                     .then(() => {
@@ -1263,9 +1259,9 @@ function SchedulePanel() {
                 <Play className="size-3.5 mr-1" /> 지금 실행
               </Button>
               <Button
-                size="sm"
+                size="xs"
                 variant="ghost"
-                className="h-7 px-2 text-xs text-muted-foreground"
+                className="px-2 text-xs text-muted-foreground"
                 onClick={() =>
                   callDelete({ data: { id: s.id } })
                     .then(() => qc.invalidateQueries({ queryKey: ["video-schedules"] }))

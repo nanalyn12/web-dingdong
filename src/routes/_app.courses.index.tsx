@@ -135,7 +135,7 @@ function CoursesPage() {
       )}
 
       <section data-tour="course-list" className="space-y-5">
-        <div className="glass rounded-3xl p-6 md:p-7 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div className="glass rounded-3xl p-4 sm:p-6 md:p-7 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold">
               {category ? `${category.emoji} ${category.label}` : "강의 목록"}
@@ -168,7 +168,7 @@ function CoursesPage() {
                   type="button"
                   onClick={() => setLevelFilter(key)}
                   className={[
-                    "px-3 py-1.5 rounded-xl text-xs font-medium transition",
+                    "inline-flex min-h-11 items-center px-3 py-1.5 rounded-xl text-xs font-medium transition md:min-h-0",
                     levelFilter === key
                       ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
                       : "text-muted-foreground hover:text-foreground",
@@ -181,7 +181,7 @@ function CoursesPage() {
             <Select value={lang} onValueChange={(v) => setLang(v as LangKey)}>
               <SelectTrigger
                 aria-label="영상 나레이션 언어"
-                className="h-9 w-[142px] rounded-2xl bg-white/60 border-white/60 text-xs font-medium"
+                className="h-11 w-[142px] rounded-2xl bg-white/60 border-white/60 text-xs font-medium md:h-9"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -196,7 +196,7 @@ function CoursesPage() {
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
               <SelectTrigger
                 aria-label="정렬 기준"
-                className="h-9 w-[116px] rounded-2xl bg-white/60 border-white/60 text-xs font-medium"
+                className="h-11 w-[116px] rounded-2xl bg-white/60 border-white/60 text-xs font-medium md:h-9"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -346,7 +346,7 @@ function CreateCourseForm() {
   };
 
   return (
-    <section className="glass rounded-3xl p-8">
+    <section className="glass rounded-3xl p-5 sm:p-8">
       <h1 className="text-3xl font-bold">강의 만들기</h1>
       <p className="mt-2 text-muted-foreground">
         주차 수를 선택하면 叮叮이 그만큼의 세부 강의를 한 번에 만들어요.
@@ -615,7 +615,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
             <Button
               size="sm"
               variant="ghost"
-              className="h-9 px-2 text-xs text-destructive hover:text-destructive"
+              className="px-2 text-xs text-destructive hover:text-destructive md:h-9"
               disabled={deleteCourseM.isPending}
               onClick={() => {
                 if (
@@ -772,7 +772,7 @@ function CourseEditDialog({ course }: { course: CourseWithCount }) {
           ✏️ 강의 정보 수정 (제목·설명·난이도)
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base">강의 정보 수정</DialogTitle>
         </DialogHeader>
@@ -945,7 +945,7 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
           🧩 강의 구조 편집 (이동·분리·합치기)
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base">구조 편집 — {course.title}</DialogTitle>
         </DialogHeader>
@@ -1225,17 +1225,17 @@ function LessonRow({
       {isEditor && (
         <div className="flex gap-1">
           <Button
-            size="sm"
+            size="xs"
             variant="ghost"
-            className="h-7 px-2 text-xs"
+            className="px-2 text-xs"
             onClick={() => setEditing(true)}
           >
             수정
           </Button>
           <Button
-            size="sm"
+            size="xs"
             variant="ghost"
-            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+            className="px-2 text-xs text-destructive hover:text-destructive"
             onClick={onDelete}
           >
             삭제

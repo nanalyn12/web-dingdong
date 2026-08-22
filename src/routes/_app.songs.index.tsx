@@ -92,7 +92,7 @@ export const Route = createFileRoute("/_app/songs/")({
   validateSearch: zodValidator(songsSearchSchema),
   component: SongsPage,
   errorComponent: ({ error }) => (
-    <div className="glass rounded-3xl p-6 text-sm text-destructive">{error.message}</div>
+    <div className="glass rounded-3xl p-4 sm:p-6 text-sm text-destructive">{error.message}</div>
   ),
   notFoundComponent: () => <div>없습니다.</div>,
 });
@@ -351,7 +351,7 @@ function SongsPage() {
                 })
               }
             >
-              <SelectTrigger className="h-8 w-32 text-sm">
+              <SelectTrigger className="w-32 text-sm md:h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -370,7 +370,7 @@ function SongsPage() {
                   navigate({ search: (prev: SearchParams) => ({ ...prev, genre: v }) })
                 }
               >
-                <SelectTrigger className="h-8 w-44 text-sm">
+                <SelectTrigger className="w-44 text-sm md:h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -390,7 +390,7 @@ function SongsPage() {
                   navigate({ search: (prev: SearchParams) => ({ ...prev, theme: v }) })
                 }
               >
-                <SelectTrigger className="h-8 w-44 text-sm">
+                <SelectTrigger className="w-44 text-sm md:h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -415,7 +415,7 @@ function SongsPage() {
                   })
                 }
               >
-                <SelectTrigger className="h-8 w-36 text-sm">
+                <SelectTrigger className="w-36 text-sm md:h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -429,7 +429,12 @@ function SongsPage() {
               {filteredSongs.length}곡{filtering && ` / 전체 ${songs?.length ?? 0}곡`}
             </span>
             {filtering && (
-              <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={resetFilters}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-11 text-xs md:h-8"
+                onClick={resetFilters}
+              >
                 초기화
               </Button>
             )}
@@ -569,7 +574,7 @@ function SongsPage() {
       {(!isEditor || tab === "library") && (
         <div className="space-y-6">
           {isLoading && (
-            <div className="glass rounded-3xl p-8 text-center text-muted-foreground">
+            <div className="glass rounded-3xl p-5 sm:p-8 text-center text-muted-foreground">
               불러오는 중…
             </div>
           )}
@@ -762,9 +767,9 @@ function CancelSongButton({ songId }: { songId: string }) {
   return (
     <Button
       type="button"
-      size="sm"
+      size="xs"
       variant="outline"
-      className="h-7 px-2 text-[11px]"
+      className="px-2 text-[11px]"
       disabled={m.isPending}
       onClick={() => m.mutate()}
     >
@@ -787,9 +792,9 @@ function DeleteSongButton({ songId }: { songId: string }) {
   return (
     <Button
       type="button"
-      size="sm"
+      size="xs"
       variant="ghost"
-      className="h-7 px-2 text-[11px] text-destructive hover:text-destructive"
+      className="px-2 text-[11px] text-destructive hover:text-destructive"
       disabled={m.isPending}
       onClick={() => {
         if (confirm("정말 이 노래를 삭제할까요?")) m.mutate();
@@ -1310,7 +1315,7 @@ function CuratedSongForm({ onDone }: { onDone: () => void }) {
   });
 
   return (
-    <div className="glass rounded-3xl p-6 space-y-4">
+    <div className="glass rounded-3xl p-4 sm:p-6 space-y-4">
       <div className="flex items-center gap-2">
         <span className="text-lg">🎧</span>
         <h2 className="text-xl font-bold">실제 중국어 노래 등록</h2>
@@ -1518,9 +1523,9 @@ function FailedSongCard({ song }: { song: SongRow }) {
           )}
         </div>
         <Button
-          size="sm"
+          size="xs"
           variant="outline"
-          className="h-7 px-2 text-xs shrink-0"
+          className="px-2 text-xs shrink-0"
           onClick={() => setOpen((v) => !v)}
         >
           <Pencil className="size-3.5 mr-1" />
@@ -1542,7 +1547,7 @@ function FailedSongCard({ song }: { song: SongRow }) {
           <div className="space-y-1.5">
             <Label className="text-xs">음악 스타일</Label>
             <Select value={style} onValueChange={setStyle}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-11 text-xs md:h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1658,7 +1663,7 @@ function SongSchedulePanel() {
 
   return (
     <div className="space-y-5">
-      <div className="glass rounded-3xl p-6 space-y-4">
+      <div className="glass rounded-3xl p-4 sm:p-6 space-y-4">
         <h3 className="font-semibold flex items-center gap-2">
           <CalendarClock className="size-4" />
           {editingId ? "예약 수정" : "새 예약 만들기"}
@@ -1830,17 +1835,17 @@ function SongSchedulePanel() {
                 </div>
               </div>
               <Button
-                size="sm"
+                size="xs"
                 variant="outline"
-                className="h-7 px-2 text-xs"
+                className="px-2 text-xs"
                 onClick={() => startEdit(s)}
               >
                 <Pencil className="size-3.5 mr-1" /> 수정
               </Button>
               <Button
-                size="sm"
+                size="xs"
                 variant="outline"
-                className="h-7 px-2 text-xs"
+                className="px-2 text-xs"
                 onClick={() =>
                   runSongScheduleNow({ data: { id: s.id } })
                     .then(() => {
@@ -1854,9 +1859,9 @@ function SongSchedulePanel() {
                 <Play className="size-3.5 mr-1" /> 지금 실행
               </Button>
               <Button
-                size="sm"
+                size="xs"
                 variant="ghost"
-                className="h-7 px-2 text-xs text-muted-foreground"
+                className="px-2 text-xs text-muted-foreground"
                 onClick={() =>
                   deleteSongSchedule({ data: { id: s.id } })
                     .then(() => qc.invalidateQueries({ queryKey: ["song-schedules"] }))

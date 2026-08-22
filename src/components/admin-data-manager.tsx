@@ -124,7 +124,7 @@ export function AdminDataManager() {
 
   return (
     <div className="space-y-6">
-      <section className="glass rounded-3xl p-6">
+      <section className="glass rounded-3xl p-4 sm:p-6">
         <h2 className="text-lg font-bold flex items-center gap-2">
           <Database className="size-5 text-primary" /> 데이터 백업
         </h2>
@@ -318,7 +318,7 @@ function RestoreDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && !restore.isPending && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-amber-500" /> 데이터 복원
@@ -369,7 +369,11 @@ function RestoreDialog({
             <p className="font-medium">복원할 항목</p>
             <div className="grid grid-cols-2 gap-1.5">
               {BACKUP_TABLES.map((spec) => (
-                <label key={spec.name} className="flex items-center gap-2 text-xs cursor-pointer">
+                <label
+                  key={spec.name}
+                  // The box stays 16px; the label is what takes the tap.
+                  className="flex min-h-11 cursor-pointer items-center gap-2 text-xs md:min-h-0"
+                >
                   <Checkbox
                     checked={selected.includes(spec.name)}
                     onCheckedChange={(v) => toggle(spec.name, v === true)}

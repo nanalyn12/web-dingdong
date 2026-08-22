@@ -176,7 +176,7 @@ export function PushManager() {
       {/* Permission modal */}
       {open && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="glass rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-scale-in">
+          <div className="glass rounded-3xl p-4 sm:p-6 max-w-sm w-full shadow-2xl animate-scale-in">
             <div className="flex justify-between items-start mb-3">
               <div className="text-3xl">🐼🛎️</div>
               <button

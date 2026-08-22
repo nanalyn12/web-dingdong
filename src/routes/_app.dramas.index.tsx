@@ -52,7 +52,7 @@ export const Route = createFileRoute("/_app/dramas/")({
   }),
   component: DramasPage,
   errorComponent: ({ error }) => (
-    <div className="glass rounded-3xl p-6 text-sm text-destructive">{error.message}</div>
+    <div className="glass rounded-3xl p-4 sm:p-6 text-sm text-destructive">{error.message}</div>
   ),
   notFoundComponent: () => <div>없습니다.</div>,
 });
@@ -227,7 +227,7 @@ function DramasPage() {
           <SlidersHorizontal className="size-4 text-muted-foreground ml-1" />
           {genreOptions.length > 1 && (
             <Select value={genreFilter} onValueChange={setGenreFilter}>
-              <SelectTrigger className="w-44 h-9 text-sm">
+              <SelectTrigger className="w-44 text-sm">
                 <SelectValue placeholder="카테고리" />
               </SelectTrigger>
               <SelectContent>
@@ -242,7 +242,7 @@ function DramasPage() {
           )}
           {levelOptions.length > 1 && (
             <Select value={levelFilter} onValueChange={setLevelFilter}>
-              <SelectTrigger className="w-36 h-9 text-sm">
+              <SelectTrigger className="w-36 text-sm">
                 <SelectValue placeholder="난이도" />
               </SelectTrigger>
               <SelectContent>
@@ -257,7 +257,7 @@ function DramasPage() {
           )}
           {langOptions.length > 1 && (
             <Select value={langFilter} onValueChange={setLangFilter}>
-              <SelectTrigger className="w-40 h-9 text-sm" aria-label="나레이션 언어">
+              <SelectTrigger className="w-40 text-sm" aria-label="나레이션 언어">
                 <SelectValue placeholder="나레이션" />
               </SelectTrigger>
               <SelectContent>
@@ -277,7 +277,7 @@ function DramasPage() {
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 text-xs"
+              className="text-xs"
               onClick={() => {
                 setGenreFilter("all");
                 setLevelFilter("all");
@@ -290,7 +290,9 @@ function DramasPage() {
       )}
 
       {isLoading && (
-        <div className="glass rounded-3xl p-8 text-center text-muted-foreground">불러오는 중…</div>
+        <div className="glass rounded-3xl p-5 sm:p-8 text-center text-muted-foreground">
+          불러오는 중…
+        </div>
       )}
       {!isLoading && dramas && dramas.length === 0 && (
         <div className="glass rounded-3xl p-10 text-center">
@@ -385,7 +387,7 @@ function DramasPage() {
                     }
                     disabled={setLevel.isPending}
                   >
-                    <SelectTrigger className="h-8 rounded-xl text-xs" aria-label="난이도 변경">
+                    <SelectTrigger className="rounded-xl text-xs md:h-8" aria-label="난이도 변경">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

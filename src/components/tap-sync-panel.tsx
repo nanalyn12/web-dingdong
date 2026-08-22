@@ -172,7 +172,7 @@ export function TapSyncPanel({
 
       <div
         ref={listRef}
-        className="max-h-[40vh] overflow-y-auto pr-1 space-y-1 rounded-2xl bg-white/40 p-2"
+        className="max-h-[40dvh] overflow-y-auto pr-1 space-y-1 rounded-2xl bg-white/40 p-2"
       >
         {lyrics.map((l, i) => {
           const header = isSectionHeader(l.zh);

@@ -104,7 +104,7 @@ export const Route = createFileRoute("/_app/songs/$id")({
     }),
   component: SongPlayerPage,
   errorComponent: ({ error }) => (
-    <div className="glass rounded-3xl p-6 text-sm text-destructive">{error.message}</div>
+    <div className="glass rounded-3xl p-4 sm:p-6 text-sm text-destructive">{error.message}</div>
   ),
   notFoundComponent: () => <div>없습니다.</div>,
 });
@@ -493,7 +493,7 @@ function SongPlayer({
     <div className="space-y-4">
       <Link
         to="/songs"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground md:min-h-0"
       >
         <ArrowLeft className="size-4" /> 학습송 목록
       </Link>
@@ -739,14 +739,14 @@ function SongPlayer({
       {/* ─── KARAOKE / LYRICS ─────────────────────────────────────── */}
       <div className="grid lg:grid-cols-5 gap-4">
         {/* Karaoke big line */}
-        <div className="lg:col-span-3 glass rounded-3xl p-6 min-h-[280px] flex flex-col justify-center items-center text-center relative overflow-hidden">
+        <div className="sticky top-20 z-10 lg:static lg:col-span-3 glass rounded-3xl p-4 sm:p-6 min-h-[180px] sm:min-h-[280px] flex flex-col justify-center items-center text-center relative overflow-hidden">
           <div className="absolute inset-0 gradient-primary opacity-5" />
           <div className="relative w-full space-y-3">
             <div className="flex items-center justify-center gap-2 text-[11px]">
               <button
                 onClick={() => setShowPinyinPref(!showPinyin)}
                 className={[
-                  "rounded-full px-2.5 py-1 font-semibold transition-colors",
+                  "inline-flex min-h-11 items-center rounded-full px-2.5 py-1 font-semibold transition-colors md:min-h-0",
                   showPinyin ? "bg-primary/20 text-primary" : "glass-soft text-muted-foreground",
                 ].join(" ")}
               >
@@ -755,7 +755,7 @@ function SongPlayer({
               <button
                 onClick={() => setShowKoPref((v) => !v)}
                 className={[
-                  "rounded-full px-2.5 py-1 font-semibold transition-colors",
+                  "inline-flex min-h-11 items-center rounded-full px-2.5 py-1 font-semibold transition-colors md:min-h-0",
                   showKoPref ? "bg-primary/20 text-primary" : "glass-soft text-muted-foreground",
                 ].join(" ")}
               >
@@ -791,7 +791,7 @@ function SongPlayer({
               </span>
             )}
           </div>
-          <div ref={listRef} className="max-h-[52vh] overflow-y-auto pr-1 space-y-1.5">
+          <div ref={listRef} className="max-h-[52dvh] overflow-y-auto pr-1 space-y-1.5">
             {lyrics.map((line, i) => (
               <LyricRow
                 key={i}
@@ -967,7 +967,7 @@ function PlayerControls({
           <Button
             variant="ghost"
             size="icon"
-            className="size-9"
+            className="size-11 md:size-9"
             onClick={onPrevLine}
             disabled={!hasTimes}
             aria-label="이전 가사"
@@ -986,7 +986,7 @@ function PlayerControls({
           <Button
             variant="ghost"
             size="icon"
-            className="size-9"
+            className="size-11 md:size-9"
             onClick={onNextLine}
             disabled={!hasTimes}
             aria-label="다음 가사"
@@ -1002,7 +1002,7 @@ function PlayerControls({
                 key={r}
                 onClick={() => onRateChange(r)}
                 className={[
-                  "px-2 py-1 transition-colors",
+                  "inline-flex min-h-11 items-center px-2 py-1 transition-colors md:min-h-0",
                   playbackRate === r
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -1015,7 +1015,7 @@ function PlayerControls({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
+            className="size-11 md:size-8"
             onClick={onLoopToggle}
             aria-label="현재 가사 반복"
             title={loopLine ? "반복 끄기" : "현재 가사 반복"}
@@ -1027,7 +1027,7 @@ function PlayerControls({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
+            className="size-11 md:size-8"
             onClick={onMuteToggle}
             aria-label={muted ? "음소거 해제" : "음소거"}
           >
@@ -1193,7 +1193,7 @@ function SongLessonTabs({ song, onSeek }: { song: SongRow; onSeek?: (t: number) 
 
   if (empty) {
     return (
-      <div className="glass rounded-3xl p-6 text-center text-sm text-muted-foreground">
+      <div className="glass rounded-3xl p-4 sm:p-6 text-center text-sm text-muted-foreground">
         <BookOpen className="size-6 mx-auto mb-2 opacity-60" />
         {isEditor
           ? "아직 강의 콘텐츠가 없어요. 상단의 '강의 콘텐츠 생성' 버튼을 눌러 만들어보세요."
@@ -1760,7 +1760,7 @@ function VocabCard({
         aria-label={saved ? "단어장에 담김" : "단어장에 담기"}
         title={saved ? "이미 단어장에 있어요" : "단어장에 담기"}
         className={[
-          "absolute bottom-2 right-2 z-20 size-7 rounded-full grid place-items-center shadow transition-colors",
+          "absolute bottom-2 right-2 z-20 size-11 rounded-full grid place-items-center md:size-7 shadow transition-colors",
           saved
             ? "bg-emerald-500 text-white cursor-default"
             : "bg-white/85 text-primary hover:bg-white",
@@ -1987,7 +1987,7 @@ function TaxonomyEditor({ song }: { song: SongRow }) {
         onValueChange={(v) => mutation.mutate({ genre: v === "_" ? null : (v as SongGenre) })}
         disabled={mutation.isPending}
       >
-        <SelectTrigger className="h-8 w-40 text-xs" title="목록에서 이 곡이 묶일 장르예요.">
+        <SelectTrigger className="w-40 text-xs md:h-8" title="목록에서 이 곡이 묶일 장르예요.">
           <SelectValue placeholder="장르 지정" />
         </SelectTrigger>
         <SelectContent>
@@ -2004,7 +2004,7 @@ function TaxonomyEditor({ song }: { song: SongRow }) {
         onValueChange={(v) => mutation.mutate({ theme: v === "_" ? null : (v as SongTheme) })}
         disabled={mutation.isPending}
       >
-        <SelectTrigger className="h-8 w-40 text-xs" title="목록에서 이 곡이 묶일 주제예요.">
+        <SelectTrigger className="w-40 text-xs md:h-8" title="목록에서 이 곡이 묶일 주제예요.">
           <SelectValue placeholder="주제 지정" />
         </SelectTrigger>
         <SelectContent>
@@ -2112,7 +2112,7 @@ function LyricRow({
         onClick={() => clickable && onSeek(seekTime!)}
         disabled={!clickable}
         className={[
-          "w-full text-left rounded-xl px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors",
+          "flex min-h-11 w-full items-center rounded-xl px-3 py-1.5 text-left text-[10px] font-bold uppercase md:min-h-0 tracking-widest transition-colors",
           "text-primary/70 hover:text-primary hover:bg-primary/5",
           clickable ? "cursor-pointer" : "cursor-default",
           pulseClass,

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Flame, Users } from "lucide-react";
 
 import { useMyProfile, useSession } from "@/lib/auth-client";
+import { idleLabel, idleTone, idleToneClass } from "@/lib/student-activity";
 import { getStudentRoster, type StudentRow } from "@/lib/students.functions";
 
 export const Route = createFileRoute("/_app/students")({
@@ -61,7 +62,7 @@ function StudentsPage() {
 
   if (!loading && !pLoading && session && !isEditor) {
     return (
-      <div className="glass rounded-3xl p-8 text-center text-muted-foreground">
+      <div className="glass rounded-3xl p-5 sm:p-8 text-center text-muted-foreground">
         교수자(teacher/admin) 전용 페이지입니다.
       </div>
     );
@@ -77,7 +78,7 @@ function StudentsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="glass rounded-3xl p-6 flex items-center gap-3">
+      <header className="glass rounded-3xl p-4 sm:p-6 flex items-center gap-3">
         <div className="size-10 rounded-2xl gradient-primary grid place-items-center text-primary-foreground">
           <Users className="size-5" />
         </div>
@@ -109,51 +110,67 @@ function StudentsPage() {
               아직 등록된 학생이 없어요.
             </div>
           ) : (
-            <div className="glass rounded-3xl p-2 overflow-x-auto">
-              <table className="w-full text-sm min-w-[720px]">
-                <thead>
-                  <tr className="text-muted-foreground text-xs">
-                    <Th
-                      label="학생"
-                      k="name"
-                      sort={sort}
-                      asc={asc}
-                      onClick={toggleSort}
-                      align="left"
-                    />
-                    <Th
-                      label="마지막 활동"
-                      k="daysIdle"
-                      sort={sort}
-                      asc={asc}
-                      onClick={toggleSort}
-                    />
-                    <Th label="스트릭" k="streak" sort={sort} asc={asc} onClick={toggleSort} />
-                    <Th label="최근 7일" k="actions7d" sort={sort} asc={asc} onClick={toggleSort} />
-                    <Th label="단어" k="vocabTotal" sort={sort} asc={asc} onClick={toggleSort} />
-                    <Th
-                      label="완료 레슨"
-                      k="lessonsCompleted"
-                      sort={sort}
-                      asc={asc}
-                      onClick={toggleSort}
-                    />
-                    <Th
-                      label="퀴즈 평균"
-                      k="quizAvgPct"
-                      sort={sort}
-                      asc={asc}
-                      onClick={toggleSort}
-                    />
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((s) => (
-                    <StudentRowView key={s.id} s={s} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {/* Below md the seven columns only fit behind a horizontal
+                  scroll, which hides most of them. Same rows, stacked. */}
+              <div className="flex flex-col gap-2 md:hidden">
+                {sorted.map((s) => (
+                  <StudentCardView key={s.id} s={s} />
+                ))}
+              </div>
+
+              <div className="glass hidden rounded-3xl p-2 md:block md:overflow-x-auto">
+                <table className="w-full text-sm min-w-[720px]">
+                  <thead>
+                    <tr className="text-muted-foreground text-xs">
+                      <Th
+                        label="학생"
+                        k="name"
+                        sort={sort}
+                        asc={asc}
+                        onClick={toggleSort}
+                        align="left"
+                      />
+                      <Th
+                        label="마지막 활동"
+                        k="daysIdle"
+                        sort={sort}
+                        asc={asc}
+                        onClick={toggleSort}
+                      />
+                      <Th label="스트릭" k="streak" sort={sort} asc={asc} onClick={toggleSort} />
+                      <Th
+                        label="최근 7일"
+                        k="actions7d"
+                        sort={sort}
+                        asc={asc}
+                        onClick={toggleSort}
+                      />
+                      <Th label="단어" k="vocabTotal" sort={sort} asc={asc} onClick={toggleSort} />
+                      <Th
+                        label="완료 레슨"
+                        k="lessonsCompleted"
+                        sort={sort}
+                        asc={asc}
+                        onClick={toggleSort}
+                      />
+                      <Th
+                        label="퀴즈 평균"
+                        k="quizAvgPct"
+                        sort={sort}
+                        asc={asc}
+                        onClick={toggleSort}
+                      />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((s) => (
+                      <StudentRowView key={s.id} s={s} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </>
       )}
@@ -210,23 +227,67 @@ function Th({
   );
 }
 
+/** The phone rendering of one student — the same seven numbers, stacked. */
+function StudentCardView({ s }: { s: StudentRow }) {
+  const idle = s.daysIdle;
+  return (
+    <div className="glass rounded-2xl p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 font-medium">
+            {idleTone(idle) === "stale" && (
+              <AlertTriangle className="size-3.5 shrink-0 text-amber-600" />
+            )}
+            <span className="truncate">{s.name}</span>
+            {s.role === "teacher" && (
+              <span className="shrink-0 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[9px] font-bold text-sky-700">
+                교수자
+              </span>
+            )}
+          </div>
+          {s.email && <div className="truncate text-[11px] text-muted-foreground">{s.email}</div>}
+        </div>
+        <div className={`shrink-0 text-xs ${idleToneClass(idle)}`}>{idleLabel(idle)}</div>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <CardStat label="스트릭" value={s.streak > 0 ? `🔥 ${s.streak}` : "0"} />
+        <CardStat label="최근 7일" value={String(s.actions7d)} />
+        <CardStat label="단어" value={String(s.vocabTotal)} />
+        <CardStat label="완료 레슨" value={String(s.lessonsCompleted)} />
+        <CardStat
+          label="퀴즈 평균"
+          value={s.quizAvgPct == null ? "—" : `${s.quizAvgPct}%`}
+          tone={
+            s.quizAvgPct == null
+              ? undefined
+              : s.quizAvgPct >= 70
+                ? "text-emerald-700"
+                : "text-amber-700"
+          }
+        />
+      </dl>
+    </div>
+  );
+}
+
+function CardStat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="rounded-xl bg-white/40 px-2 py-1.5">
+      <dt className="text-[10px] text-muted-foreground">{label}</dt>
+      <dd className={`text-sm font-semibold ${tone ?? ""}`}>{value}</dd>
+    </div>
+  );
+}
+
 function StudentRowView({ s }: { s: StudentRow }) {
   const idle = s.daysIdle;
-  const idleLabel = idle == null ? "—" : idle === 0 ? "오늘" : idle === 1 ? "어제" : `${idle}일 전`;
-  const idleCls =
-    idle == null
-      ? "text-muted-foreground/60"
-      : idle >= 7
-        ? "text-amber-700 font-semibold"
-        : idle === 0
-          ? "text-emerald-700"
-          : "text-foreground";
 
   return (
     <tr className="border-t border-white/40 hover:bg-white/40 transition">
       <td className="px-3 py-2.5">
         <div className="font-medium flex items-center gap-1.5">
-          {idle != null && idle >= 7 && (
+          {idleTone(idle) === "stale" && (
             <AlertTriangle className="size-3.5 text-amber-600 shrink-0" />
           )}
           {s.name}
@@ -240,7 +301,7 @@ function StudentRowView({ s }: { s: StudentRow }) {
           <div className="text-[11px] text-muted-foreground truncate max-w-[200px]">{s.email}</div>
         )}
       </td>
-      <td className={`px-3 py-2.5 text-center ${idleCls}`}>{idleLabel}</td>
+      <td className={`px-3 py-2.5 text-center ${idleToneClass(idle)}`}>{idleLabel(idle)}</td>
       <td className="px-3 py-2.5 text-center">
         {s.streak > 0 ? (
           <span className="inline-flex items-center gap-0.5">

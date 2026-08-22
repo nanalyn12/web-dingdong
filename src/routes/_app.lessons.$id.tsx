@@ -28,6 +28,7 @@ import { CourseLessonNav } from "@/components/course-lesson-nav";
 import { getLesson } from "@/lib/courses.functions";
 import { getLessonRelatedSongs } from "@/lib/content-links.functions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { SpeakButton } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -123,37 +124,6 @@ function normalizeMarkdown(md: string) {
   return md.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
 }
 
-/* ---------- Reusable TTS button (Chinese only) ---------- */
-function TtsButton({
-  text,
-  speak,
-  active,
-  size = "md",
-  label,
-}: {
-  text: string;
-  speak: (t: string, id?: string) => void;
-  active: boolean;
-  size?: "sm" | "md";
-  label?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => speak(text, text)}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0 cursor-pointer",
-        size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs",
-        active && "animate-pulse bg-primary/30",
-      )}
-      aria-label={`중국어 듣기: ${text}`}
-    >
-      <Volume2 className={size === "sm" ? "size-3" : "size-3.5"} />
-      {label ?? "듣기"}
-    </button>
-  );
-}
-
 /* ============================================================== */
 function LessonPage() {
   const { id } = Route.useParams();
@@ -243,14 +213,14 @@ function LessonPage() {
 
   if (isLoading) {
     return (
-      <section className="glass rounded-3xl p-8">
+      <section className="glass rounded-3xl p-5 sm:p-8">
         <p className="text-muted-foreground">불러오는 중...</p>
       </section>
     );
   }
   if (error || !lesson) {
     return (
-      <section className="glass rounded-3xl p-8">
+      <section className="glass rounded-3xl p-5 sm:p-8">
         <p className="text-destructive">강의를 찾을 수 없습니다.</p>
       </section>
     );
@@ -261,7 +231,7 @@ function LessonPage() {
   const levelLabel = LEVEL_LABEL_HSK[level];
 
   return (
-    <section className="glass-read rounded-3xl p-6 sm:p-8 space-y-6">
+    <section className="glass-read rounded-3xl p-4 sm:p-6 md:p-8 space-y-6">
       <CourseLessonNav lessonId={id} />
 
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -289,42 +259,42 @@ function LessonPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="flex flex-wrap gap-1 h-auto bg-white/60 backdrop-blur-xl rounded-2xl border border-white/70 shadow-sm p-1">
+        <TabsList className="sticky top-20 z-20 -mx-1 flex h-auto w-[calc(100%+0.5rem)] flex-nowrap gap-1 overflow-x-auto rounded-2xl border border-white/70 bg-white/85 p-1 shadow-sm backdrop-blur-xl md:bg-white/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:static md:-mx-0 md:w-full md:flex-wrap md:overflow-visible">
           {(lessonVideo?.youtube_video_id || lessonVideo?.media_url) && (
             <TabsTrigger
               value="video"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+              className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
             >
               🎬 영상
             </TabsTrigger>
           )}
           <TabsTrigger
             value="key"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             핵심표현
           </TabsTrigger>
           <TabsTrigger
             value="content"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             본문
           </TabsTrigger>
           <TabsTrigger
             value="dialogue"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             실전대화
           </TabsTrigger>
           <TabsTrigger
             value="slides"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             슬라이드
           </TabsTrigger>
           <TabsTrigger
             value="quiz"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl"
+            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             퀴즈
           </TabsTrigger>
@@ -600,7 +570,7 @@ function ContentMarkdown({
             </div>
           </div>
           {allChinese && (
-            <TtsButton
+            <SpeakButton
               text={allChinese}
               speak={speak}
               active={speakingId === allChinese}
@@ -738,7 +708,7 @@ function ComicStrip({
                     <span className="font-semibold" lang="zh-CN">
                       {l.zh}
                     </span>
-                    <TtsButton text={l.zh} speak={speak} active={speakingId === l.zh} size="sm" />
+                    <SpeakButton text={l.zh} speak={speak} active={speakingId === l.zh} size="sm" />
                   </div>
                   {showPinyin && l.pinyin && (
                     <div className="text-[11px] text-muted-foreground">{l.pinyin}</div>
@@ -822,7 +792,7 @@ function DialogueList({
                 >
                   {d.zh}
                 </p>
-                <TtsButton
+                <SpeakButton
                   text={d.zh}
                   speak={(t) => speak(t, ttsId)}
                   active={speakingId === ttsId}
@@ -1392,7 +1362,7 @@ function SlidesCarousel({
                 )}
               </div>
               {allZh && (
-                <TtsButton
+                <SpeakButton
                   text={allZh}
                   speak={speak}
                   active={speakingId === allZh}
@@ -1724,7 +1694,7 @@ function QuizRunner({
     const pct = Math.round((score / quiz.length) * 100);
     return (
       <div className="space-y-4">
-        <div className="glass-soft rounded-3xl p-8 text-center space-y-4">
+        <div className="glass-soft rounded-3xl p-5 sm:p-8 text-center space-y-4">
           <div className="text-7xl">{passed ? "🎉" : "💪"}</div>
           <div className="text-sm text-muted-foreground">결과</div>
           <div className="text-5xl font-bold text-gradient-primary">
@@ -1800,7 +1770,7 @@ function QuizRunner({
 
       <div
         key={currentQuestionIdx}
-        className="glass-soft rounded-3xl p-6 space-y-4 min-h-[280px] animate-in fade-in slide-in-from-bottom-2 duration-300"
+        className="glass-soft rounded-3xl p-4 sm:p-6 space-y-4 min-h-[280px] animate-in fade-in slide-in-from-bottom-2 duration-300"
       >
         <div className="flex items-start gap-2">
           <span className="inline-flex shrink-0 items-center justify-center size-7 rounded-full bg-primary/15 text-primary text-xs font-bold">

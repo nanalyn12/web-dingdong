@@ -14,6 +14,7 @@ import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 
 import { Input } from "@/components/ui/input";
+import { SpeakButton } from "@/components/speak-button";
 import {
   Select,
   SelectContent,
@@ -115,7 +116,7 @@ function VocabularyPage() {
 
   if (store.loading) {
     return (
-      <section className="glass rounded-3xl p-8">
+      <section className="glass rounded-3xl p-5 sm:p-8">
         <p className="text-muted-foreground">불러오는 중...</p>
       </section>
     );
@@ -166,7 +167,7 @@ function VocabularyPage() {
           )}
         </div>
         <Select value={search.status} onValueChange={(v) => setSearch({ status: v as never })}>
-          <SelectTrigger className="w-32 h-9 text-xs">
+          <SelectTrigger className="w-32 text-xs">
             <SelectValue placeholder="상태" />
           </SelectTrigger>
           <SelectContent>
@@ -178,7 +179,7 @@ function VocabularyPage() {
           </SelectContent>
         </Select>
         <Select value={search.hsk} onValueChange={(v) => setSearch({ hsk: v as never })}>
-          <SelectTrigger className="w-24 h-9 text-xs">
+          <SelectTrigger className="w-24 text-xs">
             <SelectValue placeholder="HSK" />
           </SelectTrigger>
           <SelectContent>
@@ -191,7 +192,7 @@ function VocabularyPage() {
           </SelectContent>
         </Select>
         <Select value={search.sort} onValueChange={(v) => setSearch({ sort: v as never })}>
-          <SelectTrigger className="w-28 h-9 text-xs">
+          <SelectTrigger className="w-28 text-xs">
             <SelectValue placeholder="정렬" />
           </SelectTrigger>
           <SelectContent>
@@ -304,7 +305,7 @@ function VocabCard({
         <button
           type="button"
           onClick={onDelete}
-          className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
+          className="inline-grid min-h-11 min-w-11 shrink-0 cursor-pointer place-items-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500 md:min-h-0 md:min-w-0"
           aria-label="삭제"
         >
           <Trash2 className="size-4" />
@@ -335,20 +336,11 @@ function VocabCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => speak(v.zh, v.zh)}
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1 text-[11px] cursor-pointer",
-            speakingId === v.zh && "animate-pulse bg-primary/30",
-          )}
-        >
-          <Volume2 className="size-3" /> 듣기
-        </button>
+        <SpeakButton text={v.zh} speak={speak} active={speakingId === v.zh} size="sm" />
         <button
           type="button"
           onClick={() => setPractice(true)}
-          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-400 to-pink-400 text-white px-3 py-1 text-[11px] font-bold shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full bg-gradient-to-r from-rose-400 to-pink-400 px-3 py-1 text-[11px] font-bold text-white shadow-sm transition-shadow hover:shadow-md md:min-h-0"
         >
           <Sparkles className="size-3" /> AI 학습
         </button>

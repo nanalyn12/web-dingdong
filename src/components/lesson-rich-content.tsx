@@ -10,6 +10,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SpeakButton } from "@/components/speak-button";
 
 const HAN_RE = /[\u3400-\u9fff]/;
 const HAN_PLUS = /[\u3400-\u9fff][\u3400-\u9fff\u3000-\u303f\uff00-\uffef，。！？、；：""''…—\s]*/g;
@@ -400,34 +401,6 @@ export function parseRichMarkdown(md: string): Block[] {
 
 /* ============ Renderers ============ */
 
-function TtsPill({
-  text,
-  speak,
-  active,
-  size = "sm",
-}: {
-  text: string;
-  speak: (t: string, id?: string) => void;
-  active: boolean;
-  size?: "sm" | "md";
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => speak(text, text)}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0 cursor-pointer",
-        size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs",
-        active && "animate-pulse bg-primary/30",
-      )}
-      aria-label={`듣기: ${text}`}
-    >
-      <Volume2 className={size === "sm" ? "size-3" : "size-3.5"} />
-      듣기
-    </button>
-  );
-}
-
 const TONES = [
   {
     text: "text-rose-600",
@@ -697,7 +670,7 @@ function InlineText({
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
       {zh && (
         <div className="mt-2">
-          <TtsPill text={zh} speak={speak} active={speakingId === zh} />
+          <SpeakButton size="sm" text={zh} speak={speak} active={speakingId === zh} />
         </div>
       )}
     </div>
@@ -768,7 +741,7 @@ export function RichLessonContent({
               </div>
               {zh && (
                 <div className="absolute -top-2 right-2 opacity-0 group-hover/para:opacity-100 transition-opacity">
-                  <TtsPill text={zh} speak={speak} active={speakingId === zh} />
+                  <SpeakButton size="sm" text={zh} speak={speak} active={speakingId === zh} />
                 </div>
               )}
             </div>
@@ -861,7 +834,9 @@ export function RichLessonContent({
                     <span className="flex-1 text-sm text-slate-700 leading-relaxed">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{t}</ReactMarkdown>
                     </span>
-                    {zh && <TtsPill text={zh} speak={speak} active={speakingId === zh} />}
+                    {zh && (
+                      <SpeakButton size="sm" text={zh} speak={speak} active={speakingId === zh} />
+                    )}
                   </li>
                 );
               })}
