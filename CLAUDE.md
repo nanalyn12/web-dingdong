@@ -32,3 +32,9 @@ npm run verify
 | 2026-08-18 | Gemini 개인 키를 AI 호출 16곳 전부에 연결      | src/lib/ai-gateway.server.ts + 호출부 13개 모듈               | 개인 키가 叮叮 챗봇에서만 쓰이고 나머지는 공용 키로 새고 있었음 |
 | 2026-08-18 | Suno 개인 키 지원 + 키 선택 규칙 공용화        | src/lib/api-key-choice.ts, suno.server.ts, \_app.settings.tsx | Suno는 건당 실과금이라 공용 키로만 도는 것이 곧 관리자 카드 결제 |
 | 2026-08-18 | Supabase 잔재 삭제 + 볼륨 청소 분리·테스트     | src/lib/media-cleanup{,.server}.ts, server.ts, schema.ts      | 잔여 URL 0건 확인 후 죽은 코드 제거. 삭제 판정을 순수 함수로 빼 검증 가능하게 |
+| 2026-08-22 | 모바일 탭 타깃·다이얼로그·safe-area (배치 1)    | src/lib/mobile-ui.ts, ui/{button,tabs,dialog,input,select}.tsx | 375px 실측에서 탭 타깃 26/50이 40px 미만. 규격을 순수 모듈로 빼 px 단위로 판정 가능하게 |
+| 2026-08-22 | 모바일 내비게이션 시트 + 링크 목록 단일화 (배치 2) | src/lib/nav-items.ts, nav-links.tsx, mobile-nav.tsx, app-sidebar.tsx | 폰에서 도달 가능한 내비 링크가 0개였음. 권한 분기가 Link 7블록에 흩어져 두 표면이 갈라질 위험 |
+| 2026-08-22 | 모바일 밀도 일괄 조정 (배치 3)                  | src/lib/mobile-density.test.ts + 라우트·컴포넌트 24개 (패딩 66곳·탭 타깃 36곳) | 본문 폭 294px, 호출부 고정 높이가 프리미티브를 덮고 있었음. 규칙을 소스 가드로 고정 |
+| 2026-08-22 | 화면별 모바일 마무리 (배치 4)                   | coachmark-visibility.ts, fab-placement.ts, student-activity.ts, lessons/songs/students | 코치마크가 폰에서 자동 실행, FAB이 홈 인디케이터 침범, 학습송 상세 컨트롤 21개가 44px 미만 |
+| 2026-08-22 | 모바일 하단 탭바 (배치 5)                       | src/components/mobile-tab-bar.tsx, nav-items.ts, fab-placement.ts, styles.css | 학습송·영상 학습이 햄버거 뒤 두 번 탭에 숨어 있었음. 학습 앱의 주 목적지가 상시 노출되지 않았음 |
+| 2026-08-22 | 듣기 버튼 8개 복사본 → SpeakButton 통합 (배치 6) | src/components/speak-button.tsx + 호출부 8곳, vocabulary·dialog 컨트롤 | 레슨 화면 컨트롤 39개가 44px 미만. 같은 알약이 8곳에 복붙돼 두 개는 aria-label조차 없었음 |
