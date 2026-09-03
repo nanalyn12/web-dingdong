@@ -5,6 +5,11 @@ import { toast } from "sonner";
 
 import { useSession } from "@/lib/auth-client";
 import {
+  notificationPermission,
+  requestNotificationPermission,
+  supportsWebPush,
+} from "@/lib/browser-capabilities";
+import {
   deleteSubscription,
   getVapidPublicKey,
   mySubscriptionStatus,
@@ -79,7 +84,10 @@ export function PushManager() {
     if (!session) return;
     if (typeof window === "undefined") return;
     if (localStorage.getItem(ASKED_KEY)) return;
-    if (Notification?.permission === "granted" || Notification?.permission === "denied") return;
+    // Nothing to prompt for where the API does not exist — and reading it
+    // directly is what used to crash the app on iOS Safari.
+    const permission = notificationPermission();
+    if (permission === null || permission === "granted" || permission === "denied") return;
     const t = setTimeout(() => setOpen(true), 4000);
     return () => clearTimeout(t);
   }, [session]);
@@ -95,11 +103,11 @@ export function PushManager() {
   async function subscribe() {
     setBusy(true);
     try {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      if (!("serviceWorker" in navigator) || !supportsWebPush()) {
         toast.error("이 브라우저는 푸시 알림을 지원하지 않아요.");
         return;
       }
-      const permission = await Notification.requestPermission();
+      const permission = await requestNotificationPermission();
       localStorage.setItem(ASKED_KEY, "1");
       if (permission !== "granted") {
         toast.info("알림을 거부했어요. 언제든 다시 켤 수 있어요.");
