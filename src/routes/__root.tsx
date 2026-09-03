@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -39,22 +39,73 @@ function NotFoundComponent() {
   );
 }
 
+/**
+ * What the error actually was, as text a person can read off a phone.
+ *
+ * `console.error` below is the only place this used to go, and
+ * `reportLovableError` forwards to a hook that exists in the Lovable preview
+ * and nowhere else — so on the deployed site a crash left no trace at all, on
+ * the screen or in the server logs. Someone on a phone had no way to say more
+ * than "it broke".
+ */
+function errorDetail(error: unknown): string {
+  const parts: string[] = [];
+  if (error instanceof Error) {
+    parts.push(`${error.name}: ${error.message}`);
+    if (error.stack) parts.push(error.stack);
+  } else {
+    parts.push(String(error));
+  }
+  if (typeof window !== "undefined") {
+    parts.push(`at ${window.location.pathname}${window.location.search}`);
+  }
+  parts.push(new Date().toISOString());
+  return parts.join("\n\n");
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
+  const detail = errorDetail(error);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+      <div className="w-full max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
+
+        <details className="mt-4 text-left">
+          <summary className="cursor-pointer text-xs text-muted-foreground">
+            오류 자세히 보기
+          </summary>
+          <pre className="mt-2 max-h-64 select-all overflow-auto whitespace-pre-wrap break-all rounded-lg border border-input bg-muted p-3 text-left text-[11px] leading-relaxed text-foreground">
+            {detail}
+          </pre>
+          <button
+            type="button"
+            onClick={() => {
+              // Clipboard access is refused outside a secure context and in
+              // some in-app browsers; the <pre> is select-all either way.
+              navigator.clipboard
+                ?.writeText(detail)
+                .then(() => setCopied(true))
+                .catch(() => {});
+            }}
+            className="mt-2 inline-flex min-h-11 items-center justify-center rounded-md border border-input px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent md:min-h-9"
+          >
+            {copied ? "복사됨" : "오류 내용 복사"}
+          </button>
+        </details>
+
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
