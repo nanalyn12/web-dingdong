@@ -111,6 +111,11 @@ export const profiles = pgTable("profiles", {
   last_active_at: ts("last_active_at"),
   // Personal widget panel layout — ordered widget ids (null = default set).
   widget_layout: jsonb("widget_layout").$type<Json>(),
+  // "light" | "dark" | "system". Nullable, and NULL is the common case: every
+  // row that predates the column reads as "system" through
+  // parseThemePreference(). Plain text rather than a pgEnum so adding a value
+  // later is a code change, not a migration (see learning_goal).
+  theme: text("theme"),
   created_at: ts("created_at").notNull().defaultNow(),
   updated_at: ts("updated_at").notNull().defaultNow(),
 });

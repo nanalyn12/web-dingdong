@@ -21,7 +21,7 @@ export function MobileTabBar() {
   return (
     <nav
       aria-label="주요 학습 메뉴"
-      className="glass pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-white/60 md:hidden"
+      className="glass pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-surface/60 md:hidden"
     >
       <ul className="flex items-stretch">
         {items.map((item) => {

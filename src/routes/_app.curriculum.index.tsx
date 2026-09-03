@@ -251,7 +251,7 @@ function CurriculumForm() {
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 interests.includes(p)
                   ? "gradient-primary text-primary-foreground"
-                  : "bg-white/50 hover:bg-white/70"
+                  : "bg-surface/50 hover:bg-surface/70"
               }`}
             >
               {p}
@@ -305,7 +305,7 @@ function CurriculumForm() {
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 activities.includes(p)
                   ? "gradient-primary text-primary-foreground"
-                  : "bg-white/50 hover:bg-white/70"
+                  : "bg-surface/50 hover:bg-surface/70"
               }`}
             >
               {p}
@@ -376,7 +376,7 @@ function HistoryPanel() {
       )}
       <ul className="space-y-2">
         {data?.map((c) => (
-          <li key={c.id} className="rounded-2xl bg-white/50 p-3 flex items-start gap-2">
+          <li key={c.id} className="rounded-2xl bg-surface/50 p-3 flex items-start gap-2">
             <Link to="/curriculum/$id" params={{ id: c.id }} className="flex-1 min-w-0">
               <div className="font-medium truncate">{c.title}</div>
               <div className="text-xs text-muted-foreground mt-0.5">

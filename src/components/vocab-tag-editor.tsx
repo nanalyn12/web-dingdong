@@ -36,7 +36,7 @@ export function VocabTagEditor({
       <PopoverTrigger
         className={cn(
           "inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] md:min-h-0",
-          "border-slate-200 bg-white/70 text-slate-600 hover:bg-white",
+          "border-slate-200 bg-surface/70 text-slate-600 hover:bg-surface",
         )}
         aria-label="태그 편집"
       >
@@ -95,7 +95,7 @@ export function VocabTagEditor({
                       "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] cursor-pointer border",
                       on
                         ? "border-primary/40 bg-primary/15 text-primary"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                        : "border-slate-200 bg-surface text-slate-600 hover:bg-slate-50",
                     )}
                   >
                     {on && <Check className="size-3" />}#{t}

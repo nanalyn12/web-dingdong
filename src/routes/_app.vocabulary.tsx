@@ -149,7 +149,7 @@ function VocabularyPage() {
       </header>
 
       <div className="glass rounded-3xl p-4 flex flex-wrap gap-2 items-center">
-        <div className="flex items-center gap-2 flex-1 min-w-[180px] rounded-xl bg-white/70 px-3 py-1.5">
+        <div className="flex items-center gap-2 flex-1 min-w-[180px] rounded-xl bg-surface/70 px-3 py-1.5">
           <SearchIcon className="size-4 opacity-50" />
           <Input
             value={search.q}
@@ -159,7 +159,7 @@ function VocabularyPage() {
           />
           {search.q && (
             <button
-              className="size-6 grid place-items-center rounded-full hover:bg-white/60"
+              className="size-6 grid place-items-center rounded-full hover:bg-surface/60"
               onClick={() => setSearch({ q: "" })}
             >
               <X className="size-3" />
@@ -219,7 +219,7 @@ function VocabularyPage() {
               "rounded-full px-3 py-1 text-[11px] border cursor-pointer",
               !search.tag
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-slate-200 bg-white/70 text-slate-600 hover:bg-white",
+                : "border-slate-200 bg-surface/70 text-slate-600 hover:bg-surface",
             )}
           >
             모든 태그
@@ -232,7 +232,7 @@ function VocabularyPage() {
                 "rounded-full px-3 py-1 text-[11px] border cursor-pointer",
                 search.tag === t
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-slate-200 bg-white/70 text-slate-600 hover:bg-white",
+                  : "border-slate-200 bg-surface/70 text-slate-600 hover:bg-surface",
               )}
             >
               #{t}
@@ -281,12 +281,12 @@ function VocabCard({
   const days = daysUntilDue(v.srs);
   const badge = STATUS_LABEL[status];
   return (
-    <div className="group p-4 bg-white/85 hover:bg-white rounded-3xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_-12px_rgba(244,114,182,0.2)] transition-all">
+    <div className="group p-4 bg-surface/85 hover:bg-surface rounded-3xl border border-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_-12px_rgba(244,114,182,0.2)] transition-all">
       <div className="flex items-start gap-3">
         <button
           type="button"
           onClick={() => setPractice(true)}
-          className="shrink-0 size-12 rounded-2xl flex items-center justify-center text-2xl bg-gradient-to-br from-white to-slate-50 border border-white shadow-inner hover:scale-110 transition-transform cursor-pointer"
+          className="shrink-0 size-12 rounded-2xl flex items-center justify-center text-2xl bg-gradient-to-br from-surface to-slate-50 border border-surface shadow-inner hover:scale-110 transition-transform cursor-pointer"
           aria-label="AI 학습 열기"
         >
           {v.emoji || "📝"}

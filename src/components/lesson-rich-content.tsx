@@ -405,31 +405,31 @@ const TONES = [
   {
     text: "text-rose-600",
     bg: "bg-rose-500",
-    soft: "from-rose-50 to-white",
+    soft: "from-rose-50 to-surface",
     border: "border-rose-100",
   },
   {
     text: "text-sky-600",
     bg: "bg-sky-500",
-    soft: "from-sky-50 to-white",
+    soft: "from-sky-50 to-surface",
     border: "border-sky-100",
   },
   {
     text: "text-emerald-600",
     bg: "bg-emerald-500",
-    soft: "from-emerald-50 to-white",
+    soft: "from-emerald-50 to-surface",
     border: "border-emerald-100",
   },
   {
     text: "text-indigo-600",
     bg: "bg-indigo-500",
-    soft: "from-indigo-50 to-white",
+    soft: "from-indigo-50 to-surface",
     border: "border-indigo-100",
   },
   {
     text: "text-amber-600",
     bg: "bg-amber-500",
-    soft: "from-amber-50 to-white",
+    soft: "from-amber-50 to-surface",
     border: "border-amber-100",
   },
 ];
@@ -455,7 +455,7 @@ function SentenceCard({
     <div className="flex items-start gap-2">
       <div
         className={cn(
-          "shrink-0 grid place-items-center size-7 rounded-full text-white text-[11px] font-black shadow-sm ring-2 ring-white",
+          "shrink-0 grid place-items-center size-7 rounded-full text-white text-[11px] font-black shadow-sm ring-2 ring-surface",
           tone.bg,
         )}
       >
@@ -463,7 +463,7 @@ function SentenceCard({
       </div>
       <div
         className={cn(
-          "relative flex-1 min-w-0 rounded-2xl bg-white border px-3 py-2 shadow-sm",
+          "relative flex-1 min-w-0 rounded-2xl bg-surface border px-3 py-2 shadow-sm",
           tone.border,
           speaking && "ring-2 ring-offset-1",
         )}
@@ -590,7 +590,7 @@ function ExpressionCard({
       </div>
 
       {/* Meaning */}
-      <div className="mt-3 rounded-2xl bg-white/80 backdrop-blur border border-white px-3.5 py-2.5">
+      <div className="mt-3 rounded-2xl bg-surface/80 backdrop-blur border border-surface px-3.5 py-2.5">
         <div className={cn("flex items-center gap-1.5 mb-0.5", tone.text)}>
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Meaning</span>
           {meaningEmoji && <span className="text-sm leading-none">{meaningEmoji}</span>}
@@ -725,8 +725,8 @@ export function RichLessonContent({
               className={cn(
                 "group/para relative rounded-2xl px-4 py-3 transition-colors",
                 zh
-                  ? "border-l-[3px] border-transparent [border-image:linear-gradient(180deg,#fb7185,#818cf8)_1] bg-gradient-to-r from-rose-50/40 via-white to-indigo-50/30"
-                  : "bg-white/60",
+                  ? "border-l-[3px] border-transparent [border-image:linear-gradient(180deg,#fb7185,#818cf8)_1] bg-gradient-to-r from-rose-50/40 via-surface to-indigo-50/30"
+                  : "bg-surface/60",
               )}
             >
               <div
@@ -751,7 +751,7 @@ export function RichLessonContent({
           return (
             <blockquote
               key={i}
-              className="relative rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-indigo-50/50 px-6 py-5 pl-14 shadow-sm"
+              className="relative rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 via-surface to-indigo-50/50 px-6 py-5 pl-14 shadow-sm"
             >
               <Quote className="absolute left-4 top-4 size-6 text-sky-400/70" />
               <div className="text-[10px] font-bold tracking-[0.2em] text-sky-500 uppercase mb-1">
@@ -794,7 +794,7 @@ export function RichLessonContent({
           return (
             <div
               key={i}
-              className="rounded-3xl bg-white/70 border border-white p-4 sm:p-5 shadow-sm space-y-2"
+              className="rounded-3xl bg-surface/70 border border-surface p-4 sm:p-5 shadow-sm space-y-2"
             >
               <div className="text-[10px] font-black tracking-[0.3em] uppercase text-rose-500 flex items-center gap-1.5">
                 <MessageSquareQuote className="size-3" /> 예문
@@ -826,7 +826,7 @@ export function RichLessonContent({
                   <li
                     key={idx}
                     className={cn(
-                      "flex items-start gap-2.5 rounded-2xl bg-white border p-3 shadow-sm hover:shadow-md transition-shadow",
+                      "flex items-start gap-2.5 rounded-2xl bg-surface border p-3 shadow-sm hover:shadow-md transition-shadow",
                       tone.border,
                     )}
                   >

@@ -165,7 +165,7 @@ function PendingTeacherCard({
   }
 
   return (
-    <li className="rounded-2xl bg-white/70 border border-border p-4 space-y-3">
+    <li className="rounded-2xl bg-surface/70 border border-border p-4 space-y-3">
       <div className="flex items-start gap-4">
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
@@ -257,7 +257,7 @@ function PendingTeacherCard({
             {openNote ? "신청 사유 접기 ▲" : "신청 사유 보기 ▼"}
           </button>
           {openNote && (
-            <div className="mt-2 text-sm whitespace-pre-wrap text-foreground/90 bg-white/60 rounded-xl p-3 border border-border/60">
+            <div className="mt-2 text-sm whitespace-pre-wrap text-foreground/90 bg-surface/60 rounded-xl p-3 border border-border/60">
               {p.teacher_application_note || p.learning_goal}
             </div>
           )}

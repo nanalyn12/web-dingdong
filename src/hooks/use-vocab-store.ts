@@ -59,7 +59,14 @@ export function useVocabStore() {
   const grade = useMutation({
     mutationFn: ({ id, grade: g }: { id: string; grade: SrsGrade }) =>
       gradeVocabulary({ data: { id, grade: g } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["vocabulary"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vocabulary"] });
+      // The home widgets read the same SRS rows. Without these, finishing a
+      // review session leaves the widget panel showing the pre-session count
+      // until its own staleTime lapses.
+      qc.invalidateQueries({ queryKey: ["widget-stats"] });
+      qc.invalidateQueries({ queryKey: ["widget-due-vocab"] });
+    },
   });
   const setTags = useMutation({
     mutationFn: ({ id, tags }: { id: string; tags: string[] }) =>

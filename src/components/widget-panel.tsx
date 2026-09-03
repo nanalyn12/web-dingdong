@@ -1,30 +1,34 @@
 import { Link } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Check, GripVertical, Pencil, Plus, Volume2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, GripVertical, Pencil, Plus, Volume2, X } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import { useZhTts } from "@/lib/use-zh-tts";
 import {
   DEFAULT_LAYOUT,
   WIDGET_IDS,
+  WIDGET_META,
+  advanceQueue,
+  pickDueWord,
+  sanitizeLayout,
+  type WidgetId,
+} from "@/lib/widget-catalog";
+import { canMoveDown, canMoveUp, moveWidget } from "@/lib/widget-order";
+import {
+  getContinueLesson,
   getContinueWatching,
   getDailyQuote,
   getDailySong,
+  getDueVocabQueue,
   getWidgetLayout,
   getWidgetStats,
   saveWidgetLayout,
-  type WidgetId,
+  type DueVocab,
 } from "@/lib/widgets.functions";
+import { gradeVocabulary } from "@/lib/vocab.functions";
 import { levelLabel } from "@/lib/levels";
-
-const WIDGET_META: Record<WidgetId, { title: string; emoji: string }> = {
-  quote: { title: "오늘의 명언", emoji: "💬" },
-  stats: { title: "학습 현황", emoji: "📊" },
-  calendar: { title: "학습 캘린더", emoji: "📅" },
-  continue: { title: "이어보기", emoji: "▶️" },
-  song: { title: "오늘의 학습송", emoji: "🎵" },
-};
 
 const GUEST_KEY = "dd-widget-layout";
 
@@ -50,12 +54,7 @@ export function WidgetPanel() {
     }
     try {
       const raw = localStorage.getItem(GUEST_KEY);
-      if (raw) {
-        const parsed = (JSON.parse(raw) as string[]).filter((w): w is WidgetId =>
-          (WIDGET_IDS as readonly string[]).includes(w),
-        );
-        setLayout(parsed);
-      }
+      if (raw) setLayout(sanitizeLayout(JSON.parse(raw)));
     } catch {
       /* ignore */
     }
@@ -82,14 +81,16 @@ export function WidgetPanel() {
     <div className="glass rounded-3xl p-3 space-y-2" data-tour="widget-panel">
       <div className="flex items-center justify-between px-1">
         <span className="text-xs font-semibold text-muted-foreground">내 위젯</span>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="xs"
           onClick={() => setEdit((v) => !v)}
-          className="inline-flex items-center gap-1 text-[11px] rounded-lg px-2 py-1 hover:bg-white/60 transition text-muted-foreground"
+          className="gap-1 text-muted-foreground"
         >
-          {edit ? <Check className="size-3" /> : <Pencil className="size-3" />}
+          {edit ? <Check /> : <Pencil />}
           {edit ? "완료" : "편집"}
-        </button>
+        </Button>
       </div>
 
       {layout.length === 0 && !edit && (
@@ -116,29 +117,59 @@ export function WidgetPanel() {
               persist(layout);
             }}
             className={[
-              "rounded-2xl bg-white/50 border border-white/60 overflow-hidden",
+              "rounded-2xl bg-surface/50 border border-surface/60 overflow-hidden",
               edit ? "cursor-grab active:cursor-grabbing" : "",
               dragIndex === i ? "opacity-60 ring-2 ring-primary/40" : "",
             ].join(" ")}
           >
             <div className="flex items-center gap-1.5 px-3 pt-2">
               {edit && <GripVertical className="size-3.5 text-muted-foreground shrink-0" />}
-              <span className="text-[11px] font-semibold text-muted-foreground flex-1">
+              <span className="text-[11px] font-semibold text-muted-foreground flex-1 truncate">
                 {WIDGET_META[id].emoji} {WIDGET_META[id].title}
               </span>
-              {edit && (
-                <button
-                  type="button"
-                  onClick={() => persist(layout.filter((w) => w !== id))}
-                  className="rounded-md p-0.5 hover:bg-white/70 text-muted-foreground"
-                  title="위젯 제거"
-                >
-                  <X className="size-3.5" />
-                </button>
-              )}
             </div>
+            {/* Edit controls get their own row: three 44px targets and the
+                title do not both fit across the sidebar's width, and dragging
+                is unavailable on touch, so the buttons are the only path
+                there. Both paths end in persist() — the drag path used to be
+                the only one that saved. */}
+            {edit && (
+              <div className="flex items-center justify-end gap-0.5 px-1.5 pt-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="위로 이동"
+                  disabled={!canMoveUp(i)}
+                  onClick={() => persist(moveWidget(layout, i, "up"))}
+                >
+                  <ArrowUp />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="아래로 이동"
+                  disabled={!canMoveDown(i, layout.length)}
+                  onClick={() => persist(moveWidget(layout, i, "down"))}
+                >
+                  <ArrowDown />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="위젯 제거"
+                  onClick={() => persist(layout.filter((w) => w !== id))}
+                >
+                  <X />
+                </Button>
+              </div>
+            )}
             <div className="px-3 pb-3 pt-1.5">
               {id === "quote" && <QuoteWidget />}
+              {id === "vocab" && <VocabWidget signedIn={!!session} />}
+              {id === "lesson" && <ContinueLessonWidget signedIn={!!session} />}
               {id === "stats" && <StatsWidget signedIn={!!session} />}
               {id === "calendar" && <CalendarWidget signedIn={!!session} />}
               {id === "continue" && <ContinueWidget signedIn={!!session} />}
@@ -154,15 +185,16 @@ export function WidgetPanel() {
             위젯 추가
           </p>
           {available.map((id) => (
-            <button
+            <Button
               key={id}
               type="button"
+              variant="ghost"
               onClick={() => persist([...layout, id])}
-              className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-sm bg-white/40 hover:bg-white/70 transition text-left"
+              className="w-full justify-start rounded-xl bg-surface/40 hover:bg-surface/70"
             >
-              <Plus className="size-3.5 text-primary" />
+              <Plus className="text-primary" />
               {WIDGET_META[id].emoji} {WIDGET_META[id].title}
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -189,7 +221,7 @@ function QuoteWidget() {
           type="button"
           onClick={() => speak(data.zh, "daily-quote")}
           className={[
-            "rounded-md p-1 hover:bg-white/70 shrink-0",
+            "rounded-md p-1 hover:bg-surface/70 shrink-0",
             speakingId === "daily-quote" ? "text-primary animate-pulse" : "text-muted-foreground",
           ].join(" ")}
           title="발음 듣기"
@@ -248,7 +280,9 @@ function StatsWidget({ signedIn }: { signedIn: boolean }) {
         </Link>
       )}
       {data && data.dueCount === 0 && (
-        <p className="text-[11px] text-emerald-700">오늘 복습 완료! 잘하고 있어요 ✨</p>
+        <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+          오늘 복습 완료! 잘하고 있어요 ✨
+        </p>
       )}
     </div>
   );
@@ -349,7 +383,7 @@ function ContinueWidget({ signedIn }: { signedIn: boolean }) {
       <p className="text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition">
         {data.title}
       </p>
-      <div className="mt-1 h-1 rounded-full bg-white/60 overflow-hidden">
+      <div className="mt-1 h-1 rounded-full bg-surface/60 overflow-hidden">
         <div className="h-full gradient-primary" style={{ width: `${data.percent}%` }} />
       </div>
       <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -389,6 +423,157 @@ function DailySongWidget() {
           {levelLabel(data.level)}
         </span>
       </div>
+    </Link>
+  );
+}
+
+/* ── 🃏 오늘의 단어 ─────────────────────────────────────────────────────── */
+
+/**
+ * The only widget that writes. Grading goes through `gradeVocabulary`, the
+ * same call the review screen uses, so a word answered here counts toward the
+ * streak and the calendar exactly as one answered there does — two paths that
+ * disagreed about what "studied today" means would be worse than either.
+ */
+function VocabWidget({ signedIn }: { signedIn: boolean }) {
+  const qc = useQueryClient();
+  const { speak, speakingId } = useZhTts();
+  const [queue, setQueue] = useState<DueVocab[] | null>(null);
+  const [revealed, setRevealed] = useState(false);
+
+  const due = useQuery({
+    queryKey: ["widget-due-vocab"],
+    queryFn: () => getDueVocabQueue({}),
+    enabled: signedIn,
+    staleTime: 30_000,
+  });
+  useEffect(() => {
+    if (due.data) setQueue(due.data);
+  }, [due.data]);
+
+  const grade = useMutation({
+    mutationFn: (input: { id: string; grade: 0 | 2 }) => gradeVocabulary({ data: input }),
+    onSuccess: (_r, input) => {
+      const next = advanceQueue(queue ?? [], input.id);
+      setQueue(next);
+      setRevealed(false);
+      // The counters on the stats and calendar widgets move with this answer.
+      void qc.invalidateQueries({ queryKey: ["widget-stats"] });
+      // The queue holds ten at a time. Emptying it does not mean the backlog is
+      // empty — without this refetch the widget claims to be finished while the
+      // stats widget directly above it still counts the rest.
+      if (next.length === 0) void qc.invalidateQueries({ queryKey: ["widget-due-vocab"] });
+    },
+  });
+
+  if (!signedIn)
+    return (
+      <p className="text-xs text-muted-foreground">
+        <Link to="/auth" className="text-primary hover:underline">
+          로그인
+        </Link>
+        하면 복습할 단어가 여기에 나와요.
+      </p>
+    );
+  if (due.isLoading) return <p className="text-xs text-muted-foreground">불러오는 중…</p>;
+
+  const word = pickDueWord(queue ?? [], 0);
+  if (!word)
+    return (
+      <p className="text-xs text-emerald-700 dark:text-emerald-300">
+        복습할 단어를 다 끝냈어요. 잘하고 있어요 ✨
+      </p>
+    );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-start gap-1.5">
+        <p className="text-xl font-semibold leading-snug flex-1">{word.zh}</p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="발음 듣기"
+          onClick={() => speak(word.zh, `widget-vocab-${word.id}`)}
+          className={speakingId === `widget-vocab-${word.id}` ? "text-primary" : ""}
+        >
+          <Volume2 />
+        </Button>
+      </div>
+
+      {revealed ? (
+        <>
+          <p className="text-[11px] text-muted-foreground">{word.pinyin}</p>
+          <p className="text-sm">{word.ko}</p>
+          <div className="flex gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              disabled={grade.isPending}
+              onClick={() => grade.mutate({ id: word.id, grade: 0 })}
+            >
+              모르겠어요
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1"
+              disabled={grade.isPending}
+              onClick={() => grade.mutate({ id: word.id, grade: 2 })}
+            >
+              알아요
+            </Button>
+          </div>
+        </>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setRevealed(true)}
+        >
+          뜻 보기
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/* ── 📖 수업 이어하기 ───────────────────────────────────────────────────── */
+
+function ContinueLessonWidget({ signedIn }: { signedIn: boolean }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["widget-continue-lesson"],
+    queryFn: () => getContinueLesson({}),
+    enabled: signedIn,
+    staleTime: 30_000,
+  });
+  if (!signedIn)
+    return <p className="text-xs text-muted-foreground">로그인하면 보던 수업이 이어져요.</p>;
+  if (isLoading) return <p className="text-xs text-muted-foreground">불러오는 중…</p>;
+  if (!data)
+    return (
+      <p className="text-xs text-muted-foreground">
+        아직 들은 수업이 없어요.{" "}
+        <Link to="/courses" className="text-primary hover:underline">
+          강의 보기 →
+        </Link>
+      </p>
+    );
+  return (
+    <Link to="/lessons/$id" params={{ id: data.lesson_id }} className="block group">
+      {data.course_title && (
+        <p className="text-[10px] text-muted-foreground line-clamp-1">{data.course_title}</p>
+      )}
+      <p className="text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition">
+        {data.title}
+      </p>
+      <p className="text-[10px] text-muted-foreground mt-0.5">
+        {data.done ? "완료한 수업 · 다시 보기" : `${data.completed_tabs}개 탭 완료 · 이어서 학습`}
+      </p>
     </Link>
   );
 }

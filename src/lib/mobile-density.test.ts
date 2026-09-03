@@ -109,7 +109,9 @@ describe("tap targets at the call site", () => {
         for (const token of unprefixed(className)) {
           // `size-*` sets height as well as width, and tailwind-merge lets it
           // beat the primitive's own h-*/w-* exactly like a bare `h-*` does.
-          const height = token.match(/^(?:h|size)-(\d+)$/);
+          // `min-h-*` is here because the SpeakButton and tab recipes state the
+          // floor that way; anchoring on `h|size` alone read straight past them.
+          const height = token.match(/^(?:min-h|h|size)-(\d+)$/);
           if (!height) continue;
           const px = Number(height[1]) * 4;
           if (px < MIN_TAP_TARGET_PX) {

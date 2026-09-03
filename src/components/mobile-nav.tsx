@@ -4,6 +4,7 @@ import { HelpCircle, Menu, Sparkles } from "lucide-react";
 
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { NavLinks } from "@/components/nav-links";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useMyProfile } from "@/lib/auth-client";
 
 /**
@@ -28,12 +29,15 @@ export function MobileNav({ onOpenHelp }: { onOpenHelp: () => void }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         aria-label="메뉴 열기"
-        className="md:hidden inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/60 border border-border hover:bg-white transition"
+        className="md:hidden inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-surface/60 border border-border hover:bg-surface transition"
       >
         <Menu className="size-5" />
       </SheetTrigger>
 
-      <SheetContent side="left" className="w-72 max-w-[85vw] glass border-white/60 p-4">
+      <SheetContent
+        side="left"
+        className="flex flex-col w-72 max-w-[85vw] glass border-surface/60 p-4"
+      >
         <SheetTitle asChild>
           <Link
             to="/"
@@ -61,11 +65,15 @@ export function MobileNav({ onOpenHelp }: { onOpenHelp: () => void }) {
             setOpen(false);
             onOpenHelp();
           }}
-          className="mt-2 flex min-h-11 items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-white/40 transition-all"
+          className="mt-2 flex min-h-11 items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-surface/40 transition-all"
         >
           <HelpCircle className="size-4 shrink-0" />
           <span>이 페이지 둘러보기</span>
         </button>
+
+        {/* Guests never reach /settings, so this is their only way to the
+            theme. mt-auto pins it to the bottom of the sheet. */}
+        <ThemeToggle className="mt-auto" />
       </SheetContent>
     </Sheet>
   );

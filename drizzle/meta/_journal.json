@@ -134,6 +134,13 @@
       "when": 1786981548858,
       "tag": "0018_stormy_black_crow",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788364658177,
+      "tag": "0019_curvy_frog_thor",
+      "breakpoints": true
     }
   ]
 }

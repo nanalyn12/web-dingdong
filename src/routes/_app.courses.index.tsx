@@ -158,7 +158,7 @@ function CoursesPage() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
-            <div className="inline-flex rounded-2xl bg-white/60 border border-white/60 p-1">
+            <div className="inline-flex rounded-2xl bg-surface/60 border border-surface/60 p-1">
               {[
                 ["all", "전체"] as const,
                 ...LEVEL_OPTIONS.map((l) => [l.value, l.label] as const),
@@ -181,7 +181,7 @@ function CoursesPage() {
             <Select value={lang} onValueChange={(v) => setLang(v as LangKey)}>
               <SelectTrigger
                 aria-label="영상 나레이션 언어"
-                className="h-11 w-[142px] rounded-2xl bg-white/60 border-white/60 text-xs font-medium md:h-9"
+                className="h-11 w-[142px] rounded-2xl bg-surface/60 border-surface/60 text-xs font-medium md:h-9"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -196,7 +196,7 @@ function CoursesPage() {
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
               <SelectTrigger
                 aria-label="정렬 기준"
-                className="h-11 w-[116px] rounded-2xl bg-white/60 border-white/60 text-xs font-medium md:h-9"
+                className="h-11 w-[116px] rounded-2xl bg-surface/60 border-surface/60 text-xs font-medium md:h-9"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -427,7 +427,7 @@ function CreateCourseForm() {
               <Loader2 className="size-4 animate-spin" />
               叮叮이 {progress.current}/{progress.total}주차 세부 강의를 만드는 중… (각 10~30초)
             </div>
-            <div className="h-2 rounded-full bg-white/60 overflow-hidden">
+            <div className="h-2 rounded-full bg-surface/60 overflow-hidden">
               <div
                 className="h-full gradient-primary transition-all"
                 style={{
@@ -639,7 +639,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
 
         {/* Editor tools — collapsed */}
         {isEditor && (
-          <details className="group/details rounded-2xl border border-white/40 bg-white/30 open:bg-white/40 transition">
+          <details className="group/details rounded-2xl border border-surface/40 bg-surface/30 open:bg-surface/40 transition">
             <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-muted-foreground flex items-center justify-between">
               <span>편집자 도구 · 세부 강의 관리</span>
               <span className="text-[10px] opacity-70 group-open/details:rotate-180 transition-transform">
@@ -659,7 +659,7 @@ function CourseCard({ course }: { course: CourseWithCount }) {
               </Button>
               <LessonListEditor courseId={course.id} />
               <form
-                className="space-y-3 pt-3 border-t border-white/30"
+                className="space-y-3 pt-3 border-t border-surface/30"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (mutation.isPending) return;
@@ -958,10 +958,10 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
           {lessons.length === 0 ? (
             <p className="text-sm text-muted-foreground">세부 강의가 없어요.</p>
           ) : (
-            <ul className="space-y-1 max-h-48 overflow-y-auto rounded-xl border border-border bg-white/40 p-2">
+            <ul className="space-y-1 max-h-48 overflow-y-auto rounded-xl border border-border bg-surface/40 p-2">
               {lessons.map((l) => (
                 <li key={l.id}>
-                  <label className="flex items-center gap-2 text-sm rounded-lg px-2 py-1 hover:bg-white/70 cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm rounded-lg px-2 py-1 hover:bg-surface/70 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selected.includes(l.id)}
@@ -990,7 +990,7 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
         </div>
 
         {/* ① 선택 레슨 이동 */}
-        <div className="rounded-2xl border border-border bg-white/40 p-3 space-y-2">
+        <div className="rounded-2xl border border-border bg-surface/40 p-3 space-y-2">
           <p className="text-xs font-semibold">① 선택한 세부 강의를 다른 강의로 이동</p>
           <div className="flex gap-2">
             <Select value={moveTarget} onValueChange={setMoveTarget}>
@@ -1017,7 +1017,7 @@ function CourseStructureDialog({ course }: { course: CourseWithCount }) {
         </div>
 
         {/* ② 선택 레슨 분리 */}
-        <div className="rounded-2xl border border-border bg-white/40 p-3 space-y-2">
+        <div className="rounded-2xl border border-border bg-surface/40 p-3 space-y-2">
           <p className="text-xs font-semibold">② 선택한 세부 강의로 새 강의 만들기 (분리)</p>
           <div className="flex gap-2">
             <Input
@@ -1117,7 +1117,7 @@ function LessonListEditor({ courseId }: { courseId: string }) {
   if (lessons.length === 0) return null;
 
   return (
-    <div className="pt-3 border-t border-white/30 space-y-2">
+    <div className="pt-3 border-t border-surface/30 space-y-2">
       <p className="text-xs font-medium text-muted-foreground">세부 강의 목록</p>
       <ul className="space-y-1.5">
         {lessons.map((l) => (
@@ -1164,7 +1164,7 @@ function LessonRow({
 
   if (editing) {
     return (
-      <li className="space-y-1.5 rounded-xl bg-white/50 p-2">
+      <li className="space-y-1.5 rounded-xl bg-surface/50 p-2">
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

@@ -415,7 +415,7 @@ export function DingDongBot() {
           <span className="glass-soft rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-widest uppercase text-primary">
             🎙️ 음성 AI
           </span>
-          <span className="mt-1 text-[11px] font-semibold text-foreground/80 bg-white/70 backdrop-blur rounded-full px-2 py-0.5 shadow-sm">
+          <span className="mt-1 text-[11px] font-semibold text-foreground/80 bg-surface/70 backdrop-blur rounded-full px-2 py-0.5 shadow-sm">
             叮叮에게 말 걸기
           </span>
         </div>
@@ -451,7 +451,7 @@ export function DingDongBot() {
           {/* mic badge */}
           <span
             aria-hidden
-            className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full gradient-primary text-primary-foreground shadow-md ring-2 ring-white flex items-center justify-center"
+            className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full gradient-primary text-primary-foreground shadow-md ring-2 ring-surface flex items-center justify-center"
           >
             <Mic className="h-3.5 w-3.5" />
           </span>
@@ -508,7 +508,7 @@ export function DingDongBot() {
                   {speaking ? "멈추기" : "🔊 다시 듣기"}
                 </button>
                 {/* Tail */}
-                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rotate-45 bg-white/60 border-r border-b border-white/40 backdrop-blur-md" />
+                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rotate-45 bg-surface/60 border-r border-b border-surface/40 backdrop-blur-md" />
               </div>
             )}
 
@@ -575,7 +575,7 @@ export function DingDongBot() {
           {/* Composer + FAQ */}
           <div className="w-full max-w-2xl glass rounded-3xl p-3 shadow-2xl">
             {/* Tabs */}
-            <div className="flex items-center gap-1 mb-2 p-1 rounded-2xl bg-white/40 w-fit mx-auto">
+            <div className="flex items-center gap-1 mb-2 p-1 rounded-2xl bg-surface/40 w-fit mx-auto">
               <button
                 onClick={() => setTab("chat")}
                 className={cn(
@@ -612,7 +612,7 @@ export function DingDongBot() {
                         "text-[11px] px-2.5 py-1 rounded-full transition",
                         faqCat === c.key
                           ? "gradient-primary text-primary-foreground"
-                          : "glass-soft text-foreground/80 hover:bg-white/70",
+                          : "glass-soft text-foreground/80 hover:bg-surface/70",
                       )}
                     >
                       {c.emoji} {c.label}
@@ -625,7 +625,7 @@ export function DingDongBot() {
                     <button
                       key={f.id}
                       onClick={() => askFaq(f.q, f.a)}
-                      className="w-full text-left rounded-2xl bg-white/60 hover:bg-white/90 transition px-3 py-2 text-xs leading-snug border border-white/50"
+                      className="w-full text-left rounded-2xl bg-surface/60 hover:bg-surface/90 transition px-3 py-2 text-xs leading-snug border border-surface/50"
                     >
                       <span className="font-semibold text-foreground">Q. </span>
                       {f.q}
@@ -639,7 +639,7 @@ export function DingDongBot() {
             ) : !session ? (
               /* Free chat is a model call per message, so it needs an account.
                  The FAQ tab above is pre-written and stays open to everyone. */
-              <div className="rounded-2xl bg-white/70 border border-white/60 p-5 text-center space-y-3">
+              <div className="rounded-2xl bg-surface/70 border border-surface/60 p-5 text-center space-y-3">
                 <div className="text-3xl">🐼</div>
                 <div className="text-sm font-semibold text-foreground">
                   叮叮과 자유롭게 대화하려면 로그인해 주세요
@@ -694,7 +694,7 @@ export function DingDongBot() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="🎙️ 말하거나 입력해서 물어보세요…"
-                    className={`flex-1 h-11 px-4 rounded-full bg-white/70 border border-white/50 ${MOBILE_TEXT_INPUT_CLASS} outline-none focus:ring-2 focus:ring-primary/40 md:h-10`}
+                    className={`flex-1 h-11 px-4 rounded-full bg-surface/70 border border-surface/50 ${MOBILE_TEXT_INPUT_CLASS} outline-none focus:ring-2 focus:ring-primary/40 md:h-10`}
                   />
                   <Button
                     type="submit"

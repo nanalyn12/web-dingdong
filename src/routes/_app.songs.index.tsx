@@ -332,7 +332,7 @@ function SongsPage() {
               {search.q && (
                 <button
                   onClick={() => navigate({ search: (prev: SearchParams) => ({ ...prev, q: "" }) })}
-                  className="size-6 grid place-items-center rounded-full hover:bg-white/40 shrink-0"
+                  className="size-6 grid place-items-center rounded-full hover:bg-surface/40 shrink-0"
                 >
                   <X className="size-3" />
                 </button>
@@ -884,7 +884,7 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
         </h2>
         <button
           onClick={onDone}
-          className="size-8 grid place-items-center rounded-full hover:bg-white/40"
+          className="size-8 grid place-items-center rounded-full hover:bg-surface/40"
         >
           <X className="size-4" />
         </button>
@@ -947,7 +947,7 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
 
       {/* Step 2 — review + edit */}
       <div
-        className={`rounded-2xl border border-white/40 p-4 space-y-3 transition-opacity ${drafted ? "opacity-100" : "opacity-60"}`}
+        className={`rounded-2xl border border-surface/40 p-4 space-y-3 transition-opacity ${drafted ? "opacity-100" : "opacity-60"}`}
       >
         <div className="text-xs font-semibold text-primary flex items-center gap-1">
           ② 제목·가사 확인 후 생성
@@ -1015,7 +1015,7 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
           />
         </div>
         {previewRows.length > 0 && (
-          <details className="rounded-xl bg-white/50 border border-white/60 p-3 text-xs" open>
+          <details className="rounded-xl bg-surface/50 border border-surface/60 p-3 text-xs" open>
             <summary className="cursor-pointer font-semibold text-primary">
               🈶 AI가 채운 병음/번역 미리보기 ({previewRows.length}줄)
             </summary>
@@ -1023,7 +1023,7 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
               {previewRows.map((r, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-[1.2fr_1.2fr_1fr] gap-2 py-1 border-b border-white/40 last:border-0"
+                  className="grid grid-cols-[1.2fr_1.2fr_1fr] gap-2 py-1 border-b border-surface/40 last:border-0"
                 >
                   <div className="font-medium">{r.zh}</div>
                   <div className="text-primary/80">
@@ -1095,7 +1095,7 @@ function CreateSongForm({ onDone }: { onDone: () => void }) {
         <h2 className="font-semibold">새 노래 수동 추가</h2>
         <button
           onClick={onDone}
-          className="size-8 grid place-items-center rounded-full hover:bg-white/40"
+          className="size-8 grid place-items-center rounded-full hover:bg-surface/40"
         >
           <X className="size-4" />
         </button>
@@ -1724,7 +1724,7 @@ function SongSchedulePanel() {
                     "size-9 rounded-xl text-sm font-medium border transition disabled:opacity-40",
                     frequency === "weekly" && weekdays.includes(d)
                       ? "gradient-primary text-primary-foreground border-transparent"
-                      : "bg-white/60 border-border hover:bg-white",
+                      : "bg-surface/60 border-border hover:bg-surface",
                   ].join(" ")}
                 >
                   {w}

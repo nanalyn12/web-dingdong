@@ -111,7 +111,7 @@ function Landing() {
 
               <Link
                 to="/vocabulary"
-                className="inline-flex items-center gap-2 rounded-2xl glass-soft px-5 py-3 text-sm font-semibold hover:bg-white/60 transition"
+                className="inline-flex items-center gap-2 rounded-2xl glass-soft px-5 py-3 text-sm font-semibold hover:bg-surface/60 transition"
               >
                 <BookOpen className="size-4" />내 단어장
               </Link>
@@ -152,7 +152,7 @@ function Landing() {
               key={cat.key}
               to="/courses"
               search={{ cat: cat.key }}
-              className="glass-soft rounded-3xl p-5 text-center hover:scale-[1.03] hover:bg-white/60 transition group"
+              className="glass-soft rounded-3xl p-5 text-center hover:scale-[1.03] hover:bg-surface/60 transition group"
             >
               <div
                 className={`size-14 mx-auto rounded-2xl ${cat.chip} grid place-items-center text-3xl mb-3 group-hover:scale-110 transition`}
@@ -373,7 +373,7 @@ function EmptyCourses() {
       </p>
       <Link
         to="/courses"
-        className="mt-5 inline-flex items-center gap-2 rounded-2xl glass px-4 py-2 text-sm font-medium hover:bg-white/60 transition"
+        className="mt-5 inline-flex items-center gap-2 rounded-2xl glass px-4 py-2 text-sm font-medium hover:bg-surface/60 transition"
       >
         강의 페이지로 이동 <ArrowRight className="size-4" />
       </Link>

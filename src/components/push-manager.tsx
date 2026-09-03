@@ -192,7 +192,7 @@ export function PushManager() {
                   localStorage.setItem(ASKED_KEY, "1");
                   setOpen(false);
                 }}
-                className="p-1 rounded-full hover:bg-white/40"
+                className="p-1 rounded-full hover:bg-surface/40"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -246,7 +246,7 @@ export function PushManager() {
               localStorage.setItem(IOS_BANNER_KEY, "1");
               setShowIOSBanner(false);
             }}
-            className="p-1 rounded-full hover:bg-white/40"
+            className="p-1 rounded-full hover:bg-surface/40"
           >
             <X className="h-4 w-4" />
           </button>

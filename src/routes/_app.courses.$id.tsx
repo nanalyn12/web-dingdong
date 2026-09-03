@@ -132,7 +132,7 @@ function CourseDetail() {
                   <Link
                     to="/lessons/$id"
                     params={{ id: l.id }}
-                    className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent/60 text-xs font-bold">
                       {i + 1}

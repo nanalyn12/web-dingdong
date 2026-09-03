@@ -165,7 +165,7 @@ export function KeyExpressionCard({
   return (
     <div
       className={cn(
-        "group relative p-5 bg-white/85 hover:bg-white transition-all duration-300 rounded-3xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+        "group relative p-5 bg-surface/85 hover:bg-surface transition-all duration-300 rounded-3xl border border-surface shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
         tone.hover,
       )}
     >
@@ -201,7 +201,7 @@ export function KeyExpressionCard({
               "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition-colors",
               saved
                 ? "bg-emerald-50 text-emerald-600 border-emerald-200 cursor-default"
-                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 cursor-pointer",
+                : "bg-surface text-slate-600 border-slate-200 hover:bg-slate-50 cursor-pointer",
             )}
             aria-label="단어장에 저장"
             title={saved ? "단어장에 저장됨" : "단어장에 저장"}
@@ -223,7 +223,7 @@ export function KeyExpressionCard({
       <div className="flex items-start gap-3 mb-1">
         <div
           className={cn(
-            "shrink-0 size-12 sm:size-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl bg-gradient-to-br from-white to-slate-50 border border-white shadow-inner",
+            "shrink-0 size-12 sm:size-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl bg-gradient-to-br from-surface to-slate-50 border border-surface shadow-inner",
             tone.ring,
           )}
           aria-hidden
@@ -262,7 +262,7 @@ export function KeyExpressionCard({
               "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-all cursor-pointer",
               listening
                 ? "bg-rose-500 text-white shadow animate-pulse"
-                : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
+                : "bg-surface text-slate-700 border border-slate-200 hover:bg-slate-50",
             )}
             aria-label={listening ? "중단" : "녹음 시작"}
           >

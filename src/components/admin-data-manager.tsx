@@ -195,7 +195,7 @@ export function AdminDataManager() {
           {backups?.map((backup) => (
             <li
               key={backup.id}
-              className="rounded-2xl bg-white/70 border border-border p-4 flex flex-wrap items-start gap-4"
+              className="rounded-2xl bg-surface/70 border border-border p-4 flex flex-wrap items-start gap-4"
             >
               <div className="flex-1 min-w-0 space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">

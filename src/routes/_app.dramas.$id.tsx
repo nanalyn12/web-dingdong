@@ -375,7 +375,7 @@ function DramaDetail() {
                   "shrink-0 rounded-2xl px-3 py-2 text-xs text-left transition-all",
                   active
                     ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                    : "bg-white/60 hover:bg-white",
+                    : "bg-surface/60 hover:bg-surface",
                 ].join(" ")}
               >
                 <div className="font-mono text-[10px] opacity-80">{fmtTime(s.start_seconds)}</div>
@@ -480,14 +480,14 @@ function TranscriptPanel({
                   "w-full text-left rounded-2xl px-3 py-2 transition-all flex items-start gap-3",
                   active
                     ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)] scale-[1.01]"
-                    : "hover:bg-white/70",
+                    : "hover:bg-surface/70",
                 ].join(" ")}
               >
                 <span
                   className={[
                     "shrink-0 font-mono text-[10px] mt-1 px-1.5 py-0.5 rounded-full",
                     active
-                      ? "bg-white/25"
+                      ? "bg-surface/25"
                       : l.isExact
                         ? "bg-emerald-500/15 text-emerald-700"
                         : "bg-amber-500/15 text-amber-800",
@@ -557,7 +557,7 @@ function ScenePanel({
           </h2>
           <button
             onClick={() => onSeek(scene.start_seconds)}
-            className="text-xs font-mono px-2 py-1 rounded-full bg-white/70 hover:bg-white"
+            className="text-xs font-mono px-2 py-1 rounded-full bg-surface/70 hover:bg-surface"
           >
             ▶ {fmtTime(scene.start_seconds)} – {fmtTime(scene.end_seconds)}
           </button>
@@ -618,7 +618,7 @@ function ScenePanel({
       )}
 
       {scene.culture_tip?.body && (
-        <div className="rounded-3xl p-5 bg-gradient-to-br from-amber-100/70 to-pink-100/60 border border-white shadow-[var(--shadow-soft)] space-y-1">
+        <div className="rounded-3xl p-5 bg-gradient-to-br from-amber-100/70 to-pink-100/60 border border-surface shadow-[var(--shadow-soft)] space-y-1">
           <div className="font-semibold">🌏 {scene.culture_tip.title || "문화 팁"}</div>
           <p className="text-sm leading-relaxed">{scene.culture_tip.body}</p>
         </div>
@@ -673,7 +673,7 @@ function LineRow({
     isEditor && dramaId && typeof sceneIndex === "number" && typeof lineIndex === "number";
 
   return (
-    <div className="rounded-2xl bg-white/85 hover:bg-white border border-white p-3 flex items-start gap-3">
+    <div className="rounded-2xl bg-surface/85 hover:bg-surface border border-surface p-3 flex items-start gap-3">
       <button
         onClick={() => line.zh && speak(line.zh, id)}
         disabled={!line.zh}
@@ -714,7 +714,7 @@ function LineRow({
             <button
               onClick={() => saveTime.mutate(Math.round(currentTime))}
               disabled={saveTime.isPending}
-              className="text-[10px] px-1.5 py-0.5 rounded-full bg-white border border-primary/30 hover:bg-primary/10 text-primary inline-flex items-center gap-1"
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface border border-primary/30 hover:bg-primary/10 text-primary inline-flex items-center gap-1"
               title="현재 재생 시각을 이 대사에 저장"
             >
               <Clock className="size-3" />
@@ -773,7 +773,7 @@ function VocabRow({ item }: { item: DramaScene["vocab"][number] }) {
   });
 
   return (
-    <div className="rounded-2xl bg-white/85 hover:bg-white border border-white p-3 flex items-center gap-3">
+    <div className="rounded-2xl bg-surface/85 hover:bg-surface border border-surface p-3 flex items-center gap-3">
       <div className="size-12 rounded-2xl bg-gradient-to-br from-pink-100 to-sky-100 grid place-items-center text-2xl shrink-0">
         {emoji}
       </div>
@@ -811,7 +811,7 @@ function VocabRow({ item }: { item: DramaScene["vocab"][number] }) {
             "size-8 rounded-full grid place-items-center transition-all",
             saved
               ? "bg-emerald-500 text-white"
-              : "bg-white border border-primary/30 hover:bg-primary/10 text-primary",
+              : "bg-surface border border-primary/30 hover:bg-primary/10 text-primary",
           ].join(" ")}
           title={saved ? "저장됨" : "단어장에 저장"}
         >
@@ -912,7 +912,7 @@ function MiniQuiz({
                       ? "bg-destructive/80 text-destructive-foreground border-destructive"
                       : isPicked
                         ? "bg-primary/20 border-primary"
-                        : "bg-white/80 hover:bg-white border-white",
+                        : "bg-surface/80 hover:bg-surface border-surface",
                 ].join(" ")}
               >
                 {opt}
@@ -925,7 +925,7 @@ function MiniQuiz({
           value={picked}
           onChange={(e) => setPicked(e.target.value)}
           disabled={revealed}
-          className="w-full rounded-2xl px-4 py-3 bg-white/80 border border-white outline-none focus:border-primary"
+          className="w-full rounded-2xl px-4 py-3 bg-surface/80 border border-surface outline-none focus:border-primary"
           placeholder="정답을 입력하세요 (예: 学)"
         />
       )}

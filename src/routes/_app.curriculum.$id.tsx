@@ -208,7 +208,7 @@ function CurriculumDetail() {
           {materials.map((m, i) => (
             <label
               key={i}
-              className="flex items-center gap-2 rounded-xl bg-white/50 px-3 py-2 text-sm"
+              className="flex items-center gap-2 rounded-xl bg-surface/50 px-3 py-2 text-sm"
             >
               <input type="checkbox" className="rounded" />
               <span>{m}</span>
@@ -256,7 +256,10 @@ function CurriculumDetail() {
         <h2 className="text-xl font-bold mb-3">🎲 인터랙티브 활동 추천</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {activities.map((a, i) => (
-            <div key={i} className="rounded-2xl bg-white/60 p-4 space-y-2 border border-white/40">
+            <div
+              key={i}
+              className="rounded-2xl bg-surface/60 p-4 space-y-2 border border-surface/40"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-bold">{a.name}</div>
@@ -328,7 +331,7 @@ function CurriculumDetail() {
 
       <section className="glass rounded-3xl p-4 sm:p-6">
         <h2 className="text-xl font-bold mb-3">📄 학생 배포용 유인물</h2>
-        <pre className="whitespace-pre-wrap text-sm font-sans bg-white/50 rounded-2xl p-4">
+        <pre className="whitespace-pre-wrap text-sm font-sans bg-surface/50 rounded-2xl p-4">
           {row.handout_markdown}
         </pre>
       </section>
@@ -392,7 +395,7 @@ function LinkedContentSection({ id }: { id: string }) {
 
       {data && (
         <div className="space-y-4">
-          {data.summary && <p className="text-sm bg-white/60 rounded-2xl p-3">{data.summary}</p>}
+          {data.summary && <p className="text-sm bg-surface/60 rounded-2xl p-3">{data.summary}</p>}
           <LinkGroup label="강의" icon={GraduationCap} links={data.lessons} to="lesson" />
           <LinkGroup label="영상 학습" icon={Film} links={data.dramas} to="drama" />
           <LinkGroup label="학습송" icon={Music} links={data.songs} to="song" />
@@ -444,7 +447,7 @@ function LinkCard({ link, to }: { link: CurriculumLink; to: LinkTarget }) {
     </>
   );
   const cls =
-    "block rounded-2xl bg-white/60 p-4 border border-white/40 hover:bg-white/80 transition-colors";
+    "block rounded-2xl bg-surface/60 p-4 border border-surface/40 hover:bg-surface/80 transition-colors";
   if (to === "lesson") {
     return (
       <Link to="/lessons/$id" params={{ id: link.id }} className={cls}>

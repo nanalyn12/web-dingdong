@@ -38,3 +38,7 @@ npm run verify
 | 2026-08-22 | 화면별 모바일 마무리 (배치 4)                   | coachmark-visibility.ts, fab-placement.ts, student-activity.ts, lessons/songs/students | 코치마크가 폰에서 자동 실행, FAB이 홈 인디케이터 침범, 학습송 상세 컨트롤 21개가 44px 미만 |
 | 2026-08-22 | 모바일 하단 탭바 (배치 5)                       | src/components/mobile-tab-bar.tsx, nav-items.ts, fab-placement.ts, styles.css | 학습송·영상 학습이 햄버거 뒤 두 번 탭에 숨어 있었음. 학습 앱의 주 목적지가 상시 노출되지 않았음 |
 | 2026-08-22 | 듣기 버튼 8개 복사본 → SpeakButton 통합 (배치 6) | src/components/speak-button.tsx + 호출부 8곳, vocabulary·dialog 컨트롤 | 레슨 화면 컨트롤 39개가 44px 미만. 같은 알약이 8곳에 복붙돼 두 개는 aria-label조차 없었음 |
+| 2026-09-03 | 위젯 순서 변경 터치 지원 (배치 7)               | src/lib/widget-order.ts, widget-panel.tsx | 재정렬이 HTML5 draggable 뿐이라 터치에서 이벤트가 안 떠 폰에서 순서를 못 바꿨음 |
+| 2026-09-03 | 다크모드 (배치 8)                               | src/lib/theme.ts, theme-provider/-toggle.tsx, __root.tsx, drizzle/0019, styles.css | `.dark` 토큰과 `@custom-variant`는 있었으나 클래스를 붙이는 코드가 0건. 그라디언트·그림자·팔레트 8개 토큰도 라이트 전용이었음 |
+| 2026-09-03 | 하드코딩 흰색 265건 → `--surface` (배치 9)      | src/lib/surface-tokens.test.ts + tsx 34파일, styles.css 유틸 4곳 | 클래스에 박힌 `bg-white/50`은 토큰이 아니라 `.dark`가 다시 칠할 수 없었음. 가드로 재유입 차단 |
+| 2026-09-03 | 오늘의 단어·수업 이어하기 위젯 (배치 10)        | src/lib/widget-catalog.ts, widgets.functions.ts, widget-panel.tsx | 위젯이 전부 '보기' 전용이었고 이어보기가 영상만 다뤘음. 위젯 id·메타 이중 정의도 함께 해소 |

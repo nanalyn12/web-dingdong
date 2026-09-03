@@ -240,7 +240,7 @@ function RelatedLessonsCard({ songId, isEditor }: { songId: string; isEditor: bo
         {data.links.map((l) => (
           <div
             key={l.lesson_id}
-            className="rounded-2xl bg-white/50 border border-white/60 p-4 space-y-2"
+            className="rounded-2xl bg-surface/50 border border-surface/60 p-4 space-y-2"
           >
             <Link
               to="/lessons/$id"
@@ -510,14 +510,14 @@ function SongPlayer({
             transform: "scale(1.2)",
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-white/40 to-white/70 dark:from-black/60 dark:via-black/40 dark:to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-br from-surface/60 via-surface/40 to-surface/70 dark:from-black/60 dark:via-black/40 dark:to-black/70" />
 
         <div className="relative p-5 sm:p-6 space-y-5">
           <div className="flex items-start gap-4 flex-wrap">
             {/* Cover / LP */}
             <div
               className={[
-                "size-28 sm:size-32 rounded-full overflow-hidden gradient-primary grid place-items-center text-3xl text-primary-foreground shrink-0 shadow-[var(--shadow-soft)] ring-4 ring-white/60",
+                "size-28 sm:size-32 rounded-full overflow-hidden gradient-primary grid place-items-center text-3xl text-primary-foreground shrink-0 shadow-[var(--shadow-soft)] ring-4 ring-surface/60",
                 isPlaying ? "animate-spin" : "",
               ].join(" ")}
               style={{ animationDuration: "12s" }}
@@ -680,7 +680,7 @@ function SongPlayer({
               muted={muted}
             />
           ) : (
-            <div className="rounded-2xl border-2 border-dashed border-muted-foreground/20 p-10 text-center text-muted-foreground text-sm bg-white/40">
+            <div className="rounded-2xl border-2 border-dashed border-muted-foreground/20 p-10 text-center text-muted-foreground text-sm bg-surface/40">
               {song.status === "generating_audio"
                 ? "🎙️ 음원 준비 중… 완료되면 자동으로 표시돼요."
                 : "재생할 미디어가 아직 없어요."}
@@ -929,7 +929,7 @@ function PlayerControls({
   const rates = [0.75, 1, 1.25];
   const dur = duration || 0;
   return (
-    <div className="rounded-2xl bg-white/70 dark:bg-black/40 backdrop-blur px-4 py-3 space-y-2 shadow-[var(--shadow-soft)]">
+    <div className="rounded-2xl bg-surface/70 dark:bg-black/40 backdrop-blur px-4 py-3 space-y-2 shadow-[var(--shadow-soft)]">
       {/* Progress bar with lyric dots */}
       <div className="relative pt-1">
         <Slider
@@ -1156,7 +1156,7 @@ function NativeMediaSurface({
 function triggerCls(done: boolean): string {
   return [
     "rounded-full px-3.5 py-1.5 text-xs font-semibold gap-1 inline-flex items-center",
-    "data-[state=inactive]:bg-white/60 data-[state=inactive]:hover:bg-white",
+    "data-[state=inactive]:bg-surface/60 data-[state=inactive]:hover:bg-surface",
     "data-[state=active]:gradient-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[var(--shadow-soft)]",
     done ? "ring-1 ring-emerald-400/60" : "",
   ]
@@ -1554,14 +1554,14 @@ function LineOrderActivity({
                 <div className="flex flex-col gap-0.5">
                   <button
                     type="button"
-                    className="text-[10px] px-1.5 rounded bg-white/60 hover:bg-white"
+                    className="text-[10px] px-1.5 rounded bg-surface/60 hover:bg-surface"
                     onClick={() => move(pos, pos - 1)}
                   >
                     ▲
                   </button>
                   <button
                     type="button"
-                    className="text-[10px] px-1.5 rounded bg-white/60 hover:bg-white"
+                    className="text-[10px] px-1.5 rounded bg-surface/60 hover:bg-surface"
                     onClick={() => move(pos, pos + 1)}
                   >
                     ▼
@@ -1763,7 +1763,7 @@ function VocabCard({
           "absolute bottom-2 right-2 z-20 size-11 rounded-full grid place-items-center md:size-7 shadow transition-colors",
           saved
             ? "bg-emerald-500 text-white cursor-default"
-            : "bg-white/85 text-primary hover:bg-white",
+            : "bg-surface/85 text-primary hover:bg-surface",
         ].join(" ")}
       >
         {save.isPending ? (
@@ -1853,8 +1853,8 @@ function GrammarNoteRow({
   return (
     <li
       className={[
-        "rounded-2xl overflow-hidden bg-white/70 backdrop-blur shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5",
-        studied ? "ring-2 ring-emerald-400/70" : "ring-1 ring-white/40",
+        "rounded-2xl overflow-hidden bg-surface/70 backdrop-blur shadow-[var(--shadow-soft)] transition-all hover:-translate-y-0.5",
+        studied ? "ring-2 ring-emerald-400/70" : "ring-1 ring-surface/40",
       ].join(" ")}
     >
       <div className="flex">
@@ -1871,7 +1871,7 @@ function GrammarNoteRow({
                 "shrink-0 size-6 rounded-full grid place-items-center text-xs transition-all",
                 studied
                   ? "bg-emerald-500 text-white shadow"
-                  : "bg-white/70 text-muted-foreground hover:bg-emerald-100 hover:text-emerald-700",
+                  : "bg-surface/70 text-muted-foreground hover:bg-emerald-100 hover:text-emerald-700",
               ].join(" ")}
             >
               {studied ? "✓" : "○"}
@@ -2132,7 +2132,7 @@ function LyricRow({
         "w-full text-left rounded-2xl px-3 py-2 transition-all duration-300 ease-out",
         active
           ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)] scale-[1.02]"
-          : "hover:bg-white/60 hover:scale-[1.01] hover:shadow-sm text-foreground/80",
+          : "hover:bg-surface/60 hover:scale-[1.01] hover:shadow-sm text-foreground/80",
         clickable ? "cursor-pointer" : "cursor-default",
         pulseClass,
       ].join(" ")}

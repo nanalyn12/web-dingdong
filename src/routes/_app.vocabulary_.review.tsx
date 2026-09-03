@@ -248,7 +248,7 @@ function FlashSession({
         <div className="glass rounded-3xl p-5 sm:p-8 min-h-[280px] flex flex-col items-center justify-center gap-4">
           <button
             onClick={() => speak(cur.zh, cur.zh)}
-            className="absolute right-6 mt-2 self-end p-2 rounded-full hover:bg-white/60"
+            className="absolute right-6 mt-2 self-end p-2 rounded-full hover:bg-surface/60"
             aria-label="발음 듣기"
           >
             <Volume2 className="size-4 text-primary" />
@@ -474,7 +474,7 @@ function MatchSession({
                 selectedZh === v.id && "border-primary ring-2 ring-primary/40 bg-primary/5",
                 !matched.has(v.id) &&
                   selectedZh !== v.id &&
-                  "border-slate-200 bg-white hover:bg-slate-50 cursor-pointer",
+                  "border-slate-200 bg-surface hover:bg-slate-50 cursor-pointer",
               )}
               lang="zh-CN"
             >
@@ -494,7 +494,7 @@ function MatchSession({
                 wrongFlash === v.id && "border-rose-300 bg-rose-50 animate-pulse",
                 !matched.has(v.id) &&
                   wrongFlash !== v.id &&
-                  "border-slate-200 bg-white hover:bg-slate-50 cursor-pointer",
+                  "border-slate-200 bg-surface hover:bg-slate-50 cursor-pointer",
               )}
             >
               {v.ko}

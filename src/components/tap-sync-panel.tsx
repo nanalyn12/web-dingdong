@@ -129,15 +129,15 @@ export function TapSyncPanel({
           <h2 className="font-bold text-lg">🎤 탭 싱크</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             노래를 재생하고 각 줄이 시작될 때마다{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-white/70 border text-[10px] font-mono">
+            <kbd className="px-1.5 py-0.5 rounded bg-surface/70 border text-[10px] font-mono">
               Space
             </kbd>
             를 누르세요. 되돌리기{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-white/70 border text-[10px] font-mono">
+            <kbd className="px-1.5 py-0.5 rounded bg-surface/70 border text-[10px] font-mono">
               Backspace
             </kbd>
             , 재생/정지{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-white/70 border text-[10px] font-mono">
+            <kbd className="px-1.5 py-0.5 rounded bg-surface/70 border text-[10px] font-mono">
               Enter
             </kbd>
           </p>
@@ -172,7 +172,7 @@ export function TapSyncPanel({
 
       <div
         ref={listRef}
-        className="max-h-[40dvh] overflow-y-auto pr-1 space-y-1 rounded-2xl bg-white/40 p-2"
+        className="max-h-[40dvh] overflow-y-auto pr-1 space-y-1 rounded-2xl bg-surface/40 p-2"
       >
         {lyrics.map((l, i) => {
           const header = isSectionHeader(l.zh);

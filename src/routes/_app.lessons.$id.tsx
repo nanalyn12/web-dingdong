@@ -259,42 +259,42 @@ function LessonPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="sticky top-20 z-20 -mx-1 flex h-auto w-[calc(100%+0.5rem)] flex-nowrap gap-1 overflow-x-auto rounded-2xl border border-white/70 bg-white/85 p-1 shadow-sm backdrop-blur-xl md:bg-white/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:static md:-mx-0 md:w-full md:flex-wrap md:overflow-visible">
+        <TabsList className="sticky top-20 z-20 -mx-1 flex h-auto w-[calc(100%+0.5rem)] flex-nowrap gap-1 overflow-x-auto rounded-2xl border border-surface/70 bg-surface/85 p-1 shadow-sm backdrop-blur-xl md:bg-surface/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:static md:-mx-0 md:w-full md:flex-wrap md:overflow-visible">
           {(lessonVideo?.youtube_video_id || lessonVideo?.media_url) && (
             <TabsTrigger
               value="video"
-              className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+              className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
             >
               🎬 영상
             </TabsTrigger>
           )}
           <TabsTrigger
             value="key"
-            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             핵심표현
           </TabsTrigger>
           <TabsTrigger
             value="content"
-            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             본문
           </TabsTrigger>
           <TabsTrigger
             value="dialogue"
-            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             실전대화
           </TabsTrigger>
           <TabsTrigger
             value="slides"
-            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             슬라이드
           </TabsTrigger>
           <TabsTrigger
             value="quiz"
-            className="shrink-0 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
           >
             퀴즈
           </TabsTrigger>
@@ -510,7 +510,7 @@ function RelatedSongsCard({ lessonId }: { lessonId: string }) {
         {data.map((s) => (
           <div
             key={s.song_id}
-            className="rounded-2xl bg-white/50 border border-white/60 p-4 space-y-1.5"
+            className="rounded-2xl bg-surface/50 border border-surface/60 p-4 space-y-1.5"
           >
             <Link
               to="/songs/$id"
@@ -556,7 +556,7 @@ function ContentMarkdown({
   return (
     <div className="relative group">
       <div className="absolute -inset-1 bg-gradient-to-r from-rose-200/60 via-sky-200/40 to-indigo-200/60 rounded-[2rem] blur opacity-30 group-hover:opacity-50 transition duration-700 pointer-events-none"></div>
-      <article className="relative bg-white/90 backdrop-blur-2xl p-5 sm:p-8 rounded-[1.8rem] border border-white shadow-[0_25px_60px_-15px_rgba(15,23,42,0.15)]">
+      <article className="relative bg-surface/90 backdrop-blur-2xl p-5 sm:p-8 rounded-[1.8rem] border border-surface shadow-[0_25px_60px_-15px_rgba(15,23,42,0.15)]">
         {/* Editorial header */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
@@ -630,7 +630,7 @@ function CulturalCardView({
   return (
     <div className={cn("rounded-3xl border bg-gradient-to-br p-5 backdrop-blur-sm", toneCls)}>
       <div className="flex items-center gap-2 mb-2">
-        <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-foreground/70">
+        <span className="inline-flex items-center gap-1 rounded-full bg-surface/70 px-2 py-0.5 text-[11px] font-medium text-foreground/70">
           {icon}
           {badge}
         </span>
@@ -684,7 +684,7 @@ function ComicStrip({
         {panels.map((p, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-white/70 dark:bg-background/40 border overflow-hidden shadow-sm"
+            className="rounded-2xl bg-surface/70 dark:bg-background/40 border overflow-hidden shadow-sm"
           >
             {p.image_url ? (
               <img
@@ -741,7 +741,7 @@ function DialogueList({
     return <p className="text-sm text-muted-foreground">대화가 없습니다.</p>;
   }
   return (
-    <div className="flex flex-col gap-4 bg-white/50 backdrop-blur-md p-4 sm:p-6 rounded-[2rem] border border-white/70 shadow-sm">
+    <div className="flex flex-col gap-4 bg-surface/50 backdrop-blur-md p-4 sm:p-6 rounded-[2rem] border border-surface/70 shadow-sm">
       {dialogues.map((d, i) => {
         const isDing = (d.speaker ?? "").includes("叮");
         const ttsId = `dlg-${i}`;
@@ -756,7 +756,7 @@ function DialogueList({
           >
             <div
               className={cn(
-                "w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center font-bold shadow-sm border-2 border-white",
+                "w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center font-bold shadow-sm border-2 border-surface",
                 isDing
                   ? "bg-rose-500 text-white shadow-rose-100"
                   : "bg-sky-500 text-white shadow-sky-100",
@@ -769,7 +769,7 @@ function DialogueList({
                 "px-4 py-3 rounded-2xl shadow-sm border max-w-full",
                 isDing
                   ? "bg-rose-500 border-rose-400 text-white rounded-tr-none"
-                  : "bg-white border-slate-100 text-slate-900 rounded-tl-none",
+                  : "bg-surface border-slate-100 text-slate-900 rounded-tl-none",
               )}
             >
               {d.speaker && (
@@ -837,7 +837,7 @@ type SlideTheme = {
 
 const SLIDE_THEMES: SlideTheme[] = [
   {
-    grad: "from-rose-100 via-pink-50 to-white",
+    grad: "from-rose-100 via-pink-50 to-surface",
     accent: "bg-rose-500",
     accentHex: "#f43f5e",
     text: "text-rose-600",
@@ -845,7 +845,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     softBg: "bg-rose-50",
   },
   {
-    grad: "from-sky-100 via-cyan-50 to-white",
+    grad: "from-sky-100 via-cyan-50 to-surface",
     accent: "bg-sky-500",
     accentHex: "#0ea5e9",
     text: "text-sky-600",
@@ -853,7 +853,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     softBg: "bg-sky-50",
   },
   {
-    grad: "from-emerald-100 via-teal-50 to-white",
+    grad: "from-emerald-100 via-teal-50 to-surface",
     accent: "bg-emerald-500",
     accentHex: "#10b981",
     text: "text-emerald-600",
@@ -861,7 +861,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     softBg: "bg-emerald-50",
   },
   {
-    grad: "from-indigo-100 via-violet-50 to-white",
+    grad: "from-indigo-100 via-violet-50 to-surface",
     accent: "bg-indigo-500",
     accentHex: "#6366f1",
     text: "text-indigo-600",
@@ -869,7 +869,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     softBg: "bg-indigo-50",
   },
   {
-    grad: "from-amber-100 via-orange-50 to-white",
+    grad: "from-amber-100 via-orange-50 to-surface",
     accent: "bg-amber-500",
     accentHex: "#f59e0b",
     text: "text-amber-600",
@@ -984,7 +984,7 @@ function RingBulletCard({
         </svg>
         {/* Inner disc */}
         <div
-          className="absolute inset-3 rounded-full bg-white/85 backdrop-blur flex items-center justify-center px-4 text-center shadow-inner"
+          className="absolute inset-3 rounded-full bg-surface/85 backdrop-blur flex items-center justify-center px-4 text-center shadow-inner"
           style={{ boxShadow: "inset 0 2px 8px rgba(15,23,42,0.06)" }}
         >
           {isShort ? (
@@ -999,7 +999,7 @@ function RingBulletCard({
         </div>
         {/* Numeric badge */}
         <div
-          className="absolute -top-1 -right-1 size-8 rounded-full text-white text-xs font-black flex items-center justify-center shadow-md ring-2 ring-white"
+          className="absolute -top-1 -right-1 size-8 rounded-full text-white text-xs font-black flex items-center justify-center shadow-md ring-2 ring-surface"
           style={{ backgroundColor: color }}
         >
           {String(index + 1).padStart(2, "0")}
@@ -1025,7 +1025,7 @@ function VocabHeroCard({
     <button
       type="button"
       onClick={() => speak(v.zh, v.zh)}
-      className="group relative overflow-hidden rounded-3xl border border-white bg-gradient-to-br from-white via-white to-slate-50 p-5 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-15px_rgba(15,23,42,0.25)] cursor-pointer"
+      className="group relative overflow-hidden rounded-3xl border border-surface bg-gradient-to-br from-surface via-surface to-slate-50 p-5 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-15px_rgba(15,23,42,0.25)] cursor-pointer"
       style={{ minHeight: 180 }}
     >
       {/* corner blob */}
@@ -1093,14 +1093,14 @@ function ExampleBubble({
   return (
     <div className={cn("flex items-start gap-3", isLeft ? "flex-row" : "flex-row-reverse")}>
       <div
-        className="shrink-0 size-11 rounded-full flex items-center justify-center text-white text-sm font-black shadow-md ring-4 ring-white"
+        className="shrink-0 size-11 rounded-full flex items-center justify-center text-white text-sm font-black shadow-md ring-4 ring-surface"
         style={{ backgroundColor: color }}
       >
         {speaker.slice(0, 1).toUpperCase()}
       </div>
       <div
         className={cn(
-          "relative flex-1 rounded-2xl bg-white/90 backdrop-blur border border-white shadow-sm p-3.5 transition-all",
+          "relative flex-1 rounded-2xl bg-surface/90 backdrop-blur border border-surface shadow-sm p-3.5 transition-all",
           speaking && "ring-2 ring-offset-2",
         )}
         style={{
@@ -1111,7 +1111,7 @@ function ExampleBubble({
         {/* tail */}
         <div
           className={cn(
-            "absolute top-3 size-3 rotate-45 bg-white border-white",
+            "absolute top-3 size-3 rotate-45 bg-surface border-surface",
             isLeft ? "-left-1.5 border-l border-b" : "-right-1.5 border-r border-t",
           )}
         />
@@ -1163,7 +1163,7 @@ function ExampleBubble({
 function KeyPointSpotlight({ text, color }: { text: string; color: string }) {
   return (
     <div
-      className="relative overflow-hidden rounded-3xl bg-white/85 backdrop-blur border border-white shadow-[0_15px_40px_-15px_rgba(15,23,42,0.2)] p-5 sm:p-6"
+      className="relative overflow-hidden rounded-3xl bg-surface/85 backdrop-blur border border-surface shadow-[0_15px_40px_-15px_rgba(15,23,42,0.2)] p-5 sm:p-6"
       style={{
         backgroundImage: `radial-gradient(circle at 15% 30%, ${color}18, transparent 55%)`,
       }}
@@ -1293,8 +1293,8 @@ function SlidesCarousel({
                 className={cn(
                   "flex items-center justify-center rounded-full w-full h-full text-xs font-bold border-2 transition-all",
                   active
-                    ? cn("bg-white shadow-lg", t.text, "border-current scale-110")
-                    : "bg-white/60 text-slate-500 border-slate-200 hover:border-slate-400",
+                    ? cn("bg-surface shadow-lg", t.text, "border-current scale-110")
+                    : "bg-surface/60 text-slate-500 border-slate-200 hover:border-slate-400",
                 )}
               >
                 {idx + 1}
@@ -1308,7 +1308,7 @@ function SlidesCarousel({
       <div className="flex-1 min-w-0">
         <div
           className={cn(
-            "relative rounded-[2.2rem] border border-white/70 bg-gradient-to-br shadow-[0_25px_60px_-15px_rgba(15,23,42,0.2)] overflow-hidden",
+            "relative rounded-[2.2rem] border border-surface/70 bg-gradient-to-br shadow-[0_25px_60px_-15px_rgba(15,23,42,0.2)] overflow-hidden",
             theme.grad,
           )}
         >
@@ -1390,7 +1390,7 @@ function SlidesCarousel({
             {/* Content markdown (rich) */}
             {slide.content && (
               <div
-                className="rounded-3xl bg-white/70 backdrop-blur border border-white/80 p-2 sm:p-3"
+                className="rounded-3xl bg-surface/70 backdrop-blur border border-surface/80 p-2 sm:p-3"
                 style={stagger(2)}
               >
                 <RichLessonContent
@@ -1533,7 +1533,7 @@ function SlidesCarousel({
                     연습 문제 보기
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-3 rounded-2xl bg-white/85 backdrop-blur border border-white p-4 text-sm space-y-1.5">
+                <CollapsibleContent className="mt-3 rounded-2xl bg-surface/85 backdrop-blur border border-surface p-4 text-sm space-y-1.5">
                   {typeof slide.practice === "string" ? (
                     <p className="text-slate-700">{slide.practice}</p>
                   ) : (
@@ -1558,7 +1558,7 @@ function SlidesCarousel({
             )}
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/40">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface/40">
             <div
               className={cn("h-full transition-all duration-500", theme.accent)}
               style={{ width: `${progress}%` }}
@@ -1572,7 +1572,7 @@ function SlidesCarousel({
             size="lg"
             onClick={() => go(i - 1)}
             disabled={i === 0}
-            className="rounded-full bg-white/70 backdrop-blur border-slate-200 hover:bg-white cursor-pointer disabled:opacity-40"
+            className="rounded-full bg-surface/70 backdrop-blur border-slate-200 hover:bg-surface cursor-pointer disabled:opacity-40"
           >
             <ChevronLeft className="size-4" /> 이전
           </Button>
@@ -1611,9 +1611,9 @@ function SlideMiniCard({
   tone: "sky" | "rose" | "amber";
 }) {
   const tones = {
-    sky: "from-sky-50 to-white border-sky-100 text-sky-600",
-    rose: "from-rose-50 to-white border-rose-100 text-rose-600",
-    amber: "from-amber-50 to-white border-amber-100 text-amber-600",
+    sky: "from-sky-50 to-surface border-sky-100 text-sky-600",
+    rose: "from-rose-50 to-surface border-rose-100 text-rose-600",
+    amber: "from-amber-50 to-surface border-amber-100 text-amber-600",
   } as const;
   return (
     <div className={cn("rounded-2xl bg-gradient-to-br border p-3.5", tones[tone])}>

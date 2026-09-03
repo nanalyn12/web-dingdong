@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
+import { THEME_PREFERENCES } from "@/lib/theme";
 import type { Profile } from "@/db/schema";
 
 const JobEnum = z.enum(["high_school", "university", "teacher", "worker", "other"]);
@@ -159,6 +160,22 @@ export const saveOnboarding = createServerFn({ method: "POST" })
       })
       .where(eq(tables.profiles.id, context.userId));
     return { ok: true };
+  });
+
+/**
+ * The theme follows the account to another device; localStorage only mirrors
+ * it so the pre-hydration boot script has something to read.
+ */
+export const saveThemePreference = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ theme: z.enum(THEME_PREFERENCES) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { db, tables } = await import("@/db");
+    await db
+      .update(tables.profiles)
+      .set({ theme: data.theme })
+      .where(eq(tables.profiles.id, context.userId));
+    return { ok: true as const };
   });
 
 export const touchLastActive = createServerFn({ method: "POST" })

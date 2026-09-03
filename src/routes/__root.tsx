@@ -15,7 +15,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthBridge } from "@/lib/auth-client";
 import { DingDongBot } from "@/components/dingdong-bot";
 import { PushManager } from "@/components/push-manager";
+import { ThemeProvider } from "@/components/theme-provider";
 import { VIEWPORT_CONTENT } from "@/lib/mobile-ui";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
 function NotFoundComponent() {
   return (
@@ -169,8 +171,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // The boot script below sets the class on this element before React
+    // hydrates, which is a mismatch by definition — the server cannot know the
+    // visitor's theme. Suppressing it here is what keeps that from being
+    // reported as a hydration error.
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Must run before the stylesheet paints, or a dark user gets a pastel
+            flash on every full document load. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
@@ -187,11 +196,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthBridge />
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <DingDongBot />
-      <PushManager />
-      <Toaster richColors position="top-center" />
+      <ThemeProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <DingDongBot />
+        <PushManager />
+        <Toaster richColors position="top-center" />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

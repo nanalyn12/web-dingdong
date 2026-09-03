@@ -3,13 +3,15 @@ import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
+import { WIDGET_IDS, sanitizeLayout, type WidgetId } from "@/lib/widget-catalog";
+import type { DueWord } from "@/lib/widget-catalog";
 import type { Json } from "@/db/schema";
 
 // ── 위젯 패널 ────────────────────────────────────────────────────────────────
-// Widget ids are validated against this list; the client registry mirrors it.
-export const WIDGET_IDS = ["quote", "stats", "calendar", "continue", "song"] as const;
-export type WidgetId = (typeof WIDGET_IDS)[number];
-export const DEFAULT_LAYOUT: WidgetId[] = ["quote", "stats", "calendar"];
+// The ids, their labels and the layout rules live in widget-catalog.ts, which
+// is pure and client-safe; this module only reaches the database. Callers
+// import them from there directly — re-exporting them here would put a
+// server-function module back on the path to a string array.
 
 /** 저장된 위젯 배치 (없으면 null → 클라이언트가 기본값 사용). */
 export const getWidgetLayout = createServerFn({ method: "GET" })
@@ -22,11 +24,10 @@ export const getWidgetLayout = createServerFn({ method: "GET" })
       .where(eq(tables.profiles.id, context.userId))
       .limit(1);
     const raw = rows[0]?.widget_layout;
+    // A row that has never been edited returns null so the client falls back
+    // to the default; an empty array is a real choice and is preserved.
     if (!Array.isArray(raw)) return null;
-    const valid = raw.filter((w): w is WidgetId =>
-      (WIDGET_IDS as readonly string[]).includes(String(w)),
-    );
-    return valid;
+    return sanitizeLayout(raw);
   });
 
 export const saveWidgetLayout = createServerFn({ method: "POST" })
@@ -247,3 +248,80 @@ export const getDailySong = createServerFn({ method: "GET" }).handler(
     return rows[kstDay % rows.length] ?? null;
   },
 );
+
+// ── 🃏 오늘의 단어 ───────────────────────────────────────────────────────────
+
+/**
+ * A short queue of words that are due, not the whole backlog: the widget grades
+ * one card at a time and refetches when it runs out, and shipping hundreds of
+ * rows to render one card is the kind of thing that only shows up in
+ * production.
+ */
+/** The card needs the reading and the meaning, not just the characters. */
+export type DueVocab = DueWord & { pinyin: string | null; ko: string | null };
+
+export const getDueVocabQueue = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }): Promise<DueVocab[]> => {
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({
+        id: tables.vocabulary.id,
+        zh: tables.vocabulary.zh,
+        pinyin: tables.vocabulary.pinyin,
+        ko: tables.vocabulary.ko,
+      })
+      .from(tables.vocabulary)
+      .where(
+        and(
+          eq(tables.vocabulary.user_id, context.userId),
+          lte(tables.vocabulary.srs_due_at, new Date().toISOString()),
+        ),
+      )
+      .orderBy(tables.vocabulary.srs_due_at)
+      .limit(10);
+    return rows;
+  });
+
+// ── 📖 수업 이어하기 ─────────────────────────────────────────────────────────
+
+export type ContinueLesson = {
+  lesson_id: string;
+  title: string;
+  course_title: string | null;
+  completed_tabs: number;
+  done: boolean;
+} | null;
+
+/**
+ * The most recently touched lesson that is not finished. `continue` already
+ * does this for video; lessons are the main content and had no way back in.
+ */
+export const getContinueLesson = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }): Promise<ContinueLesson> => {
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select({
+        lesson_id: tables.lesson_progress.lesson_id,
+        completed_tabs: tables.lesson_progress.completed_tabs,
+        completed_at: tables.lesson_progress.completed_at,
+        title: tables.lessons.title,
+        course_title: tables.courses.title,
+      })
+      .from(tables.lesson_progress)
+      .innerJoin(tables.lessons, eq(tables.lesson_progress.lesson_id, tables.lessons.id))
+      .leftJoin(tables.courses, eq(tables.lessons.course_id, tables.courses.id))
+      .where(eq(tables.lesson_progress.user_id, context.userId))
+      .orderBy(sql`${tables.lesson_progress.updated_at} DESC`)
+      .limit(1);
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      lesson_id: r.lesson_id,
+      title: r.title,
+      course_title: r.course_title,
+      completed_tabs: Array.isArray(r.completed_tabs) ? r.completed_tabs.length : 0,
+      done: !!r.completed_at,
+    };
+  });

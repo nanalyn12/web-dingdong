@@ -301,7 +301,7 @@ function RehostPanel() {
         </Button>
       </div>
       {log.length > 0 && (
-        <div className="rounded-xl bg-white/60 p-2 max-h-56 overflow-auto text-[11px] font-mono space-y-0.5">
+        <div className="rounded-xl bg-surface/60 p-2 max-h-56 overflow-auto text-[11px] font-mono space-y-0.5">
           {log.map((l, i) => (
             <div key={i}>{l}</div>
           ))}
@@ -451,7 +451,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
                 key={s}
                 type="button"
                 onClick={() => setTopic(s)}
-                className="text-xs rounded-full border border-border bg-white/60 px-3 py-1.5 hover:bg-white"
+                className="text-xs rounded-full border border-border bg-surface/60 px-3 py-1.5 hover:bg-surface"
               >
                 {s}
               </button>
@@ -612,19 +612,19 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-3 rounded-2xl bg-white/50 border border-border px-4 py-3">
+        <div className="flex items-center gap-3 rounded-2xl bg-surface/50 border border-border px-4 py-3">
           <Switch checked={repeatZh} onCheckedChange={setRepeatZh} id="repeatzh" />
           <Label htmlFor="repeatzh" className="cursor-pointer">
             중국어 표현 2회 읽기
           </Label>
         </div>
-        <div className="flex items-center gap-3 rounded-2xl bg-white/50 border border-border px-4 py-3">
+        <div className="flex items-center gap-3 rounded-2xl bg-surface/50 border border-border px-4 py-3">
           <Switch checked={burnSubtitles} onCheckedChange={setBurnSubtitles} id="burn" />
           <Label htmlFor="burn" className="cursor-pointer">
             ⑧ 자막 영상에 새기기
           </Label>
         </div>
-        <div className="flex items-center gap-3 rounded-2xl bg-white/50 border border-border px-4 py-3">
+        <div className="flex items-center gap-3 rounded-2xl bg-surface/50 border border-border px-4 py-3">
           <Switch checked={bgm} onCheckedChange={setBgm} id="bgm" />
           <Label htmlFor="bgm" className="cursor-pointer">
             배경음악 (중점별 자동 선곡)
@@ -740,7 +740,7 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
                   className="w-16 h-9 rounded-lg object-cover border border-border shrink-0"
                 />
               ) : (
-                <div className="w-16 h-9 rounded-lg bg-white/50 border border-border grid place-items-center shrink-0">
+                <div className="w-16 h-9 rounded-lg bg-surface/50 border border-border grid place-items-center shrink-0">
                   <Clapperboard className="size-4 text-muted-foreground" />
                 </div>
               )}
@@ -757,7 +757,7 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
                   {busy && ` · ${j.step}`}
                 </div>
                 {busy && (
-                  <div className="h-1.5 mt-1 rounded-full bg-white/60 overflow-hidden max-w-[240px]">
+                  <div className="h-1.5 mt-1 rounded-full bg-surface/60 overflow-hidden max-w-[240px]">
                     <div
                       className="h-full gradient-primary transition-all"
                       style={{ width: `${j.progress}%` }}
@@ -789,7 +789,7 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
                 <button
                   type="button"
                   onClick={() => setExpanded(open ? null : j.id)}
-                  className="p-1.5 rounded-lg hover:bg-white/50 text-muted-foreground"
+                  className="p-1.5 rounded-lg hover:bg-surface/50 text-muted-foreground"
                   aria-label="상세 보기"
                 >
                   <ChevronDown
@@ -1047,7 +1047,7 @@ function SchedulePanel() {
                     "size-9 rounded-xl text-sm font-medium border transition disabled:opacity-40",
                     frequency === "weekly" && weekdays.includes(d)
                       ? "gradient-primary text-primary-foreground border-transparent"
-                      : "bg-white/60 border-border hover:bg-white",
+                      : "bg-surface/60 border-border hover:bg-surface",
                   ].join(" ")}
                 >
                   {w}

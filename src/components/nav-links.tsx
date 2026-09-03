@@ -31,7 +31,7 @@ export function NavLinks({
               "flex min-h-11 items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all md:min-h-0",
               active
                 ? "gradient-primary text-primary-foreground shadow-[var(--shadow-soft)]"
-                : "text-foreground/80 hover:bg-white/40",
+                : "text-foreground/80 hover:bg-surface/40",
             ].join(" ")}
           >
             <item.icon className="size-4 shrink-0" />

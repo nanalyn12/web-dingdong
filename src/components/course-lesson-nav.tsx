@@ -44,7 +44,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:min-h-0"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:min-h-0"
           aria-expanded={open}
         >
           <List className="size-4 shrink-0 text-muted-foreground" />
@@ -99,7 +99,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     active
                       ? "gradient-primary text-primary-foreground font-semibold"
-                      : "hover:bg-white/60",
+                      : "hover:bg-surface/60",
                   ].join(" ")}
                 >
                   <span className="w-5 shrink-0 text-right opacity-70">{i + 1}</span>

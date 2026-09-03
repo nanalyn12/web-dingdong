@@ -55,6 +55,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-surface: var(--surface);
 }
 
 :root {
@@ -131,9 +132,49 @@
   );
   --shadow-glass: 0 8px 32px -8px oklch(0.5 0.1 300 / 0.18);
   --shadow-soft: 0 4px 20px -6px oklch(0.5 0.1 300 / 0.12);
+
+  /* The long-form reading surface, kept as a token rather than a literal
+     inside `glass-read`: its near-opacity is a deliberate reading decision
+     (see the utility below) and dark needs its own value for the same reason,
+     not a transparent white that lets the gradient through the text. */
+  /* The raised surface every glass card is painted with. It was written as
+     a literal `bg-white/NN` in 265 places, which is the one thing `.dark`
+     could not re-theme: 50% white stays glare on a 0.22 background. White
+     here keeps the light rendering identical to those literals. */
+  --surface: oklch(1 0 0);
+  --surface-read: oklch(1 0 0 / 0.94);
 }
 
+/* Dark.
+   Every token above has a value here — `theme.test.ts` fails on the next one
+   that does not. The four-stop app gradient, the two shadows and the pastel
+   palette used to be light-only, so switching the class on would have left a
+   pastel page under white body copy. */
 .dark {
+  --pink: oklch(0.72 0.11 0);
+  --sky: oklch(0.72 0.09 230);
+  --mint: oklch(0.74 0.09 165);
+  --lavender: oklch(0.72 0.09 295);
+  --gradient-app: linear-gradient(
+    135deg,
+    oklch(0.26 0.05 350) 0%,
+    oklch(0.24 0.05 230) 35%,
+    oklch(0.24 0.045 165) 70%,
+    oklch(0.25 0.05 295) 100%
+  );
+  --gradient-primary: linear-gradient(
+    135deg,
+    oklch(0.72 0.13 350),
+    oklch(0.7 0.11 295)
+  );
+  /* Shadows read as depth only when they are darker than the surface they
+     fall on; the light values are invisible on a 0.22 background. */
+  --shadow-glass: 0 8px 32px -8px oklch(0.12 0.03 300 / 0.55);
+  --shadow-soft: 0 4px 20px -6px oklch(0.12 0.03 300 / 0.45);
+  /* Lighter than --background, so the same `/NN` opacity that made a card
+     brighter in light makes it more raised here rather than blinding. */
+  --surface: oklch(0.34 0.035 290);
+  --surface-read: oklch(0.26 0.035 290 / 0.96);
   --background: oklch(0.22 0.04 290);
   --foreground: oklch(0.96 0.01 300);
   --card: oklch(1 0 0 / 8%);
@@ -193,9 +234,9 @@
 }
 
 @utility glass-soft {
-  background: oklch(1 0 0 / 0.6);
+  background: color-mix(in oklch, var(--surface) 60%, transparent);
   backdrop-filter: blur(12px) saturate(115%);
-  border: 1px solid oklch(1 0 0 / 0.5);
+  border: 1px solid color-mix(in oklch, var(--surface) 50%, transparent);
   box-shadow: var(--shadow-soft);
 }
 
@@ -203,7 +244,7 @@
    Nearly opaque on purpose: this is where a learner's eyes stay for minutes at
    a time, so the background behind the text must not move with the gradient. */
 @utility glass-read {
-  background: oklch(1 0 0 / 0.94);
+  background: var(--surface-read);
   backdrop-filter: blur(14px);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-glass);
@@ -287,7 +328,7 @@
     oklch(0.98 0.03 350 / 0.95),
     oklch(0.97 0.04 295 / 0.95));
   backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid oklch(1 0 0 / 0.6);
+  border: 1px solid color-mix(in oklch, var(--surface) 60%, transparent);
   border-radius: 20px;
   box-shadow: 0 20px 60px -10px oklch(0.5 0.1 300 / 0.35);
   color: var(--foreground);
@@ -323,7 +364,7 @@
   box-shadow: var(--shadow-soft);
 }
 .driver-popover.dingdong-coach .driver-popover-footer button.driver-popover-prev-btn {
-  background: oklch(1 0 0 / 0.6);
+  background: color-mix(in oklch, var(--surface) 60%, transparent);
   color: var(--foreground);
   box-shadow: none;
 }

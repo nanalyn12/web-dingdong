@@ -63,7 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 // Hidden on a phone: four items in one 375px row squeezed the
                 // search field down to a single visible character. The tour is
                 // reachable from the nav instead.
-                className="hidden sm:inline-flex items-center gap-1.5 rounded-2xl bg-white/60 border border-border px-3 py-2 text-sm hover:bg-white transition"
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-2xl bg-surface/60 border border-border px-3 py-2 text-sm hover:bg-surface transition"
                 title="둘러보기 다시 보기"
                 data-tour="help-button"
               >
@@ -71,32 +71,32 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="hidden sm:inline">도움말</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-56 glass rounded-2xl border-white/60 p-2">
+            <PopoverContent align="end" className="w-56 glass rounded-2xl border-surface/60 p-2">
               <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                 코치마크 둘러보기
               </div>
               <button
                 onClick={() => startTourForRoute(true)}
-                className="w-full text-left rounded-xl px-3 py-2 text-sm hover:bg-white/60 transition"
+                className="w-full text-left rounded-xl px-3 py-2 text-sm hover:bg-surface/60 transition"
               >
                 🧭 이 페이지 둘러보기
               </button>
               <button
                 onClick={() => runTour("sidebar", sidebarTourSteps(), { force: true })}
-                className="w-full text-left rounded-xl px-3 py-2 text-sm hover:bg-white/60 transition"
+                className="w-full text-left rounded-xl px-3 py-2 text-sm hover:bg-surface/60 transition"
               >
                 📚 사이드바 둘러보기
               </button>
               <button
                 onClick={() => runTour("dingdong", dingdongTourSteps(), { force: true })}
-                className="w-full text-left rounded-xl px-3 py-2 text-sm hover:bg-white/60 transition"
+                className="w-full text-left rounded-xl px-3 py-2 text-sm hover:bg-surface/60 transition"
               >
                 🐼 叮叮 둘러보기
               </button>
-              <div className="my-1 h-px bg-white/50" />
+              <div className="my-1 h-px bg-surface/50" />
               <button
                 onClick={restartAll}
-                className="w-full text-left rounded-xl px-3 py-2 text-sm hover:bg-white/60 transition text-primary font-semibold"
+                className="w-full text-left rounded-xl px-3 py-2 text-sm hover:bg-surface/60 transition text-primary font-semibold"
               >
                 🔁 전체 다시 보기
               </button>
@@ -107,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-2">
               <Link
                 to="/onboarding"
-                className="hidden sm:inline-flex items-center gap-2 rounded-2xl bg-white/60 border border-border px-3 py-2 text-sm hover:bg-white transition"
+                className="hidden sm:inline-flex items-center gap-2 rounded-2xl bg-surface/60 border border-border px-3 py-2 text-sm hover:bg-surface transition"
                 title="프로필"
               >
                 <UserRound className="size-4" />
@@ -136,7 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
               <button
                 onClick={logout}
-                className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white/60 border border-border px-3 py-2 text-sm transition hover:bg-white md:min-h-0"
+                className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-surface/60 border border-border px-3 py-2 text-sm transition hover:bg-surface md:min-h-0"
               >
                 <LogOut className="size-4" />
                 <span className="hidden sm:inline">로그아웃</span>

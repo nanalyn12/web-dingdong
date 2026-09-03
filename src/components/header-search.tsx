@@ -78,7 +78,7 @@ export function HeaderSearch() {
       {/* A label, not a div: the pill is 44px tall but the field itself is
           28px, so on a phone the padding strips above and below would
           swallow taps that look like they land on the search box. */}
-      <label className="flex min-h-11 min-w-0 cursor-text items-center gap-2 rounded-2xl bg-white/40 px-3 py-2 md:min-h-0">
+      <label className="flex min-h-11 min-w-0 cursor-text items-center gap-2 rounded-2xl bg-surface/40 px-3 py-2 md:min-h-0">
         <Search className="size-4 text-muted-foreground shrink-0" />
         <input
           value={q}
@@ -110,7 +110,7 @@ export function HeaderSearch() {
       </label>
 
       {showPanel && (
-        <div className="absolute left-0 right-0 top-full mt-2 glass rounded-2xl border border-white/60 shadow-lg p-2 max-h-[70dvh] overflow-y-auto z-50">
+        <div className="absolute left-0 right-0 top-full mt-2 glass rounded-2xl border border-surface/60 shadow-lg p-2 max-h-[70dvh] overflow-y-auto z-50">
           {!data || data.total === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">
               {isFetching ? "검색 중…" : `"${debounced}" 결과가 없어요.`}
@@ -143,7 +143,7 @@ export function HeaderSearch() {
                         onClick={() => go(hit)}
                         className={[
                           "w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition",
-                          idx === active ? "bg-white/70" : "hover:bg-white/50",
+                          idx === active ? "bg-surface/70" : "hover:bg-surface/50",
                         ].join(" ")}
                       >
                         <Icon className="size-4 text-primary shrink-0" />

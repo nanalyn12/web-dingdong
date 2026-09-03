@@ -273,7 +273,7 @@ function StudentCardView({ s }: { s: StudentRow }) {
 
 function CardStat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <div className="rounded-xl bg-white/40 px-2 py-1.5">
+    <div className="rounded-xl bg-surface/40 px-2 py-1.5">
       <dt className="text-[10px] text-muted-foreground">{label}</dt>
       <dd className={`text-sm font-semibold ${tone ?? ""}`}>{value}</dd>
     </div>
@@ -284,7 +284,7 @@ function StudentRowView({ s }: { s: StudentRow }) {
   const idle = s.daysIdle;
 
   return (
-    <tr className="border-t border-white/40 hover:bg-white/40 transition">
+    <tr className="border-t border-surface/40 hover:bg-surface/40 transition">
       <td className="px-3 py-2.5">
         <div className="font-medium flex items-center gap-1.5">
           {idleTone(idle) === "stale" && (

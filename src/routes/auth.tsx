@@ -116,7 +116,7 @@ function AuthPage() {
           type="button"
           onClick={onGoogle}
           disabled={googleLoading}
-          className="mt-6 w-full rounded-2xl bg-white/80 border border-border py-3 font-medium flex items-center justify-center gap-3 hover:bg-white transition disabled:opacity-60"
+          className="mt-6 w-full rounded-2xl bg-surface/80 border border-border py-3 font-medium flex items-center justify-center gap-3 hover:bg-surface transition disabled:opacity-60"
         >
           <GoogleIcon />
           {googleLoading ? "연결 중…" : "Google로 계속하기"}
@@ -136,7 +136,7 @@ function AuthPage() {
             autoComplete="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="rounded-2xl bg-white/60 border border-border px-4 py-3 outline-none focus:ring-2 focus:ring-ring"
+            className="rounded-2xl bg-surface/60 border border-border px-4 py-3 outline-none focus:ring-2 focus:ring-ring"
             placeholder="예: admin"
           />
           <label className="text-xs font-medium text-muted-foreground mt-2">비밀번호</label>
@@ -147,7 +147,7 @@ function AuthPage() {
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-2xl bg-white/60 border border-border px-4 py-3 outline-none focus:ring-2 focus:ring-ring"
+            className="rounded-2xl bg-surface/60 border border-border px-4 py-3 outline-none focus:ring-2 focus:ring-ring"
             placeholder="••••••••"
           />
           <button

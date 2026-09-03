@@ -65,7 +65,7 @@ function DashboardPage() {
             "flex items-center gap-2 rounded-2xl px-4 py-2.5 font-bold",
             data.streak > 0
               ? "bg-gradient-to-r from-orange-400 to-rose-500 text-white shadow-[var(--shadow-soft)]"
-              : "bg-white/50 text-muted-foreground",
+              : "bg-surface/50 text-muted-foreground",
           ].join(" ")}
         >
           <Flame className="size-5" />
@@ -150,7 +150,7 @@ function DashboardPage() {
                   key={w.drama_id}
                   to="/dramas/$id"
                   params={{ id: w.drama_id }}
-                  className="flex items-center gap-3 rounded-2xl bg-white/50 hover:bg-white/80 transition p-2.5"
+                  className="flex items-center gap-3 rounded-2xl bg-surface/50 hover:bg-surface/80 transition p-2.5"
                 >
                   {w.thumbnail_url ? (
                     <img
@@ -200,7 +200,7 @@ function DashboardPage() {
                   key={l.lesson_id}
                   to="/lessons/$id"
                   params={{ id: l.lesson_id }}
-                  className="flex items-center gap-3 rounded-2xl bg-white/50 hover:bg-white/80 transition p-3"
+                  className="flex items-center gap-3 rounded-2xl bg-surface/50 hover:bg-surface/80 transition p-3"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-sm truncate">{l.title}</div>
@@ -237,7 +237,7 @@ function DashboardPage() {
               .map(([k, n]) => (
                 <span
                   key={k}
-                  className="rounded-full bg-white/60 border border-border px-3 py-1 text-xs font-medium"
+                  className="rounded-full bg-surface/60 border border-border px-3 py-1 text-xs font-medium"
                 >
                   {k === "기타" ? "기타" : `HSK ${k}급`} <b className="text-primary">{n}</b>
                 </span>

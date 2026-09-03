@@ -7,6 +7,7 @@ import { listCoursesWithLessons } from "@/lib/courses.functions";
 import { useMyProfile } from "@/lib/auth-client";
 import { WidgetPanel } from "@/components/widget-panel";
 import { NavLinks } from "@/components/nav-links";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -17,7 +18,7 @@ export function AppSidebar() {
       <Link
         to="/"
         aria-label="DingDong 홈으로"
-        className="glass rounded-3xl p-4 flex items-center gap-2 hover:bg-white/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="glass rounded-3xl p-4 flex items-center gap-2 hover:bg-surface/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         data-tour="sidebar-logo"
       >
         <div className="size-9 rounded-2xl gradient-primary grid place-items-center text-primary-foreground">
@@ -36,6 +37,11 @@ export function AppSidebar() {
       <WidgetPanel />
 
       <LessonList pathname={pathname} />
+
+      {/* The theme has to be reachable without an account, and /settings is
+          behind auth — so the toggle lives in the two nav surfaces (here and
+          the mobile sheet) and is mirrored in settings. */}
+      <ThemeToggle className="glass rounded-3xl p-1.5" />
     </aside>
   );
 }
@@ -85,14 +91,14 @@ function CourseNode({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-left cursor-pointer transition-colors hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+        className="w-full flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-left cursor-pointer transition-colors hover:bg-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
       >
         <ChevronRight className={`size-3.5 transition-transform ${open ? "rotate-90" : ""}`} />
         <span className="truncate font-medium">{course.title}</span>
         <span className="ml-auto text-[10px] text-muted-foreground">{course.lessons.length}</span>
       </button>
       {open && (
-        <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-white/40 pl-2">
+        <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-surface/40 pl-2">
           {course.lessons.length === 0 && (
             <div className="px-2 py-1 text-xs text-muted-foreground">비어 있음</div>
           )}
@@ -108,7 +114,7 @@ function CourseNode({
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
                   active
                     ? "gradient-primary text-primary-foreground pl-3 shadow-[var(--shadow-soft)]"
-                    : "text-foreground/75 hover:bg-white/50 hover:translate-x-0.5 active:scale-[0.98]",
+                    : "text-foreground/75 hover:bg-surface/50 hover:translate-x-0.5 active:scale-[0.98]",
                 ].join(" ")}
               >
                 {active && (

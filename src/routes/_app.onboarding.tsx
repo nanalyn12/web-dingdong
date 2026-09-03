@@ -262,7 +262,7 @@ function OnboardingPage() {
                       "rounded-full px-3 py-1.5 text-sm border transition",
                       active
                         ? "gradient-primary text-primary-foreground border-transparent"
-                        : "bg-white/60 border-border hover:bg-white",
+                        : "bg-surface/60 border-border hover:bg-surface",
                     ].join(" ")}
                   >
                     {name}

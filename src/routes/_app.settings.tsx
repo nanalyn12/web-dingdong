@@ -2,9 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { KeyRound, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Palette, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsEditor, useSession } from "@/lib/auth-client";
@@ -65,6 +66,17 @@ function SettingsPage() {
         </div>
       </header>
 
+      <section className="glass rounded-3xl p-4 sm:p-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <Palette className="size-4 text-primary" />
+          <h2 className="font-semibold">화면 테마</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          시스템 설정을 고르면 기기의 다크 모드를 그대로 따라가요.
+        </p>
+        <ThemeToggle />
+      </section>
+
       {isLoading && <p className="text-muted-foreground px-2">불러오는 중…</p>}
 
       {usage && (
@@ -86,7 +98,7 @@ function SettingsPage() {
                 <span className="text-2xl font-bold">{usage.used}</span>
                 <span className="text-muted-foreground">/ {usage.limit}회</span>
               </div>
-              <div className="h-2 rounded-full bg-white/40 overflow-hidden">
+              <div className="h-2 rounded-full bg-surface/40 overflow-hidden">
                 <div
                   className="h-full gradient-primary transition-all"
                   style={{
