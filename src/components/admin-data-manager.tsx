@@ -208,10 +208,10 @@ export function AdminDataManager() {
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded border ${
                       backup.status === "completed"
-                        ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                        ? "bg-success/8 text-success border-success/30"
                         : backup.status === "failed"
-                          ? "bg-red-100 text-red-700 border-red-200"
-                          : "bg-amber-100 text-amber-700 border-amber-200"
+                          ? "bg-danger/8 text-danger border-danger/30"
+                          : "bg-warning/8 text-warning border-warning/30"
                     }`}
                   >
                     {STATUS_LABEL[backup.status] ?? backup.status}
@@ -223,7 +223,7 @@ export function AdminDataManager() {
                   v{backup.backup_version}
                   {backup.app_version ? ` · 앱 ${backup.app_version}` : ""}
                 </p>
-                {backup.error && <p className="text-xs text-red-600">오류: {backup.error}</p>}
+                {backup.error && <p className="text-xs text-danger">오류: {backup.error}</p>}
               </div>
 
               <div className="flex gap-2 shrink-0">
@@ -321,7 +321,7 @@ function RestoreDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="size-5 text-amber-500" /> 데이터 복원
+            <AlertTriangle className="size-5 text-warning" /> 데이터 복원
           </DialogTitle>
           <DialogDescription>
             백업일: {new Date(backup.created_at).toLocaleString("ko-KR")} · 데이터 수:{" "}
@@ -400,7 +400,7 @@ function RestoreDialog({
                   </p>
                 )}
                 {preview.sharedDeletes > 0 && (
-                  <p className="text-xs text-red-600">
+                  <p className="text-xs text-danger">
                     공유 콘텐츠 {preview.sharedDeletes}건이 삭제됩니다 — 여기에 딸린 학습자 진행
                     기록도 함께 사라져요.
                   </p>

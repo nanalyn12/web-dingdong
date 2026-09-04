@@ -493,7 +493,7 @@ function SongsPage() {
                       </div>
                       <Progress value={pct} className="h-1.5" />
                       {rateLimited ? (
-                        <div className="flex items-center gap-1.5 text-[11px] text-amber-700 bg-amber-100/60 rounded-full px-2 py-1 w-fit">
+                        <div className="flex items-center gap-1.5 text-[11px] text-warning bg-warning/8 rounded-full px-2 py-1 w-fit">
                           <Loader2 className="size-3 animate-spin" />
                           <span>
                             Suno 요청 한도 초과 —{" "}
@@ -509,7 +509,7 @@ function SongsPage() {
                         )
                       )}
                       {stuck && (
-                        <div className="text-[11px] text-amber-800 bg-amber-100/70 rounded-md px-2 py-1">
+                        <div className="text-[11px] text-warning bg-warning/8 rounded-md px-2 py-1">
                           ⚠️ 10분 이상 대기 중이에요. Suno 응답이 지연되고 있어요 — 아래 버튼으로
                           취소 후 다시 시도해 보세요.
                         </div>

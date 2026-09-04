@@ -661,11 +661,11 @@ export function DingDongBot() {
                     🎙 {sttLang === "ko-KR" ? "한국어" : "中文"}
                   </button>
                   {listening && (
-                    <span className="text-[10px] text-pink-500 animate-pulse">● 듣는 중…</span>
+                    <span className="text-[10px] text-primary animate-pulse">● 듣는 중…</span>
                   )}
                 </div>
                 {micError && (
-                  <div className="mb-2 mx-1 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-[11px] text-rose-700 flex items-start gap-1.5">
+                  <div className="mb-2 mx-1 rounded-xl bg-danger/8 border border-danger/30 px-3 py-2 text-[11px] text-danger flex items-start gap-1.5">
                     <MicOff className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                     <span className="leading-snug">{micError}</span>
                   </div>
@@ -684,7 +684,7 @@ export function DingDongBot() {
                     onClick={toggleListening}
                     className={cn(
                       "h-10 w-10 rounded-full shrink-0",
-                      listening && "bg-pink-100 text-pink-600",
+                      listening && "bg-primary text-primary-foreground",
                     )}
                   >
                     {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}

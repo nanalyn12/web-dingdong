@@ -56,6 +56,12 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-surface: var(--surface);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-level-beginner: var(--level-beginner);
+  --color-level-intermediate: var(--level-intermediate);
+  --color-level-advanced: var(--level-advanced);
 }
 
 :root {
@@ -142,6 +148,21 @@
      could not re-theme: 50% white stays glare on a 0.22 background. White
      here keeps the light rendering identical to those literals. */
   --surface: oklch(1 0 0);
+
+  /* Status, as TEXT colours. Distinct from --destructive, which is the
+     background of a destructive button and pairs with --destructive-foreground;
+     these are read against a card or the app gradient, so they are dark enough
+     to clear AA there. palette-tokens.test.ts fails if that stops being true. */
+  --success: oklch(0.46 0.13 158);
+  --warning: oklch(0.48 0.11 70);
+  --danger: oklch(0.5 0.18 22);
+
+  /* Difficulty. A separate axis from status on purpose — routing these through
+     --success/--danger would say 초급 means success and 중급 means danger.
+     Told apart by hue, and every badge carries its label as text. */
+  --level-beginner: oklch(0.48 0.13 158);
+  --level-intermediate: oklch(0.52 0.16 350);
+  --level-advanced: oklch(0.515 0.16 295);
   --surface-read: oklch(1 0 0 / 0.94);
 }
 
@@ -174,6 +195,12 @@
   /* Lighter than --background, so the same `/NN` opacity that made a card
      brighter in light makes it more raised here rather than blinding. */
   --surface: oklch(0.34 0.035 290);
+  --success: oklch(0.78 0.14 158);
+  --warning: oklch(0.8 0.13 78);
+  --danger: oklch(0.78 0.15 22);
+  --level-beginner: oklch(0.78 0.14 158);
+  --level-intermediate: oklch(0.78 0.14 350);
+  --level-advanced: oklch(0.78 0.13 295);
   --surface-read: oklch(0.26 0.035 290 / 0.96);
   --background: oklch(0.22 0.04 290);
   --foreground: oklch(0.96 0.01 300);

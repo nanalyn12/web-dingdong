@@ -36,7 +36,7 @@ export function VocabTagEditor({
       <PopoverTrigger
         className={cn(
           "inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] md:min-h-0",
-          "border-slate-200 bg-surface/70 text-slate-600 hover:bg-surface",
+          "border-border bg-surface/70 text-muted-foreground hover:bg-surface",
         )}
         aria-label="태그 편집"
       >
@@ -44,10 +44,10 @@ export function VocabTagEditor({
         {compact ? tags.length || "+" : tags.length ? `${tags.length} 태그` : "태그 추가"}
       </PopoverTrigger>
       <PopoverContent className="w-64 space-y-2 p-3">
-        <div className="text-xs font-semibold text-slate-500">태그</div>
+        <div className="text-xs font-semibold text-muted-foreground">태그</div>
         <div className="flex gap-1 flex-wrap min-h-6">
           {tags.length === 0 && (
-            <span className="text-[11px] text-slate-400">아직 태그가 없어요.</span>
+            <span className="text-[11px] text-muted-foreground/70">아직 태그가 없어요.</span>
           )}
           {tags.map((t) => (
             <button
@@ -83,7 +83,7 @@ export function VocabTagEditor({
         </div>
         {allTags.length > 0 && (
           <>
-            <div className="text-[11px] text-slate-500 mt-2">기존 태그</div>
+            <div className="text-[11px] text-muted-foreground mt-2">기존 태그</div>
             <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
               {allTags.map((t) => {
                 const on = tags.includes(t);
@@ -95,7 +95,7 @@ export function VocabTagEditor({
                       "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] cursor-pointer border",
                       on
                         ? "border-primary/40 bg-primary/15 text-primary"
-                        : "border-slate-200 bg-surface text-slate-600 hover:bg-slate-50",
+                        : "border-border bg-surface text-muted-foreground hover:bg-muted",
                     )}
                   >
                     {on && <Check className="size-3" />}#{t}

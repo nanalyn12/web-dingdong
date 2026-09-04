@@ -290,10 +290,10 @@ function OnboardingPage() {
             ✅ 이미 {profile.role === "admin" ? "관리자" : "교사"} 권한이 있어요.
           </p>
         ) : profile?.teacher_status === "pending" ? (
-          <p className="text-sm font-medium text-amber-600">⏳ 승인 대기 중이에요.</p>
+          <p className="text-sm font-medium text-warning">⏳ 승인 대기 중이에요.</p>
         ) : profile?.teacher_status === "rejected" ? (
           <>
-            <p className="text-sm font-medium text-rose-600">이전 신청이 거절되었어요.</p>
+            <p className="text-sm font-medium text-danger">이전 신청이 거절되었어요.</p>
             <Button variant="outline" onClick={openApplyDialog}>
               다시 신청하기
             </Button>

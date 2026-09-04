@@ -80,15 +80,15 @@ export const Route = createFileRoute("/_app/studio")({
 });
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-  queued: { label: "대기", cls: "bg-amber-100 text-amber-700 border-amber-200" },
-  running: { label: "생성 중", cls: "bg-blue-100 text-blue-700 border-blue-200" },
+  queued: { label: "대기", cls: "bg-muted text-foreground border-border" },
+  running: { label: "생성 중", cls: "bg-sky/25 text-foreground border-sky/40" },
   awaiting_approval: {
     label: "승인 대기",
-    cls: "bg-purple-100 text-purple-700 border-purple-200",
+    cls: "bg-warning/8 text-warning border-warning/30",
   },
-  uploading: { label: "업로드 중", cls: "bg-blue-100 text-blue-700 border-blue-200" },
-  done: { label: "완료", cls: "bg-green-100 text-green-700 border-green-200" },
-  failed: { label: "실패", cls: "bg-red-100 text-red-700 border-red-200" },
+  uploading: { label: "업로드 중", cls: "bg-lavender/25 text-foreground border-lavender/40" },
+  done: { label: "완료", cls: "bg-success/8 text-success border-success/30" },
+  failed: { label: "실패", cls: "bg-danger/8 text-danger border-danger/30" },
 };
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -193,10 +193,10 @@ function StudioPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Youtube className="size-4 text-red-500" />
+          <Youtube className="size-4 text-primary" />
           {ytStatus.data?.connected ? (
             <>
-              <span className="text-green-700 font-medium">연결됨</span>
+              <span className="text-success font-medium">연결됨</span>
               {/* Reconnecting is the only way to widen an existing token's
                   scopes — captions.insert needs force-ssl, which connections
                   made before that was requested do not carry. */}
@@ -285,7 +285,7 @@ function RehostPanel() {
   return (
     <div className="glass rounded-2xl p-4 space-y-3 border border-amber-400/40 bg-amber-50/40">
       <div className="flex items-center gap-2 flex-wrap">
-        <Youtube className="size-4 text-red-500 shrink-0" />
+        <Youtube className="size-4 text-primary shrink-0" />
         <span className="text-sm font-semibold">웹 전용 영상 {count}개가 볼륨을 쓰고 있어요</span>
         <span className="text-xs text-muted-foreground">
           YouTube(비공개 목록)로 옮기면 볼륨이 비워지고 재생은 임베드로 바뀝니다.
@@ -801,7 +801,7 @@ function JobList({ jobs }: { jobs: VideoJob[] }) {
 
             {open && (
               <div className="mt-3 ml-19 pl-0 md:pl-19 space-y-2">
-                {j.error && <p className="text-xs text-red-600 whitespace-pre-wrap">{j.error}</p>}
+                {j.error && <p className="text-xs text-danger whitespace-pre-wrap">{j.error}</p>}
                 {j.video_path && (
                   <video
                     src={`/media/${j.video_path}`}

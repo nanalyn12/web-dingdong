@@ -175,7 +175,7 @@ export function PushManager() {
         aria-label="알림 설정"
       >
         {subscribed ? (
-          <Bell className="h-4 w-4 text-pink-500" />
+          <Bell className="h-4 w-4 text-primary" />
         ) : (
           <BellOff className="h-4 w-4 text-muted-foreground" />
         )}
@@ -237,7 +237,7 @@ export function PushManager() {
       {/* iOS install banner */}
       {showIOSBanner && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 max-w-sm w-[calc(100vw-2rem)] glass rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3">
-          <Share className="h-5 w-5 text-pink-500 shrink-0" />
+          <Share className="h-5 w-5 text-primary shrink-0" />
           <p className="text-xs flex-1">
             iOS는 <b>홈 화면에 추가</b> 후에만 알림을 받을 수 있어요. 공유 → 홈 화면에 추가!
           </p>

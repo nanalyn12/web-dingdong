@@ -403,31 +403,26 @@ export function parseRichMarkdown(md: string): Block[] {
 
 const TONES = [
   {
-    text: "text-rose-600",
     bg: "bg-rose-500",
     soft: "from-rose-50 to-surface",
     border: "border-rose-100",
   },
   {
-    text: "text-sky-600",
     bg: "bg-sky-500",
     soft: "from-sky-50 to-surface",
     border: "border-sky-100",
   },
   {
-    text: "text-emerald-600",
     bg: "bg-emerald-500",
     soft: "from-emerald-50 to-surface",
     border: "border-emerald-100",
   },
   {
-    text: "text-indigo-600",
     bg: "bg-indigo-500",
     soft: "from-indigo-50 to-surface",
     border: "border-indigo-100",
   },
   {
-    text: "text-amber-600",
     bg: "bg-amber-500",
     soft: "from-amber-50 to-surface",
     border: "border-amber-100",
@@ -471,20 +466,22 @@ function SentenceCard({
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <div
-              className="text-base sm:text-[17px] font-bold text-slate-900 leading-snug"
+              className="text-base sm:text-[17px] font-bold text-foreground leading-snug"
               lang="zh-CN"
             >
               {s.zh}
             </div>
             {showPinyin && s.pinyin && (
               <div
-                className={cn("text-xs italic mt-0.5", tone.text)}
+                className="text-xs italic mt-0.5 text-muted-foreground"
                 style={{ fontFamily: "Georgia, serif" }}
               >
                 {s.pinyin}
               </div>
             )}
-            {s.ko && <div className="text-sm text-slate-600 mt-0.5 leading-snug">{s.ko}</div>}
+            {s.ko && (
+              <div className="text-sm text-muted-foreground mt-0.5 leading-snug">{s.ko}</div>
+            )}
           </div>
           <button
             type="button"
@@ -554,23 +551,21 @@ function ExpressionCard({
           <div className="min-w-0">
             <div className="flex items-baseline gap-2 flex-wrap">
               <div
-                className="text-2xl sm:text-3xl font-black text-slate-900 leading-none tracking-tight"
+                className="text-2xl sm:text-3xl font-black text-foreground leading-none tracking-tight"
                 lang="zh-CN"
               >
                 {item.zh}
               </div>
               {item.pinyin && (
                 <div
-                  className={cn("text-sm italic", tone.text)}
+                  className="text-sm italic text-muted-foreground"
                   style={{ fontFamily: "Georgia, serif" }}
                 >
                   {item.pinyin}
                 </div>
               )}
             </div>
-            <div
-              className={cn("mt-0.5 text-[10px] font-black tracking-[0.25em] uppercase", tone.text)}
-            >
+            <div className="mt-0.5 text-[10px] font-black tracking-[0.25em] uppercase text-muted-foreground">
               {item.isGrammar ? "Grammar Pattern" : "Key Expression"}
             </div>
           </div>
@@ -591,27 +586,24 @@ function ExpressionCard({
 
       {/* Meaning */}
       <div className="mt-3 rounded-2xl bg-surface/80 backdrop-blur border border-surface px-3.5 py-2.5">
-        <div className={cn("flex items-center gap-1.5 mb-0.5", tone.text)}>
+        <div className="flex items-center gap-1.5 mb-0.5 text-muted-foreground">
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Meaning</span>
           {meaningEmoji && <span className="text-sm leading-none">{meaningEmoji}</span>}
         </div>
-        <p className="text-sm sm:text-base font-semibold text-slate-800 leading-snug">
+        <p className="text-sm sm:text-base font-semibold text-foreground leading-snug">
           {meaningText}
         </p>
         {item.notes && (
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-1">{item.notes}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mt-1">
+            {item.notes}
+          </p>
         )}
       </div>
 
       {/* Examples */}
       {item.examples.length > 0 && (
         <div className="mt-2.5 space-y-1.5">
-          <div
-            className={cn(
-              "text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-1.5",
-              tone.text,
-            )}
-          >
+          <div className="text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-1.5 text-muted-foreground">
             <MessageSquareQuote className="size-3" />
             예문 {item.examples.length}
           </div>
@@ -638,14 +630,14 @@ function H2({ text, number }: { text: string; number: number }) {
   return (
     <div className="mt-4 first:mt-1 flex items-center gap-3">
       <span className="h-9 w-1.5 rounded-full bg-gradient-to-b from-rose-500 via-fuchsia-500 to-indigo-500 shrink-0" />
-      <span className="grid place-items-center size-9 rounded-xl bg-gradient-to-br from-rose-100 to-indigo-100 text-rose-600 shrink-0">
+      <span className="grid place-items-center size-9 rounded-xl bg-gradient-to-br from-rose-100 to-indigo-100 text-primary shrink-0">
         <Sparkles className="size-4" />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-black tracking-[0.3em] text-slate-400 uppercase">
+        <div className="text-[10px] font-black tracking-[0.3em] text-muted-foreground/70 uppercase">
           § {String(number).padStart(2, "0")}
         </div>
-        <h2 className="text-2xl sm:text-[28px] font-black text-slate-900 leading-tight truncate">
+        <h2 className="text-2xl sm:text-[28px] font-black text-foreground leading-tight truncate">
           {text}
         </h2>
       </div>
@@ -666,7 +658,7 @@ function InlineText({
   const zh = extractChinese(text);
   // Render with markdown inline (for **bold**)
   return (
-    <div className="prose prose-sm max-w-none prose-p:my-0 prose-strong:text-primary prose-strong:font-semibold text-slate-700 leading-relaxed">
+    <div className="prose prose-sm max-w-none prose-p:my-0 prose-strong:text-primary prose-strong:font-semibold text-foreground leading-relaxed">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
       {zh && (
         <div className="mt-2">
@@ -708,9 +700,9 @@ export function RichLessonContent({
           return (
             <h3
               key={i}
-              className="mt-6 mb-1 text-lg font-bold text-slate-900 flex items-center gap-2 before:content-[''] before:size-2 before:rotate-45 before:bg-gradient-to-br before:from-rose-400 before:to-indigo-400"
+              className="mt-6 mb-1 text-lg font-bold text-foreground flex items-center gap-2 before:content-[''] before:size-2 before:rotate-45 before:bg-gradient-to-br before:from-rose-400 before:to-indigo-400"
             >
-              {b.number && <span className="text-rose-500 tabular-nums">{b.number}.</span>}
+              {b.number && <span className="text-primary tabular-nums">{b.number}.</span>}
               {b.text}
             </h3>
           );
@@ -731,7 +723,7 @@ export function RichLessonContent({
             >
               <div
                 className={cn(
-                  "prose prose-sm sm:prose max-w-none prose-p:my-0 prose-strong:text-primary text-slate-700 leading-[1.85]",
+                  "prose prose-sm sm:prose max-w-none prose-p:my-0 prose-strong:text-primary text-foreground leading-[1.85]",
                   isFirst &&
                     variant === "content" &&
                     "first-letter:float-left first-letter:mr-2 first-letter:text-5xl first-letter:font-bold first-letter:leading-[0.9] first-letter:text-transparent first-letter:bg-clip-text first-letter:bg-gradient-to-br first-letter:from-rose-500 first-letter:to-indigo-500",
@@ -753,11 +745,11 @@ export function RichLessonContent({
               key={i}
               className="relative rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 via-surface to-indigo-50/50 px-6 py-5 pl-14 shadow-sm"
             >
-              <Quote className="absolute left-4 top-4 size-6 text-sky-400/70" />
-              <div className="text-[10px] font-bold tracking-[0.2em] text-sky-500 uppercase mb-1">
+              <Quote className="absolute left-4 top-4 size-6 text-primary/70" />
+              <div className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase mb-1">
                 핵심 포인트
               </div>
-              <div className="text-slate-800 leading-relaxed italic">
+              <div className="text-foreground leading-relaxed italic">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{b.text}</ReactMarkdown>
               </div>
             </blockquote>
@@ -796,7 +788,7 @@ export function RichLessonContent({
               key={i}
               className="rounded-3xl bg-surface/70 border border-surface p-4 sm:p-5 shadow-sm space-y-2"
             >
-              <div className="text-[10px] font-black tracking-[0.3em] uppercase text-rose-500 flex items-center gap-1.5">
+              <div className="text-[10px] font-black tracking-[0.3em] uppercase text-primary flex items-center gap-1.5">
                 <MessageSquareQuote className="size-3" /> 예문
               </div>
               {b.items.map((s, idx) => (
@@ -831,7 +823,7 @@ export function RichLessonContent({
                     )}
                   >
                     <span className={cn("mt-1.5 size-1.5 rounded-full shrink-0", tone.bg)} />
-                    <span className="flex-1 text-sm text-slate-700 leading-relaxed">
+                    <span className="flex-1 text-sm text-foreground leading-relaxed">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{t}</ReactMarkdown>
                     </span>
                     {zh && (

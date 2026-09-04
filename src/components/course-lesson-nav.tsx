@@ -105,7 +105,7 @@ export function CourseLessonNav({ lessonId }: { lessonId: string }) {
                   <span className="w-5 shrink-0 text-right opacity-70">{i + 1}</span>
                   <span className="min-w-0 flex-1 truncate">{l.title}</span>
                   {done.has(l.id) && !active && (
-                    <Check className="size-3.5 shrink-0 text-emerald-600" />
+                    <Check className="size-3.5 shrink-0 text-success" />
                   )}
                 </Link>
               </li>

@@ -103,9 +103,9 @@ function IntegrationCard({ item }: { item: IntegrationStatus }) {
     <div className="glass rounded-2xl p-4 space-y-2">
       <div className="flex items-start gap-2">
         {item.configured ? (
-          <CheckCircle2 className="size-5 text-emerald-600 shrink-0 mt-0.5" />
+          <CheckCircle2 className="size-5 text-success shrink-0 mt-0.5" />
         ) : (
-          <XCircle className="size-5 text-amber-600 shrink-0 mt-0.5" />
+          <XCircle className="size-5 text-warning shrink-0 mt-0.5" />
         )}
         <div className="min-w-0 flex-1">
           <div className="font-semibold flex items-center gap-2 flex-wrap">
@@ -113,9 +113,7 @@ function IntegrationCard({ item }: { item: IntegrationStatus }) {
             <span
               className={[
                 "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                item.configured
-                  ? "bg-emerald-500/15 text-emerald-700"
-                  : "bg-amber-500/15 text-amber-700",
+                item.configured ? "bg-success/8 text-success" : "bg-warning/8 text-warning",
               ].join(" ")}
             >
               {item.configured ? "설정됨" : "미설정"}
@@ -140,7 +138,7 @@ function IntegrationCard({ item }: { item: IntegrationStatus }) {
           </Button>
           {result && (
             <span
-              className={["text-xs", result.ok ? "text-emerald-700" : "text-destructive"].join(" ")}
+              className={["text-xs", result.ok ? "text-success" : "text-destructive"].join(" ")}
             >
               {result.ok ? "✅" : "❌"} {result.message}
             </span>

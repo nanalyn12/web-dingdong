@@ -188,7 +188,7 @@ function SummaryCard({
   tone?: "default" | "good" | "warn";
 }) {
   const cls =
-    tone === "warn" ? "text-amber-700" : tone === "good" ? "text-emerald-700" : "text-foreground";
+    tone === "warn" ? "text-warning" : tone === "good" ? "text-success" : "text-foreground";
   return (
     <div className="glass rounded-2xl p-4">
       <div className={`text-2xl font-bold ${cls}`}>{value}</div>
@@ -236,11 +236,11 @@ function StudentCardView({ s }: { s: StudentRow }) {
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 font-medium">
             {idleTone(idle) === "stale" && (
-              <AlertTriangle className="size-3.5 shrink-0 text-amber-600" />
+              <AlertTriangle className="size-3.5 shrink-0 text-warning" />
             )}
             <span className="truncate">{s.name}</span>
             {s.role === "teacher" && (
-              <span className="shrink-0 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[9px] font-bold text-sky-700">
+              <span className="shrink-0 rounded-full bg-sky/25 px-1.5 py-0.5 text-[9px] font-bold text-foreground">
                 교수자
               </span>
             )}
@@ -259,11 +259,7 @@ function StudentCardView({ s }: { s: StudentRow }) {
           label="퀴즈 평균"
           value={s.quizAvgPct == null ? "—" : `${s.quizAvgPct}%`}
           tone={
-            s.quizAvgPct == null
-              ? undefined
-              : s.quizAvgPct >= 70
-                ? "text-emerald-700"
-                : "text-amber-700"
+            s.quizAvgPct == null ? undefined : s.quizAvgPct >= 70 ? "text-success" : "text-warning"
           }
         />
       </dl>
@@ -288,11 +284,11 @@ function StudentRowView({ s }: { s: StudentRow }) {
       <td className="px-3 py-2.5">
         <div className="font-medium flex items-center gap-1.5">
           {idleTone(idle) === "stale" && (
-            <AlertTriangle className="size-3.5 text-amber-600 shrink-0" />
+            <AlertTriangle className="size-3.5 text-warning shrink-0" />
           )}
           {s.name}
           {s.role === "teacher" && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-700">
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-sky/25 text-foreground">
               교수자
             </span>
           )}
@@ -305,7 +301,7 @@ function StudentRowView({ s }: { s: StudentRow }) {
       <td className="px-3 py-2.5 text-center">
         {s.streak > 0 ? (
           <span className="inline-flex items-center gap-0.5">
-            <Flame className="size-3.5 text-orange-500" />
+            <Flame className="size-3.5 text-primary" />
             {s.streak}
           </span>
         ) : (
@@ -319,7 +315,7 @@ function StudentRowView({ s }: { s: StudentRow }) {
         {s.quizAvgPct == null ? (
           <span className="text-muted-foreground/60">—</span>
         ) : (
-          <span className={s.quizAvgPct >= 70 ? "text-emerald-700" : "text-amber-700"}>
+          <span className={s.quizAvgPct >= 70 ? "text-success" : "text-warning"}>
             {s.quizAvgPct}%
           </span>
         )}

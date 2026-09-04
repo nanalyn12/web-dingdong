@@ -51,10 +51,10 @@ export const Route = createFileRoute("/_app/vocabulary")({
 });
 
 const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
-  new: { text: "🆕 신규", cls: "bg-sky-100 text-sky-700 border-sky-200" },
-  due: { text: "🔔 오늘", cls: "bg-rose-100 text-rose-700 border-rose-200" },
-  learning: { text: "⏳ 진행중", cls: "bg-amber-100 text-amber-800 border-amber-200" },
-  learned: { text: "✅ 암기", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  new: { text: "🆕 신규", cls: "bg-sky/25 text-foreground border-sky/40" },
+  due: { text: "🔔 오늘", cls: "bg-warning/8 text-warning border-warning/30" },
+  learning: { text: "⏳ 진행중", cls: "bg-lavender/25 text-foreground border-lavender/40" },
+  learned: { text: "✅ 암기", cls: "bg-success/8 text-success border-success/30" },
 };
 
 function VocabularyPage() {
@@ -131,10 +131,10 @@ function VocabularyPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             총 <b>{store.items.length}</b>개 · 복습 예정{" "}
-            <b className="text-rose-500">{counts.due}</b> · 신규 <b>{counts.fresh}</b> · 암기{" "}
-            <b className="text-emerald-600">{counts.learned}</b>
+            <b className="text-warning">{counts.due}</b> · 신규 <b>{counts.fresh}</b> · 암기{" "}
+            <b className="text-success">{counts.learned}</b>
             {store.authed === false && (
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-semibold">
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-warning/8 text-warning border border-warning/30 text-[11px] font-semibold">
                 게스트 — 이 브라우저에만 저장
               </span>
             )}
@@ -219,7 +219,7 @@ function VocabularyPage() {
               "rounded-full px-3 py-1 text-[11px] border cursor-pointer",
               !search.tag
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-slate-200 bg-surface/70 text-slate-600 hover:bg-surface",
+                : "border-border bg-surface/70 text-muted-foreground hover:bg-surface",
             )}
           >
             모든 태그
@@ -232,7 +232,7 @@ function VocabularyPage() {
                 "rounded-full px-3 py-1 text-[11px] border cursor-pointer",
                 search.tag === t
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-slate-200 bg-surface/70 text-slate-600 hover:bg-surface",
+                  : "border-border bg-surface/70 text-muted-foreground hover:bg-surface",
               )}
             >
               #{t}
@@ -296,16 +296,16 @@ function VocabCard({
           onClick={() => setPractice(true)}
           className="min-w-0 flex-1 text-left cursor-pointer"
         >
-          <p className="text-xl font-semibold text-slate-900 leading-tight" lang="zh-CN">
+          <p className="text-xl font-semibold text-foreground leading-tight" lang="zh-CN">
             {v.zh}
           </p>
-          {v.pinyin && <p className="text-xs italic text-slate-500 mt-0.5">{v.pinyin}</p>}
-          {v.ko && <p className="text-sm text-slate-700 mt-1">{v.ko}</p>}
+          {v.pinyin && <p className="text-xs italic text-muted-foreground mt-0.5">{v.pinyin}</p>}
+          {v.ko && <p className="text-sm text-foreground mt-1">{v.ko}</p>}
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="inline-grid min-h-11 min-w-11 shrink-0 cursor-pointer place-items-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500 md:min-h-0 md:min-w-0"
+          className="inline-grid min-h-11 min-w-11 shrink-0 cursor-pointer place-items-center rounded-lg p-1.5 text-muted-foreground/70 transition-colors hover:bg-danger/10 hover:text-danger md:min-h-0 md:min-w-0"
           aria-label="삭제"
         >
           <Trash2 className="size-4" />
@@ -323,7 +323,7 @@ function VocabCard({
           {status === "learning" && days > 0 && ` · ${days}일 후`}
         </span>
         {v.hsk && (
-          <span className="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px]">
+          <span className="rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-[10px]">
             HSK {v.hsk}
           </span>
         )}

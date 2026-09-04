@@ -44,10 +44,10 @@ export const Route = createFileRoute("/_app/curriculum/$id")({
 });
 
 const PHASE_STYLE: Record<string, string> = {
-  도입: "bg-pink-100 text-pink-800",
-  전개: "bg-sky-100 text-sky-800",
-  활동: "bg-emerald-100 text-emerald-800",
-  정리: "bg-violet-100 text-violet-800",
+  도입: "bg-pink/25 text-foreground",
+  전개: "bg-sky/25 text-foreground",
+  활동: "bg-mint/25 text-foreground",
+  정리: "bg-lavender/25 text-foreground",
 };
 
 function CurriculumDetail() {
@@ -147,7 +147,7 @@ function CurriculumDetail() {
               {row.course_title && (
                 <Link
                   to="/courses"
-                  className="inline-flex items-center gap-1 text-xs bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full hover:bg-sky-200"
+                  className="inline-flex items-center gap-1 text-xs bg-sky/25 text-foreground px-2.5 py-1 rounded-full hover:bg-sky/40"
                 >
                   <GraduationCap className="size-3.5" /> {row.course_title}
                 </Link>
@@ -156,7 +156,7 @@ function CurriculumDetail() {
                 <Link
                   to="/lessons/$id"
                   params={{ id: row.lesson_id }}
-                  className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full hover:bg-emerald-200"
+                  className="inline-flex items-center gap-1 text-xs bg-mint/25 text-foreground px-2.5 py-1 rounded-full hover:bg-mint/40"
                 >
                   <BookOpen className="size-3.5" /> {row.lesson_title}
                 </Link>
@@ -181,7 +181,7 @@ function CurriculumDetail() {
             onClick={() => {
               if (confirm("삭제할까요?")) delM.mutate();
             }}
-            className="text-red-600 hover:text-red-700"
+            className="text-danger hover:text-danger/80"
           >
             <Trash2 className="size-4" /> 삭제
           </Button>
@@ -237,7 +237,7 @@ function CurriculumDetail() {
                   </TableCell>
                   <TableCell>
                     <span
-                      className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${PHASE_STYLE[b.phase ?? ""] ?? "bg-slate-100 text-slate-700"}`}
+                      className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${PHASE_STYLE[b.phase ?? ""] ?? "bg-slate-100 text-foreground"}`}
                     >
                       {b.phase}
                     </span>
@@ -294,7 +294,7 @@ function CurriculumDetail() {
                 </div>
               )}
               {a.why_this && (
-                <div className="text-xs text-pink-700 bg-pink-50/50 rounded-lg p-2">
+                <div className="text-xs text-foreground bg-pink/20 rounded-lg p-2">
                   💡 {a.why_this}
                 </div>
               )}
@@ -440,7 +440,7 @@ function LinkCard({ link, to }: { link: CurriculumLink; to: LinkTarget }) {
       {link.subtitle && <div className="text-xs text-muted-foreground">{link.subtitle}</div>}
       {link.reason && <p className="text-sm mt-1">{link.reason}</p>}
       {link.block_hint && (
-        <div className="text-xs text-pink-700 bg-pink-50/70 rounded-lg p-2 mt-2">
+        <div className="text-xs text-foreground bg-pink/25 rounded-lg p-2 mt-2">
           ⏱️ {link.block_hint}
         </div>
       )}

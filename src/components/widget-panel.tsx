@@ -280,9 +280,7 @@ function StatsWidget({ signedIn }: { signedIn: boolean }) {
         </Link>
       )}
       {data && data.dueCount === 0 && (
-        <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
-          오늘 복습 완료! 잘하고 있어요 ✨
-        </p>
+        <p className="text-[11px] text-success">오늘 복습 완료! 잘하고 있어요 ✨</p>
       )}
     </div>
   );
@@ -479,11 +477,7 @@ function VocabWidget({ signedIn }: { signedIn: boolean }) {
 
   const word = pickDueWord(queue ?? [], 0);
   if (!word)
-    return (
-      <p className="text-xs text-emerald-700 dark:text-emerald-300">
-        복습할 단어를 다 끝냈어요. 잘하고 있어요 ✨
-      </p>
-    );
+    return <p className="text-xs text-success">복습할 단어를 다 끝냈어요. 잘하고 있어요 ✨</p>;
 
   return (
     <div className="space-y-2">

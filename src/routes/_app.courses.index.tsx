@@ -43,7 +43,13 @@ import {
 import { useIsEditor } from "@/lib/auth-client";
 import { generateLesson } from "@/lib/generate-lesson.functions";
 import { courseMatchesCategory, findCategory } from "@/lib/course-categories";
-import { LEVEL_LABEL_HSK, LEVEL_OPTIONS, LEVEL_ORDER, levelLabelHsk } from "@/lib/levels";
+import {
+  LEVEL_LABEL_HSK,
+  LEVEL_OPTIONS,
+  LEVEL_ORDER,
+  LEVEL_TONE,
+  levelLabelHsk,
+} from "@/lib/levels";
 
 type Level = "beginner" | "intermediate" | "advanced";
 
@@ -500,20 +506,20 @@ function CourseCard({ course }: { course: CourseWithCount }) {
     // 🌱 chip the same level already uses elsewhere.
     beginner: {
       bar: "bg-gradient-to-b from-emerald-300 to-teal-500",
-      pill: "bg-emerald-500/15 text-emerald-700",
-      ring: "text-emerald-500",
+      pill: `bg-level-beginner/15 ${LEVEL_TONE.beginner}`,
+      ring: LEVEL_TONE.beginner,
       glow: "hover:shadow-[0_10px_30px_-12px_rgba(16,185,129,0.4)]",
     },
     intermediate: {
       bar: "bg-gradient-to-b from-rose-400 to-pink-500",
-      pill: "bg-rose-500/15 text-rose-700",
-      ring: "text-rose-500",
+      pill: `bg-level-intermediate/15 ${LEVEL_TONE.intermediate}`,
+      ring: LEVEL_TONE.intermediate,
       glow: "hover:shadow-[0_10px_30px_-12px_rgba(251,113,133,0.45)]",
     },
     advanced: {
       bar: "bg-gradient-to-b from-violet-500 to-purple-600",
-      pill: "bg-violet-500/15 text-violet-700",
-      ring: "text-violet-500",
+      pill: `bg-level-advanced/15 ${LEVEL_TONE.advanced}`,
+      ring: LEVEL_TONE.advanced,
       glow: "hover:shadow-[0_10px_30px_-12px_rgba(139,92,246,0.45)]",
     },
   }[courseLevel];

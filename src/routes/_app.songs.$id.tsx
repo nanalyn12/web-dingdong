@@ -266,7 +266,7 @@ function RelatedLessonsCard({ songId, isEditor }: { songId: string; isEditor: bo
             )}
             {l.difference && <p className="text-xs text-muted-foreground">↔ {l.difference}</p>}
             {l.order_tip && (
-              <p className="text-xs text-emerald-700 bg-emerald-500/10 rounded-xl px-2.5 py-1.5">
+              <p className="text-xs text-foreground bg-primary/10 rounded-xl px-2.5 py-1.5">
                 💡 {l.order_tip}
               </p>
             )}
@@ -552,11 +552,11 @@ function SongPlayer({
                   </span>
                 )}
                 {song.source === "curated" ? (
-                  <span className="rounded-full bg-rose-500/15 text-rose-700 px-2 py-0.5 text-[11px] font-semibold">
+                  <span className="rounded-full bg-pink/25 text-foreground px-2 py-0.5 text-[11px] font-semibold">
                     🎧 실제 노래
                   </span>
                 ) : (
-                  <span className="rounded-full bg-violet-500/15 text-violet-700 px-2 py-0.5 text-[11px] font-semibold">
+                  <span className="rounded-full bg-lavender/25 text-foreground px-2 py-0.5 text-[11px] font-semibold">
                     🤖 AI 생성
                   </span>
                 )}
@@ -576,12 +576,12 @@ function SongPlayer({
                   </span>
                 )}
                 {song.status === "generating_audio" && (
-                  <span className="rounded-full bg-amber-200/60 text-amber-900 px-2 py-0.5 text-[11px] font-semibold animate-pulse">
+                  <span className="rounded-full bg-warning/8 text-warning px-2 py-0.5 text-[11px] font-semibold animate-pulse">
                     🎙️ 음원 생성 중
                   </span>
                 )}
                 {song.status === "generating_video" && (
-                  <span className="rounded-full bg-amber-200/60 text-amber-900 px-2 py-0.5 text-[11px] font-semibold animate-pulse">
+                  <span className="rounded-full bg-warning/8 text-warning px-2 py-0.5 text-[11px] font-semibold animate-pulse">
                     🎬 영상 생성 중
                   </span>
                 )}
@@ -1444,7 +1444,7 @@ function ClozeActivity({
                     "inline-block min-w-16 border-b-2 bg-transparent px-1 text-center font-semibold outline-none transition-colors",
                     revealed
                       ? ok
-                        ? "border-emerald-500 text-emerald-700"
+                        ? "border-success text-success"
                         : "border-destructive text-destructive"
                       : "border-primary/40 focus:border-primary",
                   ].join(" ")}
@@ -1461,7 +1461,7 @@ function ClozeActivity({
               </div>
               {revealed && !ok && (
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  정답: <span className="font-semibold text-emerald-600">{it.answer}</span>
+                  정답: <span className="font-semibold text-success">{it.answer}</span>
                 </div>
               )}
             </li>
@@ -1636,7 +1636,7 @@ function RepeatAfterMe({
           <span>
             {i + 1} / {timed.length}
           </span>
-          {playedKeys.includes(cur.zh) && <span className="text-emerald-600">· 재생함 ✅</span>}
+          {playedKeys.includes(cur.zh) && <span className="text-success">· 재생함 ✅</span>}
         </div>
         <div className="text-2xl font-bold">{cur.zh}</div>
         {cur.pinyin && <div className="text-sm font-mono text-primary/80">{cur.pinyin}</div>}
@@ -1871,7 +1871,7 @@ function GrammarNoteRow({
                 "shrink-0 size-6 rounded-full grid place-items-center text-xs transition-all",
                 studied
                   ? "bg-emerald-500 text-white shadow"
-                  : "bg-surface/70 text-muted-foreground hover:bg-emerald-100 hover:text-emerald-700",
+                  : "bg-surface/70 text-muted-foreground hover:bg-success/10 hover:text-success",
               ].join(" ")}
             >
               {studied ? "✓" : "○"}
@@ -2202,7 +2202,7 @@ function SunoStatusPanel({
       </div>
       <Progress value={Math.min(99.9, pct)} className="h-1.5" />
       {rateLimited ? (
-        <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-100/70 rounded-2xl px-3 py-2">
+        <div className="flex items-center gap-1.5 text-xs text-warning bg-warning/8 rounded-2xl px-3 py-2">
           <Loader2 className="size-3.5 animate-spin" />
           <span>
             Suno 요청 한도 초과 — {retryIn > 0 ? `${retryIn}초 후 자동 재시도` : "재시도 중…"}

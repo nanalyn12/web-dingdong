@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import { listCoursesWithCounts, listCoursesWithLessons } from "@/lib/courses.functions";
 import { listMyLessonProgress } from "@/lib/lesson-progress.functions";
-import { levelLabelHsk } from "@/lib/levels";
+import { LEVEL_TONE, levelLabelHsk } from "@/lib/levels";
 
 export const Route = createFileRoute("/_app/courses/$id")({
   head: () => ({
@@ -16,9 +16,9 @@ export const Route = createFileRoute("/_app/courses/$id")({
 });
 
 const LEVEL_PILL: Record<string, string> = {
-  beginner: "bg-emerald-500/15 text-emerald-700",
-  intermediate: "bg-rose-500/15 text-rose-700",
-  advanced: "bg-violet-500/15 text-violet-700",
+  beginner: `bg-level-beginner/15 ${LEVEL_TONE.beginner}`,
+  intermediate: `bg-level-intermediate/15 ${LEVEL_TONE.intermediate}`,
+  advanced: `bg-level-advanced/15 ${LEVEL_TONE.advanced}`,
 };
 
 function CourseDetail() {
@@ -146,7 +146,7 @@ function CourseDetail() {
                       )}
                     </span>
                     {p?.completed ? (
-                      <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                      <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-success">
                         <Check className="size-3.5" /> 완료
                       </span>
                     ) : p ? (

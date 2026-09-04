@@ -26,7 +26,6 @@ type KeyExpression = {
 type Tone = {
   tag: string;
   hover: string;
-  pin: string;
   ring: string;
 };
 
@@ -181,7 +180,7 @@ export function KeyExpressionCard({
         </span>
         <div className="flex items-center gap-1.5">
           {k.hsk !== undefined && (
-            <span className="px-2 py-0.5 text-[10px] font-bold text-slate-500 bg-slate-100 rounded-full">
+            <span className="px-2 py-0.5 text-[10px] font-bold text-muted-foreground bg-muted rounded-full">
               HSK {k.hsk}
             </span>
           )}
@@ -200,8 +199,8 @@ export function KeyExpressionCard({
             className={cn(
               "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition-colors",
               saved
-                ? "bg-emerald-50 text-emerald-600 border-emerald-200 cursor-default"
-                : "bg-surface text-slate-600 border-slate-200 hover:bg-slate-50 cursor-pointer",
+                ? "bg-success/8 text-success border-success/30 cursor-default"
+                : "bg-surface text-muted-foreground border-border hover:bg-muted cursor-pointer",
             )}
             aria-label="단어장에 저장"
             title={saved ? "단어장에 저장됨" : "단어장에 저장"}
@@ -233,7 +232,7 @@ export function KeyExpressionCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
             <p
-              className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight tracking-tight"
+              className="text-2xl sm:text-3xl font-semibold text-foreground leading-tight tracking-tight"
               lang="zh-CN"
             >
               {k.zh}
@@ -241,18 +240,18 @@ export function KeyExpressionCard({
             <SpeakButton text={k.zh} speak={speak} active={speaking} size="sm" />
           </div>
           {k.pinyin && (
-            <p className={cn("text-xs font-medium italic tracking-wide mt-0.5", tone.pin)}>
+            <p className="text-xs font-medium italic tracking-wide mt-0.5 text-muted-foreground">
               {k.pinyin}
             </p>
           )}
-          <p className="text-[15px] text-slate-700 font-medium mt-1">{k.ko}</p>
+          <p className="text-[15px] text-foreground font-medium mt-1">{k.ko}</p>
         </div>
       </div>
 
       {/* Pronunciation test */}
       <div className="mt-4 rounded-2xl bg-slate-50/80 border border-slate-100 p-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
             🎤 발음 테스트
           </div>
           <button
@@ -262,7 +261,7 @@ export function KeyExpressionCard({
               "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-all cursor-pointer",
               listening
                 ? "bg-rose-500 text-white shadow animate-pulse"
-                : "bg-surface text-slate-700 border border-slate-200 hover:bg-slate-50",
+                : "bg-surface text-foreground border border-slate-200 hover:bg-slate-50",
             )}
             aria-label={listening ? "중단" : "녹음 시작"}
           >
@@ -271,13 +270,13 @@ export function KeyExpressionCard({
           </button>
         </div>
 
-        {err && <p className="mt-2 text-[11px] text-rose-600">{err}</p>}
+        {err && <p className="mt-2 text-[11px] text-danger">{err}</p>}
 
         {heard != null && (
           <div className="mt-2 space-y-1.5">
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-500">들린 말:</span>
-              <span className="font-medium text-slate-800" lang="zh-CN">
+              <span className="text-muted-foreground">들린 말:</span>
+              <span className="font-medium text-foreground" lang="zh-CN">
                 {heard || "—"}
               </span>
             </div>
@@ -297,7 +296,7 @@ export function KeyExpressionCard({
                 <span
                   className={cn(
                     "text-xs font-bold inline-flex items-center gap-0.5",
-                    pass ? "text-emerald-600" : "text-amber-600",
+                    pass ? "text-success" : "text-warning",
                   )}
                 >
                   {pass ? <Check className="size-3" /> : <X className="size-3" />}
@@ -305,7 +304,7 @@ export function KeyExpressionCard({
                 </span>
               </div>
             )}
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-muted-foreground">
               {pass
                 ? "잘했어요! 한 번 더 또렷이 말해볼까요?"
                 : "괜찮아요, 듣기 버튼을 누르고 다시 따라해보세요."}

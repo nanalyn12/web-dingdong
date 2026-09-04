@@ -48,3 +48,24 @@ export function levelLabel(v: string | null | undefined): string {
 export function levelLabelHsk(v: string | null | undefined): string {
   return isLevel(v) ? LEVEL_LABEL_HSK[v] : (v ?? "");
 }
+
+/**
+ * Text tone for a level badge.
+ *
+ * Same reason the labels live here: the tones were declared per screen and
+ * drifted. `_app.courses.$id.tsx` painted 중급 rose while
+ * `vocab-practice-dialog.tsx` painted it sky, so the same level was a different
+ * colour depending on where you looked. These are their own tokens rather than
+ * the status ones — routing them through --success/--danger would say 초급
+ * means success and 중급 means danger.
+ */
+export const LEVEL_TONE: Record<Level, string> = {
+  beginner: "text-level-beginner",
+  intermediate: "text-level-intermediate",
+  advanced: "text-level-advanced",
+};
+
+/** Tone for a level read out of the DB, where the column is a plain string. */
+export function levelTone(v: string | null | undefined): string {
+  return isLevel(v) ? LEVEL_TONE[v] : "text-muted-foreground";
+}

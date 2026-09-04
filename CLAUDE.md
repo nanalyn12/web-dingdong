@@ -42,3 +42,4 @@ npm run verify
 | 2026-09-03 | 다크모드 (배치 8)                               | src/lib/theme.ts, theme-provider/-toggle.tsx, __root.tsx, drizzle/0019, styles.css | `.dark` 토큰과 `@custom-variant`는 있었으나 클래스를 붙이는 코드가 0건. 그라디언트·그림자·팔레트 8개 토큰도 라이트 전용이었음 |
 | 2026-09-03 | 하드코딩 흰색 265건 → `--surface` (배치 9)      | src/lib/surface-tokens.test.ts + tsx 34파일, styles.css 유틸 4곳 | 클래스에 박힌 `bg-white/50`은 토큰이 아니라 `.dark`가 다시 칠할 수 없었음. 가드로 재유입 차단 |
 | 2026-09-03 | 오늘의 단어·수업 이어하기 위젯 (배치 10)        | src/lib/widget-catalog.ts, widgets.functions.ts, widget-panel.tsx | 위젯이 전부 '보기' 전용이었고 이어보기가 영상만 다뤘음. 위젯 id·메타 이중 정의도 함께 해소 |
+| 2026-09-04 | 하드코딩 팔레트 → 시맨틱 토큰 (배치 11)         | src/lib/color-contrast.ts, palette-tokens.test.ts, levels.ts, styles.css + tsx 29파일 | `text-slate-700`이 다크에서 1.15:1. 색이 중립·상태·난이도 세 일을 겸하고 있어 단순 치환이 불가능했음. 대비 판정을 순수 산술로 빼 게이트에 넣음 |

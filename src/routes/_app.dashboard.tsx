@@ -210,11 +210,11 @@ function DashboardPage() {
                     </div>
                   </div>
                   {l.completed ? (
-                    <span className="rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold shrink-0">
+                    <span className="rounded-full bg-success/8 text-success border border-success/30 px-2 py-0.5 text-[10px] font-bold shrink-0">
                       ✅ 완료
                     </span>
                   ) : (
-                    <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 text-[10px] font-bold shrink-0">
+                    <span className="rounded-full bg-warning/8 text-warning border border-warning/30 px-2 py-0.5 text-[10px] font-bold shrink-0">
                       ⏳ 진행중
                     </span>
                   )}

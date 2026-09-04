@@ -352,7 +352,7 @@ function DramasPage() {
                   <div className="absolute bottom-2 left-2 bg-black/60 text-white rounded-full px-2 py-0.5 text-[10px] font-semibold">
                     🎞 {d.scene_count}장면
                     {(progressMap.get(d.id) ?? 0) > 0 && (
-                      <span className="ml-1 text-emerald-300">
+                      <span className="ml-1">
                         · ✅ {Math.min(progressMap.get(d.id)!, d.scene_count)}/{d.scene_count}
                       </span>
                     )}
@@ -556,8 +556,8 @@ function CreateDramaForm({ onDone }: { onDone: () => void }) {
                 </>
               ) : probe?.ok ? (
                 <>
-                  <CheckCircle2 className="size-3 text-emerald-600" />
-                  <span className="text-emerald-700">
+                  <CheckCircle2 className="size-3 text-success" />
+                  <span className="text-success">
                     자막 있음 · {probe.languageCode} · {probe.segmentCount}줄
                   </span>
                 </>

@@ -35,7 +35,7 @@ import {
   type VocabPractice,
 } from "@/lib/vocab-practice.functions";
 import { useMyProfile } from "@/lib/auth-client";
-import { LEVEL_LABEL } from "@/lib/levels";
+import { LEVEL_LABEL, LEVEL_TONE } from "@/lib/levels";
 import type {
   SpeechRecognitionErrorEventLike,
   SpeechRecognitionLike,
@@ -119,10 +119,12 @@ export function VocabPracticeDialog({
           <DialogTitle className="flex items-center gap-3">
             <span className="text-2xl">{word.emoji || "📝"}</span>
             <div className="flex flex-col items-start text-left">
-              <span className="text-2xl font-bold text-slate-900" lang="zh-CN">
+              <span className="text-2xl font-bold text-foreground" lang="zh-CN">
                 {word.zh}
               </span>
-              {word.pinyin && <span className="text-xs italic text-slate-500">{word.pinyin}</span>}
+              {word.pinyin && (
+                <span className="text-xs italic text-muted-foreground">{word.pinyin}</span>
+              )}
             </div>
             <SpeakButton
               text={word.zh}
@@ -131,7 +133,7 @@ export function VocabPracticeDialog({
               className="ml-1"
             />
           </DialogTitle>
-          <DialogDescription className="text-slate-600 flex items-center justify-between gap-3 flex-wrap">
+          <DialogDescription className="text-muted-foreground flex items-center justify-between gap-3 flex-wrap">
             <span>{word.ko || "AI가 학습 자료를 만들어드려요."}</span>
             {isEditor && data && (
               <Button
@@ -150,7 +152,7 @@ export function VocabPracticeDialog({
         </DialogHeader>
 
         {gen.isPending && (
-          <div className="flex items-center gap-2 text-sm text-slate-500 py-8 justify-center">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
             <Sparkles className="size-4 animate-pulse text-primary" />
             AI가 학습 자료를 만들고 있어요...
           </div>
@@ -161,10 +163,10 @@ export function VocabPracticeDialog({
         {gen.error && isGuestGenerationBlocked(gen.error) && (
           <div className="rounded-2xl bg-primary/5 border border-primary/20 p-5 text-center space-y-3">
             <div className="text-3xl">🔒</div>
-            <div className="text-sm font-semibold text-slate-800">
+            <div className="text-sm font-semibold text-foreground">
               이 단어의 학습 자료는 아직 준비되지 않았어요
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               새 단어의 예문·퀴즈는 AI가 만들어요. 로그인하면 바로 생성해 드릴게요.
             </p>
             <Button asChild size="sm">
@@ -174,7 +176,7 @@ export function VocabPracticeDialog({
         )}
 
         {gen.error && !isGuestGenerationBlocked(gen.error) && (
-          <div className="rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm p-3">
+          <div className="rounded-xl bg-danger/8 border border-danger/30 text-danger text-sm p-3">
             생성 실패: {(gen.error as Error).message}
             <Button size="sm" variant="ghost" className="ml-2" onClick={() => gen.mutate(word)}>
               다시 시도
@@ -187,17 +189,17 @@ export function VocabPracticeDialog({
             {/* meaning + tip */}
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-100 p-3">
-                <p className="text-[11px] font-bold text-rose-600 uppercase tracking-wider mb-1">
+                <p className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1">
                   의미
                 </p>
-                <p className="text-sm text-slate-800">{data.meaning_ko}</p>
+                <p className="text-sm text-foreground">{data.meaning_ko}</p>
               </div>
               {data.tip && (
                 <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-100 p-3">
-                  <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <p className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1 flex items-center gap-1">
                     <Lightbulb className="size-3" /> 사용 팁
                   </p>
-                  <p className="text-sm text-slate-800">{data.tip}</p>
+                  <p className="text-sm text-foreground">{data.tip}</p>
                 </div>
               )}
             </div>
@@ -209,7 +211,7 @@ export function VocabPracticeDialog({
                     key={i}
                     type="button"
                     onClick={() => speak(c, c)}
-                    className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 cursor-pointer"
+                    className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-foreground border border-primary/20 hover:bg-primary/20 cursor-pointer"
                     lang="zh-CN"
                   >
                     {c}
@@ -269,9 +271,9 @@ function ExamplesPanel({
 }) {
   const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">("beginner");
   const tones = {
-    beginner: "from-emerald-100 to-emerald-50 border-emerald-200 text-emerald-700",
-    intermediate: "from-sky-100 to-sky-50 border-sky-200 text-sky-700",
-    advanced: "from-violet-100 to-violet-50 border-violet-200 text-violet-700",
+    beginner: `from-emerald-100 to-emerald-50 border-emerald-200 ${LEVEL_TONE.beginner}`,
+    intermediate: `from-sky-100 to-sky-50 border-sky-200 ${LEVEL_TONE.intermediate}`,
+    advanced: `from-violet-100 to-violet-50 border-violet-200 ${LEVEL_TONE.advanced}`,
   } as const;
   const list: VocabExample[] = data.examples[level] ?? [];
   return (
@@ -286,7 +288,7 @@ function ExamplesPanel({
               "flex-1 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
               level === l
                 ? `bg-gradient-to-br ${tones[l]} shadow-sm`
-                : "bg-surface text-slate-500 border-slate-200 hover:bg-slate-50",
+                : "bg-surface text-muted-foreground border-border hover:bg-muted",
             )}
           >
             {LEVEL_LABEL[l]}
@@ -294,7 +296,7 @@ function ExamplesPanel({
         ))}
       </div>
       {list.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-6">예문이 없어요.</p>
+        <p className="text-sm text-muted-foreground text-center py-6">예문이 없어요.</p>
       ) : (
         <div className="space-y-2">
           {list.map((ex, i) => (
@@ -304,7 +306,7 @@ function ExamplesPanel({
             >
               <div className="flex items-start gap-2">
                 <p
-                  className="text-base font-semibold text-slate-900 flex-1 leading-snug"
+                  className="text-base font-semibold text-foreground flex-1 leading-snug"
                   lang="zh-CN"
                 >
                   {ex.zh}
@@ -317,8 +319,10 @@ function ExamplesPanel({
                   iconOnly
                 />
               </div>
-              {ex.pinyin && <p className="text-[11px] italic text-slate-500 mt-0.5">{ex.pinyin}</p>}
-              {ex.ko && <p className="text-xs text-slate-600 mt-1">{ex.ko}</p>}
+              {ex.pinyin && (
+                <p className="text-[11px] italic text-muted-foreground mt-0.5">{ex.pinyin}</p>
+              )}
+              {ex.ko && <p className="text-xs text-muted-foreground mt-1">{ex.ko}</p>}
             </div>
           ))}
         </div>
@@ -405,18 +409,18 @@ function FlashcardPanel({
         {!flipped ? (
           <>
             <p
-              className="text-3xl sm:text-4xl font-semibold text-slate-900 leading-tight"
+              className="text-3xl sm:text-4xl font-semibold text-foreground leading-tight"
               lang="zh-CN"
             >
               {card.zh}
             </p>
-            <p className="text-xs text-slate-400 mt-3">탭하면 뜻이 나와요</p>
+            <p className="text-xs text-muted-foreground/70 mt-3">탭하면 뜻이 나와요</p>
           </>
         ) : (
           <>
-            {card.pinyin && <p className="text-sm italic text-slate-500">{card.pinyin}</p>}
-            <p className="text-lg sm:text-xl font-semibold text-slate-800 mt-2">{card.ko}</p>
-            <p className="text-xs text-slate-400 mt-3">탭하면 한자가 나와요</p>
+            {card.pinyin && <p className="text-sm italic text-muted-foreground">{card.pinyin}</p>}
+            <p className="text-lg sm:text-xl font-semibold text-foreground mt-2">{card.ko}</p>
+            <p className="text-xs text-muted-foreground/70 mt-3">탭하면 한자가 나와요</p>
           </>
         )}
       </button>
@@ -431,7 +435,7 @@ function FlashcardPanel({
         >
           <ChevronLeft className="size-4" /> 이전
         </Button>
-        <span className="text-xs text-slate-500 font-semibold">
+        <span className="text-xs text-muted-foreground font-semibold">
           {idx + 1} / {deck.length}
         </span>
         <Button
@@ -447,7 +451,7 @@ function FlashcardPanel({
       {/* Pronunciation */}
       <div className="rounded-2xl bg-slate-50 border border-slate-100 p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
             🎤 따라 말하기
           </p>
           <div className="flex gap-1.5">
@@ -459,7 +463,7 @@ function FlashcardPanel({
                 "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold cursor-pointer",
                 listening
                   ? "bg-rose-500 text-white animate-pulse"
-                  : "bg-surface text-slate-700 border border-slate-200 hover:bg-slate-50",
+                  : "bg-surface text-foreground border border-slate-200 hover:bg-slate-50",
               )}
             >
               <Mic className="size-3" />
@@ -467,12 +471,12 @@ function FlashcardPanel({
             </button>
           </div>
         </div>
-        {err && <p className="text-[11px] text-rose-600">{err}</p>}
+        {err && <p className="text-[11px] text-danger">{err}</p>}
         {heard != null && (
           <div className="space-y-1.5">
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-muted-foreground">
               들린 말:{" "}
-              <span className="font-semibold text-slate-800" lang="zh-CN">
+              <span className="font-semibold text-foreground" lang="zh-CN">
                 {heard || "—"}
               </span>
             </p>
@@ -492,7 +496,7 @@ function FlashcardPanel({
                 <span
                   className={cn(
                     "text-xs font-bold inline-flex items-center gap-0.5",
-                    pass ? "text-emerald-600" : "text-amber-600",
+                    pass ? "text-success" : "text-warning",
                   )}
                 >
                   {pass ? <Check className="size-3" /> : <X className="size-3" />}
@@ -522,7 +526,7 @@ function QuizPanel({
   const [done, setDone] = useState(false);
 
   if (data.quiz.length === 0) {
-    return <p className="text-sm text-slate-500 text-center py-6">퀴즈가 없어요.</p>;
+    return <p className="text-sm text-muted-foreground text-center py-6">퀴즈가 없어요.</p>;
   }
 
   if (done) {
@@ -530,10 +534,10 @@ function QuizPanel({
     return (
       <div className="text-center space-y-3 py-6">
         <div className="text-5xl">{pct === 100 ? "🎉" : pct >= 50 ? "👏" : "💪"}</div>
-        <p className="text-2xl font-bold text-slate-900">
+        <p className="text-2xl font-bold text-foreground">
           {correct} / {data.quiz.length}
         </p>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           {pct === 100 ? "완벽해요!" : pct >= 50 ? "잘했어요!" : "다시 한번 도전해봐요."}
         </p>
         <Button
@@ -566,7 +570,7 @@ function QuizPanel({
             style={{ width: `${((step + 1) / data.quiz.length) * 100}%` }}
           />
         </div>
-        <span className="text-[11px] text-slate-500 font-semibold">
+        <span className="text-[11px] text-muted-foreground font-semibold">
           {step + 1} / {data.quiz.length}
         </span>
       </div>
@@ -591,7 +595,7 @@ function MeaningQ({
   const options = Array.isArray(q.options) ? q.options : [];
   return (
     <div className="space-y-3">
-      <p className="text-base font-semibold text-slate-800">{q.question_ko}</p>
+      <p className="text-base font-semibold text-foreground">{q.question_ko}</p>
       <div className="grid gap-2">
         {options.map((opt, i) => {
           const isPick = pick === i;
@@ -606,12 +610,15 @@ function MeaningQ({
               className={cn(
                 "text-left px-4 py-2.5 rounded-2xl border transition-all cursor-pointer",
                 !reveal && "bg-surface border-slate-200 hover:bg-slate-50",
-                reveal && isRight && "bg-emerald-50 border-emerald-300 text-emerald-800",
-                reveal && isPick && !isRight && "bg-rose-50 border-rose-300 text-rose-800",
-                reveal && !isPick && !isRight && "bg-surface border-slate-100 text-slate-400",
+                reveal && isRight && "bg-success/8 border-success/30 text-success",
+                reveal && isPick && !isRight && "bg-danger/8 border-danger/30 text-danger",
+                reveal &&
+                  !isPick &&
+                  !isRight &&
+                  "bg-surface border-border text-muted-foreground/70",
               )}
             >
-              <span className="font-semibold mr-2 text-slate-500">
+              <span className="font-semibold mr-2 text-muted-foreground">
                 {String.fromCharCode(65 + i)}.
               </span>
               {opt}
@@ -644,10 +651,10 @@ function FillQ({
   const right = val.trim() === (q.answer ?? "").trim();
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-500">빈칸에 들어갈 한자를 입력하세요.</p>
+      <p className="text-xs text-muted-foreground">빈칸에 들어갈 한자를 입력하세요.</p>
       <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-100 p-3">
         <div className="flex items-start gap-2">
-          <p className="text-base font-semibold text-slate-900 flex-1" lang="zh-CN">
+          <p className="text-base font-semibold text-foreground flex-1" lang="zh-CN">
             {q.blanked_zh}
           </p>
           <SpeakButton
@@ -658,8 +665,8 @@ function FillQ({
             iconOnly
           />
         </div>
-        {q.pinyin && <p className="text-[11px] italic text-slate-500 mt-1">{q.pinyin}</p>}
-        {q.ko && <p className="text-xs text-slate-600 mt-1">{q.ko}</p>}
+        {q.pinyin && <p className="text-[11px] italic text-muted-foreground mt-1">{q.pinyin}</p>}
+        {q.ko && <p className="text-xs text-muted-foreground mt-1">{q.ko}</p>}
       </div>
       <Input
         value={val}
@@ -680,8 +687,8 @@ function FillQ({
             className={cn(
               "rounded-2xl p-3 text-sm border",
               right
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : "bg-rose-50 border-rose-200 text-rose-800",
+                ? "bg-success/8 border-success/30 text-success"
+                : "bg-danger/8 border-danger/30 text-danger",
             )}
           >
             {right ? (

@@ -174,7 +174,7 @@ function PendingTeacherCard({
               <span className="text-xs text-muted-foreground">@{p.nickname}</span>
             )}
             {legacy && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/8 text-warning border border-warning/30">
                 구버전 신청 · 정보 없음
               </span>
             )}

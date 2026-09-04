@@ -248,7 +248,7 @@ function LessonPage() {
         />
       </header>
 
-      <div className="flex items-start gap-2 rounded-2xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/60 px-3 py-2 text-xs text-sky-900 dark:text-sky-100">
+      <div className="flex items-start gap-2 rounded-2xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/60 px-3 py-2 text-xs text-foreground">
         <Info className="size-4 mt-0.5 shrink-0" />
         <span>
           중국어 옆 🔊 버튼을 누르면 발음을 들을 수 있어요.{" "}
@@ -263,38 +263,38 @@ function LessonPage() {
           {(lessonVideo?.youtube_video_id || lessonVideo?.media_url) && (
             <TabsTrigger
               value="video"
-              className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+              className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground font-semibold rounded-xl md:shrink"
             >
               🎬 영상
             </TabsTrigger>
           )}
           <TabsTrigger
             value="key"
-            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground font-semibold rounded-xl md:shrink"
           >
             핵심표현
           </TabsTrigger>
           <TabsTrigger
             value="content"
-            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground font-semibold rounded-xl md:shrink"
           >
             본문
           </TabsTrigger>
           <TabsTrigger
             value="dialogue"
-            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground font-semibold rounded-xl md:shrink"
           >
             실전대화
           </TabsTrigger>
           <TabsTrigger
             value="slides"
-            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground font-semibold rounded-xl md:shrink"
           >
             슬라이드
           </TabsTrigger>
           <TabsTrigger
             value="quiz"
-            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-500 font-semibold rounded-xl md:shrink"
+            className="shrink-0 data-[state=active]:bg-surface data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground font-semibold rounded-xl md:shrink"
           >
             퀴즈
           </TabsTrigger>
@@ -340,27 +340,23 @@ function LessonPage() {
             {(lesson.key_expressions ?? []).map((k, i) => {
               const tones = [
                 {
-                  tag: "bg-rose-50 text-rose-600 border-rose-100",
+                  tag: "bg-pink/25 text-foreground border-pink/40",
                   hover: "hover:shadow-[0_20px_40px_-12px_rgba(244,114,182,0.25)]",
-                  pin: "text-rose-500",
                   ring: "ring-1 ring-rose-100",
                 },
                 {
-                  tag: "bg-indigo-50 text-indigo-600 border-indigo-100",
+                  tag: "bg-lavender/25 text-foreground border-lavender/40",
                   hover: "hover:shadow-[0_20px_40px_-12px_rgba(99,102,241,0.25)]",
-                  pin: "text-indigo-500",
                   ring: "ring-1 ring-indigo-100",
                 },
                 {
-                  tag: "bg-emerald-50 text-emerald-600 border-emerald-100",
+                  tag: "bg-mint/25 text-foreground border-mint/40",
                   hover: "hover:shadow-[0_20px_40px_-12px_rgba(34,197,94,0.25)]",
-                  pin: "text-emerald-500",
                   ring: "ring-1 ring-emerald-100",
                 },
                 {
-                  tag: "bg-sky-50 text-sky-600 border-sky-100",
+                  tag: "bg-sky/25 text-foreground border-sky/40",
                   hover: "hover:shadow-[0_20px_40px_-12px_rgba(14,165,233,0.25)]",
-                  pin: "text-sky-500",
                   ring: "ring-1 ring-sky-100",
                 },
               ];
@@ -521,7 +517,7 @@ function RelatedSongsCard({ lessonId }: { lessonId: string }) {
             </Link>
             <p className="text-sm">{s.reason}</p>
             {s.order_tip && (
-              <p className="text-xs text-emerald-700 bg-emerald-500/10 rounded-xl px-2.5 py-1.5">
+              <p className="text-xs text-foreground bg-primary/10 rounded-xl px-2.5 py-1.5">
                 💡 {s.order_tip}
               </p>
             )}
@@ -665,7 +661,7 @@ function ComicStrip({
     <div className="rounded-3xl border bg-gradient-to-br from-pink-50/60 to-amber-50/40 dark:from-pink-950/20 dark:to-amber-950/10 p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-lg font-bold flex items-center gap-2">
-          <ImageIcon className="size-5 text-pink-500" />
+          <ImageIcon className="size-5 text-primary" />
           만화로 보는 본문
         </h3>
         {!hasAnyImage && (
@@ -679,7 +675,7 @@ function ComicStrip({
           </Button>
         )}
       </div>
-      {error && <p className="text-xs text-rose-600">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
         {panels.map((p, i) => (
           <div
@@ -769,14 +765,14 @@ function DialogueList({
                 "px-4 py-3 rounded-2xl shadow-sm border max-w-full",
                 isDing
                   ? "bg-rose-500 border-rose-400 text-white rounded-tr-none"
-                  : "bg-surface border-slate-100 text-slate-900 rounded-tl-none",
+                  : "bg-surface border-slate-100 text-foreground rounded-tl-none",
               )}
             >
               {d.speaker && (
                 <div
                   className={cn(
                     "text-[10px] font-bold uppercase tracking-wider mb-1",
-                    isDing ? "text-rose-100" : "text-slate-400",
+                    isDing ? "text-white/75" : "text-muted-foreground/70",
                   )}
                 >
                   {d.speaker}
@@ -786,7 +782,7 @@ function DialogueList({
                 <p
                   className={cn(
                     "text-lg sm:text-xl font-semibold leading-snug",
-                    isDing ? "text-white" : "text-slate-900",
+                    isDing ? "text-white" : "text-foreground",
                   )}
                   lang="zh-CN"
                 >
@@ -801,7 +797,10 @@ function DialogueList({
               </div>
               {showPinyin && d.pinyin && (
                 <div
-                  className={cn("text-xs italic mt-1", isDing ? "text-rose-100" : "text-sky-500")}
+                  className={cn(
+                    "text-xs italic mt-1",
+                    isDing ? "text-white/85" : "text-muted-foreground",
+                  )}
                 >
                   {d.pinyin}
                 </div>
@@ -810,7 +809,7 @@ function DialogueList({
                 <div
                   className={cn(
                     "text-[13px] mt-1.5 font-medium",
-                    isDing ? "text-rose-50/90" : "text-slate-500",
+                    isDing ? "text-white/90" : "text-muted-foreground",
                   )}
                 >
                   {d.ko}
@@ -840,7 +839,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     grad: "from-rose-100 via-pink-50 to-surface",
     accent: "bg-rose-500",
     accentHex: "#f43f5e",
-    text: "text-rose-600",
+    text: "text-primary",
     ring: "ring-rose-200",
     softBg: "bg-rose-50",
   },
@@ -848,7 +847,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     grad: "from-sky-100 via-cyan-50 to-surface",
     accent: "bg-sky-500",
     accentHex: "#0ea5e9",
-    text: "text-sky-600",
+    text: "text-primary",
     ring: "ring-sky-200",
     softBg: "bg-sky-50",
   },
@@ -856,7 +855,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     grad: "from-emerald-100 via-teal-50 to-surface",
     accent: "bg-emerald-500",
     accentHex: "#10b981",
-    text: "text-emerald-600",
+    text: "text-primary",
     ring: "ring-emerald-200",
     softBg: "bg-emerald-50",
   },
@@ -864,7 +863,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     grad: "from-indigo-100 via-violet-50 to-surface",
     accent: "bg-indigo-500",
     accentHex: "#6366f1",
-    text: "text-indigo-600",
+    text: "text-primary",
     ring: "ring-indigo-200",
     softBg: "bg-indigo-50",
   },
@@ -872,7 +871,7 @@ const SLIDE_THEMES: SlideTheme[] = [
     grad: "from-amber-100 via-orange-50 to-surface",
     accent: "bg-amber-500",
     accentHex: "#f59e0b",
-    text: "text-amber-600",
+    text: "text-primary",
     ring: "ring-amber-200",
     softBg: "bg-amber-50",
   },
@@ -919,7 +918,7 @@ function ProgressRing({
           style={{ transition: "stroke-dashoffset 500ms ease" }}
         />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-700 tabular-nums">
+      <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-foreground tabular-nums">
         {label}
       </div>
     </div>
@@ -992,7 +991,7 @@ function RingBulletCard({
               {text}
             </span>
           ) : (
-            <span className="text-[13px] font-semibold leading-tight text-slate-700 line-clamp-4">
+            <span className="text-[13px] font-semibold leading-tight text-foreground line-clamp-4">
               {text}
             </span>
           )}
@@ -1066,7 +1065,7 @@ function VocabHeroCard({
           {v.pinyin}
         </div>
       )}
-      <div className="text-center text-sm text-slate-600 mt-1 leading-snug">{v.ko}</div>
+      <div className="text-center text-sm text-muted-foreground mt-1 leading-snug">{v.ko}</div>
     </button>
   );
 }
@@ -1118,7 +1117,7 @@ function ExampleBubble({
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <div
-              className="text-base sm:text-lg font-bold text-slate-900 leading-snug"
+              className="text-base sm:text-lg font-bold text-foreground leading-snug"
               lang="zh-CN"
             >
               {e.zh}
@@ -1128,7 +1127,7 @@ function ExampleBubble({
                 {e.pinyin}
               </div>
             )}
-            <div className="text-sm text-slate-600 mt-1 leading-snug">{e.ko}</div>
+            <div className="text-sm text-muted-foreground mt-1 leading-snug">{e.ko}</div>
           </div>
           <button
             type="button"
@@ -1186,7 +1185,7 @@ function KeyPointSpotlight({ text, color }: { text: string; color: string }) {
           <div className="text-[10px] font-black tracking-[0.3em] uppercase mb-1" style={{ color }}>
             Key Point
           </div>
-          <p className="text-lg sm:text-2xl font-bold leading-snug text-slate-900">{text}</p>
+          <p className="text-lg sm:text-2xl font-bold leading-snug text-foreground">{text}</p>
         </div>
       </div>
     </div>
@@ -1294,7 +1293,7 @@ function SlidesCarousel({
                   "flex items-center justify-center rounded-full w-full h-full text-xs font-bold border-2 transition-all",
                   active
                     ? cn("bg-surface shadow-lg", t.text, "border-current scale-110")
-                    : "bg-surface/60 text-slate-500 border-slate-200 hover:border-slate-400",
+                    : "bg-surface/60 text-muted-foreground border-border hover:border-foreground/40",
                 )}
               >
                 {idx + 1}
@@ -1348,7 +1347,7 @@ function SlidesCarousel({
                 {slide.title && (
                   <h3
                     className={cn(
-                      "font-black text-slate-900 leading-[1.1] tracking-tight truncate",
+                      "font-black text-foreground leading-[1.1] tracking-tight truncate",
                       isCoverOnly ? "text-3xl sm:text-5xl" : "text-2xl sm:text-3xl",
                     )}
                   >
@@ -1356,7 +1355,7 @@ function SlidesCarousel({
                   </h3>
                 )}
                 {slide.subtitle && !isCoverOnly && (
-                  <p className="mt-1 text-sm sm:text-base text-slate-600 leading-snug truncate">
+                  <p className="mt-1 text-sm sm:text-base text-muted-foreground leading-snug truncate">
                     {slide.subtitle}
                   </p>
                 )}
@@ -1374,7 +1373,7 @@ function SlidesCarousel({
             {/* Cover-only layout */}
             {isCoverOnly && slide.subtitle && (
               <div className="flex-1 flex items-center justify-center" style={stagger(1)}>
-                <p className="text-xl sm:text-2xl text-slate-700 text-center max-w-2xl leading-relaxed">
+                <p className="text-xl sm:text-2xl text-foreground text-center max-w-2xl leading-relaxed">
                   {slide.subtitle}
                 </p>
               </div>
@@ -1496,7 +1495,7 @@ function SlidesCarousel({
                     label="사용 맥락"
                     text={slide.usage_context}
                     icon={<Target className="size-3.5" />}
-                    tone="sky"
+                    tone="context"
                   />
                 )}
                 {slide.common_mistake && (
@@ -1504,7 +1503,7 @@ function SlidesCarousel({
                     label="자주 하는 실수"
                     text={slide.common_mistake}
                     icon={<AlertTriangle className="size-3.5" />}
-                    tone="rose"
+                    tone="caution"
                   />
                 )}
                 {slide.tip && (
@@ -1512,7 +1511,7 @@ function SlidesCarousel({
                     label="팁"
                     text={slide.tip}
                     icon={<Lightbulb className="size-3.5" />}
-                    tone="amber"
+                    tone="tip"
                   />
                 )}
               </div>
@@ -1535,14 +1534,14 @@ function SlidesCarousel({
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-3 rounded-2xl bg-surface/85 backdrop-blur border border-surface p-4 text-sm space-y-1.5">
                   {typeof slide.practice === "string" ? (
-                    <p className="text-slate-700">{slide.practice}</p>
+                    <p className="text-foreground">{slide.practice}</p>
                   ) : (
                     <>
                       {slide.practice.question && (
-                        <p className="text-slate-800 font-medium">{slide.practice.question}</p>
+                        <p className="text-foreground font-medium">{slide.practice.question}</p>
                       )}
                       {slide.practice.answer && (
-                        <p className="text-slate-500">
+                        <p className="text-muted-foreground">
                           <span className={cn("font-semibold", theme.text)}>정답:</span>{" "}
                           {slide.practice.answer}
                         </p>
@@ -1554,7 +1553,9 @@ function SlidesCarousel({
             )}
 
             {!hasStructured && !isCoverOnly && (
-              <p className="text-sm text-slate-500 italic">이 슬라이드는 시각 자료 위주입니다.</p>
+              <p className="text-sm text-muted-foreground italic">
+                이 슬라이드는 시각 자료 위주입니다.
+              </p>
             )}
           </div>
 
@@ -1576,9 +1577,9 @@ function SlidesCarousel({
           >
             <ChevronLeft className="size-4" /> 이전
           </Button>
-          <div className="text-sm font-semibold text-slate-600 tabular-nums">
+          <div className="text-sm font-semibold text-muted-foreground tabular-nums">
             <span className={theme.text}>{String(i + 1).padStart(2, "0")}</span>
-            <span className="text-slate-300 mx-1">/</span>
+            <span className="text-muted-foreground/70 mx-1">/</span>
             <span>{String(total).padStart(2, "0")}</span>
           </div>
           <Button
@@ -1608,12 +1609,12 @@ function SlideMiniCard({
   label: string;
   text: string;
   icon: ReactNode;
-  tone: "sky" | "rose" | "amber";
+  tone: "context" | "caution" | "tip";
 }) {
   const tones = {
-    sky: "from-sky-50 to-surface border-sky-100 text-sky-600",
-    rose: "from-rose-50 to-surface border-rose-100 text-rose-600",
-    amber: "from-amber-50 to-surface border-amber-100 text-amber-600",
+    context: "from-sky-50 to-surface border-primary/20 text-foreground",
+    caution: "from-rose-50 to-surface border-warning/30 text-warning",
+    tip: "from-amber-50 to-surface border-primary/20 text-foreground",
   } as const;
   return (
     <div className={cn("rounded-2xl bg-gradient-to-br border p-3.5", tones[tone])}>
@@ -1621,7 +1622,7 @@ function SlideMiniCard({
         {icon}
         {label}
       </div>
-      <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+      <p className="text-xs sm:text-sm text-foreground leading-relaxed whitespace-pre-wrap">
         {text}
       </p>
     </div>
@@ -1706,9 +1707,7 @@ function QuizRunner({
               style={{ width: `${pct}%` }}
             />
           </div>
-          <div
-            className={cn("text-sm font-medium", passed ? "text-emerald-600" : "text-amber-600")}
-          >
+          <div className={cn("text-sm font-medium", passed ? "text-success" : "text-warning")}>
             {passed ? "통과! 정말 잘했어요 🎉" : "조금만 더 연습해봐요!"}
           </div>
           <div className="flex flex-wrap justify-center gap-2 pt-2">
@@ -1762,7 +1761,7 @@ function QuizRunner({
           />
         </div>
         {streak >= 2 && (
-          <div className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-xs font-semibold text-amber-700">
+          <div className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs font-semibold text-foreground">
             🔥 {streak} 연속!
           </div>
         )}
@@ -1788,8 +1787,8 @@ function QuizRunner({
             className={cn(
               "rounded-2xl border p-3 text-sm flex items-start gap-2 animate-in fade-in",
               a.correct
-                ? "bg-emerald-50 border-emerald-300 text-emerald-900"
-                : "bg-rose-50 border-rose-300 text-rose-900",
+                ? "bg-success/8 border-success/30 text-success"
+                : "bg-danger/8 border-danger/30 text-danger",
             )}
           >
             {a.correct ? (
@@ -1883,10 +1882,8 @@ function ChoiceBlock({
           const cls = cn(
             "w-full text-left rounded-2xl border-2 px-4 py-3 transition-all cursor-pointer",
             "bg-background/40 hover:bg-background/70 hover:scale-[1.01] active:scale-[0.99]",
-            submitted &&
-              isCorrect &&
-              "bg-emerald-100 border-emerald-500 text-emerald-900 scale-[1.01]",
-            submitted && isPicked && !isCorrect && "bg-rose-100 border-rose-500 text-rose-900",
+            submitted && isCorrect && "bg-success/8 border-success text-success scale-[1.01]",
+            submitted && isPicked && !isCorrect && "bg-danger/8 border-danger text-danger",
             !submitted && isPicked && "border-primary",
             submitted && "hover:scale-100 cursor-default",
           );
@@ -1908,9 +1905,9 @@ function ChoiceBlock({
                 {String.fromCharCode(65 + idx)}
               </span>
               <span lang="zh-CN">{opt}</span>
-              {submitted && isCorrect && <Check className="inline ml-2 size-4 text-emerald-600" />}
+              {submitted && isCorrect && <Check className="inline ml-2 size-4 text-success" />}
               {submitted && isPicked && !isCorrect && (
-                <X className="inline ml-2 size-4 text-rose-600" />
+                <X className="inline ml-2 size-4 text-danger" />
               )}
             </button>
           );
@@ -1942,10 +1939,8 @@ function FillBlock({
               <span
                 className={cn(
                   "inline-block mx-1 px-2 py-0.5 rounded border-b-2 min-w-[3em] text-center font-semibold",
-                  submitted &&
-                    answer?.correct &&
-                    "text-emerald-700 border-emerald-500 bg-emerald-50",
-                  submitted && !answer?.correct && "text-rose-700 border-rose-500 bg-rose-50",
+                  submitted && answer?.correct && "text-success border-success bg-success/8",
+                  submitted && !answer?.correct && "text-danger border-danger bg-danger/8",
                   !submitted && "text-primary border-primary/50",
                 )}
               >

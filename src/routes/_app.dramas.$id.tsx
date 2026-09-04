@@ -250,9 +250,7 @@ function DramaDetail() {
           <span
             className={[
               "text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap",
-              drama.has_captions
-                ? "bg-emerald-500/15 text-emerald-700"
-                : "bg-amber-500/15 text-amber-800",
+              drama.has_captions ? "bg-success/8 text-success" : "bg-warning/8 text-warning",
             ].join(" ")}
             title={
               drama.has_captions
@@ -489,8 +487,8 @@ function TranscriptPanel({
                     active
                       ? "bg-surface/25"
                       : l.isExact
-                        ? "bg-emerald-500/15 text-emerald-700"
-                        : "bg-amber-500/15 text-amber-800",
+                        ? "bg-success/8 text-success"
+                        : "bg-warning/8 text-warning",
                   ].join(" ")}
                 >
                   {fmtTime(l.time)}
@@ -702,8 +700,8 @@ function LineRow({
               className={[
                 "text-[10px] font-mono px-1.5 py-0.5 rounded-full",
                 isExact
-                  ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700"
-                  : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-800",
+                  ? "bg-success/8 hover:bg-success/20 text-success"
+                  : "bg-warning/8 hover:bg-warning/20 text-warning",
               ].join(" ")}
               title={isExact ? "실제 자막 시각" : "근사치 (편집 필요)"}
             >
@@ -934,8 +932,8 @@ function MiniQuiz({
           className={[
             "rounded-2xl p-3 text-sm",
             isCorrect(picked)
-              ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
-              : "bg-rose-50 text-rose-900 border border-rose-200",
+              ? "bg-success/8 text-success border border-success/30"
+              : "bg-danger/8 text-danger border border-danger/30",
           ].join(" ")}
         >
           <div className="font-semibold">

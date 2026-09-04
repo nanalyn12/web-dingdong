@@ -279,12 +279,12 @@ function CurriculumForm() {
             {interests.map((i) => (
               <span
                 key={i}
-                className="text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full flex items-center gap-1"
+                className="text-xs bg-pink/25 text-foreground px-2 py-1 rounded-full flex items-center gap-1"
               >
                 {i}
                 <button
                   onClick={() => setInterests(interests.filter((x) => x !== i))}
-                  className="hover:text-pink-950"
+                  className="hover:text-foreground"
                 >
                   ×
                 </button>
@@ -388,7 +388,7 @@ function HistoryPanel() {
               onClick={() => {
                 if (confirm("삭제할까요?")) delM.mutate(c.id);
               }}
-              className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
+              className="p-1.5 rounded-lg hover:bg-danger/10 text-danger"
               aria-label="삭제"
             >
               <Trash2 className="size-4" />

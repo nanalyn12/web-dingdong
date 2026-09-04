@@ -177,8 +177,8 @@ function SessionShell({
         <div className="text-4xl">✨</div>
         <p className="font-semibold text-lg">복습 완료!</p>
         <p className="text-sm text-muted-foreground">
-          정답 <b className="text-emerald-600">{progress.correct}</b> · 오답{" "}
-          <b className="text-rose-500">{progress.wrong}</b> · 다음 복습 일정에 반영되었어요.
+          정답 <b className="text-success">{progress.correct}</b> · 오답{" "}
+          <b className="text-danger">{progress.wrong}</b> · 다음 복습 일정에 반영되었어요.
         </p>
         <div className="flex justify-center gap-2">
           <Button variant="outline" onClick={progress.reset}>
@@ -256,11 +256,11 @@ function FlashSession({
           <p className="text-5xl font-bold" lang="zh-CN">
             {cur.zh}
           </p>
-          {cur.pinyin && <p className="text-sm italic text-slate-500">{cur.pinyin}</p>}
+          {cur.pinyin && <p className="text-sm italic text-muted-foreground">{cur.pinyin}</p>}
           {flipped ? (
             <>
               <div className="h-px w-24 bg-slate-200" />
-              <p className="text-lg text-slate-800">{cur.ko || "(뜻이 없어요)"}</p>
+              <p className="text-lg text-foreground">{cur.ko || "(뜻이 없어요)"}</p>
             </>
           ) : (
             <Button variant="outline" onClick={() => setFlipped(true)} className="gap-1">
@@ -273,21 +273,21 @@ function FlashSession({
         <Button
           variant="outline"
           onClick={() => grade(0)}
-          className="border-rose-200 text-rose-600 hover:bg-rose-50"
+          className="border-danger/30 text-danger hover:bg-danger/10"
         >
           모름 <span className="text-[10px] opacity-60 ml-1">(1)</span>
         </Button>
         <Button
           variant="outline"
           onClick={() => grade(1)}
-          className="border-amber-200 text-amber-700 hover:bg-amber-50"
+          className="border-warning/30 text-warning hover:bg-warning/10"
         >
           헷갈림 <span className="text-[10px] opacity-60 ml-1">(2)</span>
         </Button>
         <Button
           variant="outline"
           onClick={() => grade(2)}
-          className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+          className="border-success/30 text-success hover:bg-success/10"
         >
           암기 <span className="text-[10px] opacity-60 ml-1">(3)</span>
         </Button>
@@ -336,7 +336,7 @@ function ClozeSession({
             <p className="text-xs text-muted-foreground">뜻</p>
             <p className="text-lg font-semibold">{cur.ko || "(뜻 정보 없음)"}</p>
             {cur.pinyin && (
-              <p className="text-sm italic text-slate-500 mt-1">
+              <p className="text-sm italic text-muted-foreground mt-1">
                 {hintUsed ? cur.pinyin : "___ ___ ___"}
               </p>
             )}
@@ -375,12 +375,12 @@ function ClozeSession({
             </button>
           </div>
           {feedback === "ok" && (
-            <p className="text-center text-emerald-600 font-semibold flex items-center justify-center gap-1">
+            <p className="text-center text-success font-semibold flex items-center justify-center gap-1">
               <Check className="size-4" /> 정답! {cur.zh}
             </p>
           )}
           {feedback === "no" && (
-            <p className="text-center text-rose-600 font-semibold flex items-center justify-center gap-1">
+            <p className="text-center text-danger font-semibold flex items-center justify-center gap-1">
               <X className="size-4" /> 정답: {cur.zh}
             </p>
           )}
@@ -581,12 +581,12 @@ function DictateSession({
             </Button>
           </div>
           {feedback === "ok" && (
-            <p className="text-emerald-600 font-semibold flex items-center justify-center gap-1">
+            <p className="text-success font-semibold flex items-center justify-center gap-1">
               <Check className="size-4" /> 정답! {cur.zh} ({cur.pinyin})
             </p>
           )}
           {feedback === "no" && (
-            <p className="text-rose-600 font-semibold flex items-center justify-center gap-1">
+            <p className="text-danger font-semibold flex items-center justify-center gap-1">
               <X className="size-4" /> 정답: {cur.zh} ({cur.pinyin})
             </p>
           )}
