@@ -1,6 +1,10 @@
-import { Button } from "@/components/ui/button";
 import { Download, Printer } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { deliverFile } from "@/lib/file-delivery";
+import { renderElementToPdfBlob } from "@/lib/pdf-report";
 
 type TimeBlock = {
   start_min?: number;
@@ -40,6 +44,14 @@ type Props = {
   assessment: Assessment;
   handoutMarkdown: string;
 };
+
+/** Trims a value down to something a filesystem will accept. */
+function safeFile(s: string, max: number) {
+  return s
+    .replace(/[^\w가-힣-]+/g, "_")
+    .replace(/_+$/, "")
+    .slice(0, max);
+}
 
 function esc(s: unknown) {
   return String(s ?? "")
@@ -154,24 +166,27 @@ export function CurriculumPdfButton(props: Props) {
 
   const download = async () => {
     setBusy(true);
+    const container = document.createElement("div");
     try {
-      const container = document.createElement("div");
       container.innerHTML = buildHtml(props);
       document.body.appendChild(container);
-      const html2pdf = (await import("html2pdf.js")).default;
+      const target = container.firstElementChild as HTMLElement;
       const dateStr = new Date().toLocaleDateString("ko-KR");
-      await html2pdf()
-        .from(container.firstElementChild as HTMLElement)
-        .set({
-          margin: 10,
-          filename: `DingDong_커리큘럼_${props.title.replace(/[^\w가-힣]+/g, "_").slice(0, 30)}_${dateStr}.pdf`,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        })
-        .save();
-      document.body.removeChild(container);
+      // ko-KR renders as "2026. 9. 4.", whose spaces and trailing dot turned
+      // the filename into "…_2026. 9. 4..pdf".
+      const filename = `DingDong_커리큘럼_${safeFile(props.title, 30)}_${safeFile(dateStr, 12)}.pdf`;
+      const blob = await renderElementToPdfBlob(target);
+
+      const method = await deliverFile(blob, filename);
+      if (method === "open") {
+        toast.info("PDF를 새 탭에서 열었어요. 공유 버튼으로 저장할 수 있어요.");
+      }
+    } catch {
+      toast.error("PDF를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
+      // Was removed inside the try, after an await: a failed render left the
+      // whole curriculum sheet sitting on the page.
+      container.remove();
       setBusy(false);
     }
   };

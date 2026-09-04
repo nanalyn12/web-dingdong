@@ -1,6 +1,10 @@
-import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { deliverFile } from "@/lib/file-delivery";
+import { renderElementToPdfBlob } from "@/lib/pdf-report";
 
 type KeyExpression = { zh: string; pinyin?: string; ko: string; hsk?: number };
 
@@ -99,17 +103,15 @@ export function LessonPdfButton({
       `;
       document.body.appendChild(container);
 
-      const html2pdf = (await import("html2pdf.js")).default;
-      await html2pdf()
-        .from(container)
-        .set({
-          margin: 10,
-          filename: `DingDong_${safeFile(lessonTitle)}_${dateStr}.pdf`,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        })
-        .save();
+      const filename = `DingDong_${safeFile(lessonTitle)}_${safeFile(dateStr)}.pdf`;
+      const blob = await renderElementToPdfBlob(container);
+
+      const method = await deliverFile(blob, filename);
+      if (method === "open") {
+        toast.info("PDF를 새 탭에서 열었어요. 공유 버튼으로 저장할 수 있어요.");
+      }
+    } catch {
+      toast.error("PDF를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       // In `finally` so a failed render cannot strand the report in the page.
       container.remove();
@@ -128,6 +130,11 @@ export function LessonPdfButton({
 function escapeHtml(s: string) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-function safeFile(s: string) {
-  return s.replace(/[^\w가-힣-]+/g, "_").slice(0, 40);
+/** ko-KR dates read as "2026. 9. 4." — spaces and a trailing dot that turned
+ *  the filename into "…_2026. 9. 4..pdf". */
+function safeFile(s: string, max = 40) {
+  return s
+    .replace(/[^\w가-힣-]+/g, "_")
+    .replace(/_+$/, "")
+    .slice(0, max);
 }

@@ -43,3 +43,4 @@ npm run verify
 | 2026-09-03 | 하드코딩 흰색 265건 → `--surface` (배치 9)      | src/lib/surface-tokens.test.ts + tsx 34파일, styles.css 유틸 4곳 | 클래스에 박힌 `bg-white/50`은 토큰이 아니라 `.dark`가 다시 칠할 수 없었음. 가드로 재유입 차단 |
 | 2026-09-03 | 오늘의 단어·수업 이어하기 위젯 (배치 10)        | src/lib/widget-catalog.ts, widgets.functions.ts, widget-panel.tsx | 위젯이 전부 '보기' 전용이었고 이어보기가 영상만 다뤘음. 위젯 id·메타 이중 정의도 함께 해소 |
 | 2026-09-04 | 하드코딩 팔레트 → 시맨틱 토큰 (배치 11)         | src/lib/color-contrast.ts, palette-tokens.test.ts, levels.ts, styles.css + tsx 29파일 | `text-slate-700`이 다크에서 1.15:1. 색이 중립·상태·난이도 세 일을 겸하고 있어 단순 치환이 불가능했음. 대비 판정을 순수 산술로 빼 게이트에 넣음 |
+| 2026-09-04 | PDF 저장 복구 — 렌더러 교체 (배치 12)          | src/lib/pdf-report.ts, file-delivery.ts, PDF 버튼 2개, html2pdf.js 제거 | html2canvas 1.4.1이 oklch를 파싱 못 해 PDF가 **한 번도** 만들어진 적 없었음. iOS는 앵커 download도 무시. 렌더·전달 양쪽을 고침 |
