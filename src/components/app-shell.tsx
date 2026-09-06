@@ -11,11 +11,13 @@ import { authClient, useMyProfile, useSession } from "@/lib/auth-client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { resetTour, runTour, type TourName } from "@/lib/coachmark";
 import {
+  consoleTourSteps,
   landingTourSteps,
   sidebarTourSteps,
   coursesTourSteps,
   dingdongTourSteps,
 } from "@/lib/tour-steps";
+import { isEditorRole } from "@/lib/roles";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { session } = useSession();
@@ -36,14 +38,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, []);
 
+  // `/`가 역할에 따라 두 화면을 내므로 투어도 갈라져야 한다. 경로만 보고
+  // landingTourSteps()를 태우면 콘솔에는 `data-tour="hero"`가 없고,
+  // runTour는 대상이 하나도 없을 때 그냥 return한다 — 교수자가 버튼을 눌러도
+  // 아무 일도 일어나지 않고 에러조차 없다.
   function startTourForRoute(force = true) {
-    if (pathname === "/") runTour("landing", landingTourSteps(), { force });
-    else if (pathname.startsWith("/courses")) runTour("courses", coursesTourSteps(), { force });
-    else runTour("sidebar", sidebarTourSteps(), { force });
+    if (pathname === "/") {
+      if (isEditorRole(profile?.role)) runTour("console", consoleTourSteps(), { force });
+      else runTour("landing", landingTourSteps(), { force });
+    } else if (pathname.startsWith("/courses")) {
+      runTour("courses", coursesTourSteps(), { force });
+    } else {
+      runTour("sidebar", sidebarTourSteps(), { force });
+    }
   }
 
   function restartAll() {
-    (["landing", "sidebar", "courses", "dingdong"] as TourName[]).forEach(resetTour);
+    (["landing", "console", "sidebar", "courses", "dingdong"] as TourName[]).forEach(resetTour);
     startTourForRoute(true);
   }
 

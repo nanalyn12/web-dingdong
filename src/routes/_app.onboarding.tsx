@@ -27,6 +27,7 @@ import {
 import { getMyProfile, saveOnboarding } from "@/lib/profile.functions";
 import { requestTeacher } from "@/lib/admin.functions";
 import { authClient } from "@/lib/auth-client";
+import { isEditorRole } from "@/lib/roles";
 
 export const Route = createFileRoute("/_app/onboarding")({
   head: () => ({ meta: [{ title: "프로필 설정 — DingDong" }] }),
@@ -285,7 +286,7 @@ function OnboardingPage() {
           강의/세부 강의를 직접 만들고 싶다면 신청해 주세요. 관리자 승인 후 활성화됩니다. 승인
           전까지는 학생과 동일한 권한으로 학습할 수 있어요.
         </p>
-        {profile?.role === "teacher" || profile?.role === "admin" ? (
+        {profile && isEditorRole(profile.role) ? (
           <p className="text-sm font-medium text-primary">
             ✅ 이미 {profile.role === "admin" ? "관리자" : "교사"} 권한이 있어요.
           </p>

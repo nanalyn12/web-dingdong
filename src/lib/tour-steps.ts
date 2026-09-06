@@ -41,6 +41,42 @@ export function landingTourSteps(): DriveStep[] {
   ];
 }
 
+/**
+ * 교수자·관리자 홈(콘솔)의 투어.
+ *
+ * 이것이 없으면 홈 투어는 조용히 죽는다. `runTour`는 대상 요소가 하나도 없으면
+ * 그냥 return하고, 콘솔에는 랜딩의 `data-tour="hero"` 같은 것이 없다 —
+ * 교수자가 "이 페이지 둘러보기"를 눌러도 아무 일도 일어나지 않고 에러도 없다.
+ */
+export function consoleTourSteps(): DriveStep[] {
+  return [
+    {
+      element: '[data-tour="console-header"]',
+      popover: {
+        title: "여기가 관리 홈이에요 🛎️",
+        description:
+          "학습자 화면 대신 오늘 처리할 일이 먼저 보여요. 학습자 화면은 로그아웃하면 볼 수 있어요.",
+      },
+    },
+    {
+      element: '[data-tour="console-cards"]',
+      popover: {
+        title: "카드 위의 숫자",
+        description:
+          "손대야 사라지는 것만 셉니다. 0이면 조용하고, 쌓이면 그 카드가 먼저 눈에 들어와요.",
+      },
+    },
+    {
+      element: '[data-tour="console-stats"]',
+      popover: {
+        title: "이번 달에 만든 것",
+        description:
+          "대기 큐와 달리 이건 회고용 숫자예요. 교수자는 본인이 만든 것만, 관리자는 전체를 봅니다.",
+      },
+    },
+  ];
+}
+
 export function sidebarTourSteps(): DriveStep[] {
   return [
     {

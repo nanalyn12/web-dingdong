@@ -17,7 +17,7 @@ const KO_LABELS: Partial<Config> = {
   popoverClass: "dingdong-coach",
 };
 
-export type TourName = "landing" | "sidebar" | "courses" | "dingdong";
+export type TourName = "landing" | "console" | "sidebar" | "courses" | "dingdong";
 
 const KEY = (n: TourName) => `dingdong:tour:${n}:v1:done`;
 

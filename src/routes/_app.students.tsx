@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Flame, Users } from "lucide-react";
 
 import { useMyProfile, useSession } from "@/lib/auth-client";
+import { isEditorRole } from "@/lib/roles";
 import { idleLabel, idleTone, idleToneClass } from "@/lib/student-activity";
 import { getStudentRoster, type StudentRow } from "@/lib/students.functions";
 
@@ -26,7 +27,7 @@ function StudentsPage() {
   const navigate = useNavigate();
   const { session, loading } = useSession();
   const { data: profile, isLoading: pLoading } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const callRoster = useServerFn(getStudentRoster);
 
   useEffect(() => {

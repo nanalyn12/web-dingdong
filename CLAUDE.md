@@ -44,3 +44,4 @@ npm run verify
 | 2026-09-03 | 오늘의 단어·수업 이어하기 위젯 (배치 10)        | src/lib/widget-catalog.ts, widgets.functions.ts, widget-panel.tsx | 위젯이 전부 '보기' 전용이었고 이어보기가 영상만 다뤘음. 위젯 id·메타 이중 정의도 함께 해소 |
 | 2026-09-04 | 하드코딩 팔레트 → 시맨틱 토큰 (배치 11)         | src/lib/color-contrast.ts, palette-tokens.test.ts, levels.ts, styles.css + tsx 29파일 | `text-slate-700`이 다크에서 1.15:1. 색이 중립·상태·난이도 세 일을 겸하고 있어 단순 치환이 불가능했음. 대비 판정을 순수 산술로 빼 게이트에 넣음 |
 | 2026-09-04 | PDF 저장 복구 — 렌더러 교체 (배치 12)          | src/lib/pdf-report.ts, file-delivery.ts, PDF 버튼 2개, html2pdf.js 제거 | html2canvas 1.4.1이 oklch를 파싱 못 해 PDF가 **한 번도** 만들어진 적 없었음. iOS는 앵커 download도 무시. 렌더·전달 양쪽을 고침 |
+| 2026-09-06 | 교수자·관리자 홈 = 관리 콘솔 (배치 13)         | src/lib/{kst-month,console-cards,console-summary,home-view,console.functions}.ts, teacher-console.tsx, _app.index.tsx | 교수자가 홈에서 만나는 것이 학습자용 랜딩이었음. 역할 인라인 판정 16곳도 roles.ts로 통일 |

@@ -34,6 +34,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useMyProfile } from "@/lib/auth-client";
+import { isEditorRole } from "@/lib/roles";
 import {
   GENRE_LABEL,
   SONG_GENRES,
@@ -136,7 +137,7 @@ export function isRateLimitedMessage(msg: string | undefined | null): boolean {
 
 function SongsPage() {
   const { data: profile } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const { data: songs, isLoading } = useQuery({
     queryKey: ["songs"],
     queryFn: () => listSongs(),

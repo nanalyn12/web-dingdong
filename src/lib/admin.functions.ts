@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
+import { isEditorRole } from "@/lib/roles";
 
 async function assertAdmin(userId: string) {
   const { db, tables } = await import("@/db");
@@ -45,7 +46,7 @@ export const requestTeacher = createServerFn({ method: "POST" })
       .limit(1);
     const prof = rows[0];
     if (!prof) throw new Error("프로필이 없습니다.");
-    if (prof.role === "teacher" || prof.role === "admin") {
+    if (isEditorRole(prof.role)) {
       return { ok: true, already: true };
     }
     if (prof.teacher_status === "pending") {

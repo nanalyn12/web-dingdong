@@ -3,6 +3,7 @@ import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth-middleware";
+import { kstDateKey } from "@/lib/kst-month";
 import { WIDGET_IDS, sanitizeLayout, type WidgetId } from "@/lib/widget-catalog";
 import type { DueWord } from "@/lib/widget-catalog";
 import type { Json } from "@/db/schema";
@@ -125,10 +126,6 @@ export type WidgetStats = {
   /** 최근 62일 중 학습한 날짜들 ("YYYY-MM-DD", KST) — 캘린더 점 표시용 */
   activityDates: string[];
 };
-
-function kstDateKey(d: Date): string {
-  return new Date(d.getTime() + 9 * 3600_000).toISOString().slice(0, 10);
-}
 
 export const getWidgetStats = createServerFn({ method: "GET" })
   .middleware([requireAuth])

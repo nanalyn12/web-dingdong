@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyProfile } from "@/lib/auth-client";
+import { isEditorRole } from "@/lib/roles";
 import { useSongProgress } from "@/lib/song-progress";
 import { shuffle } from "@/lib/shuffle";
 import { listVocabulary, saveVocabulary } from "@/lib/vocab.functions";
@@ -113,7 +114,7 @@ function SongPlayerPage() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const { data: profile } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const { data: song } = useQuery({
     queryKey: ["song", id],
     queryFn: () => getSong({ data: { id } }),
@@ -298,7 +299,7 @@ function SongPlayer({
   const apiRef = useRef<PlayerAPI | null>(null);
   const qc = useQueryClient();
   const { data: profile } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
 
   const saveTimes = useMutation({
     mutationFn: (times: (number | null)[]) =>
@@ -1170,7 +1171,7 @@ function SongLessonTabs({ song, onSeek }: { song: SongRow; onSeek?: (t: number) 
   const notes = Array.isArray(song.grammar_notes) ? song.grammar_notes : [];
   const lyricLines = Array.isArray(song.lyrics) ? song.lyrics : [];
   const { data: profile } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const hasTimes = lyricLines.some((l) => typeof l.time === "number");
 
   // Words the learner already has, so a card opens showing "담김" instead of
@@ -1907,7 +1908,7 @@ function GrammarNoteRow({
 function MakeLessonContentButton({ song }: { song: SongRow }) {
   const { data: profile } = useMyProfile();
   const qc = useQueryClient();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const mutation = useMutation({
     mutationFn: () => generateSongLessonContent({ data: { songId: song.id } }),
     onSuccess: () => {
@@ -1936,7 +1937,7 @@ function MakeLessonContentButton({ song }: { song: SongRow }) {
 function ReannotateButton({ song }: { song: SongRow }) {
   const { data: profile } = useMyProfile();
   const qc = useQueryClient();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const mutation = useMutation({
     mutationFn: () => reannotateSong({ data: { songId: song.id } }),
     onSuccess: () => {
@@ -1967,7 +1968,7 @@ function ReannotateButton({ song }: { song: SongRow }) {
 function TaxonomyEditor({ song }: { song: SongRow }) {
   const { data: profile } = useMyProfile();
   const qc = useQueryClient();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const mutation = useMutation({
     mutationFn: (patch: { genre?: SongGenre | null; theme?: SongTheme | null }) =>
       setSongTaxonomy({ data: { songId: song.id, ...patch } }),
@@ -2024,7 +2025,7 @@ function TaxonomyEditor({ song }: { song: SongRow }) {
 function ResyncLyricsButton({ song }: { song: SongRow }) {
   const { data: profile } = useMyProfile();
   const qc = useQueryClient();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const mutation = useMutation({
     mutationFn: () => resyncSongLyrics({ data: { songId: song.id } }),
     onSuccess: () => {
@@ -2055,7 +2056,7 @@ function ResyncLyricsButton({ song }: { song: SongRow }) {
 function RetryMp4Button({ song }: { song: SongRow }) {
   const { data: profile } = useMyProfile();
   const qc = useQueryClient();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const mutation = useMutation({
     mutationFn: () => generateSongMp4({ data: { songId: song.id } }),
     onSuccess: () => {

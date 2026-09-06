@@ -38,6 +38,7 @@ import { LessonPdfButton } from "@/components/lesson-pdf-button";
 import { loadProgress, saveProgress } from "@/lib/lesson-progress";
 import { getMyLessonProgress, saveMyLessonProgress } from "@/lib/lesson-progress.functions";
 import { useMyProfile, useSession } from "@/lib/auth-client";
+import { isEditorRole } from "@/lib/roles";
 import { generateLessonCulturalCards } from "@/lib/cultural-cards.functions";
 import { useZhTts } from "@/lib/use-zh-tts";
 import { generateLessonComicImages } from "@/lib/lesson-images.functions";
@@ -131,7 +132,7 @@ function LessonPage() {
   const callGenImages = useServerFn(generateLessonComicImages);
   const callGenCultural = useServerFn(generateLessonCulturalCards);
   const { data: profile } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
 
   const callGetLesson = useServerFn(getLesson);
   const {

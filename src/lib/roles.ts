@@ -10,3 +10,12 @@ const EDITOR_ROLES = ["admin", "teacher"] as const;
 export function isEditorRole(role: string | null | undefined): boolean {
   return EDITOR_ROLES.includes(role as (typeof EDITOR_ROLES)[number]);
 }
+
+// 편집 권한과 다른 축이다. 교수자도 콘텐츠는 고치지만 가입 승인은 못 한다.
+// 기존 `role === "admin"` 직접 비교 17곳은 아직 여기로 옮기지 않았다(별도 배치).
+// 새로 쓰는 코드만 이 함수를 거친다 — 사본을 열여덟 번째로 늘리지 않기 위해서다.
+
+/** 가입 승인·운영 같은 관리자 단독 권한인가. */
+export function isAdminRole(role: string | null | undefined): boolean {
+  return role === "admin";
+}

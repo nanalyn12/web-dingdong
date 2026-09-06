@@ -3,11 +3,13 @@
 // (used by the dashboard streak).
 import { sql } from "drizzle-orm";
 
+import { kstDateKey } from "@/lib/kst-month";
+
 export type ActivityField = "reviews" | "words_added" | "lessons" | "videos" | "quizzes";
 
 /** Today's date in KST as "YYYY-MM-DD". */
 export function kstToday(): string {
-  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+  return kstDateKey(new Date());
 }
 
 export async function bumpActivity(

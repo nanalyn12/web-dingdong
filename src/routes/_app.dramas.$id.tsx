@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useMyProfile, useSession } from "@/lib/auth-client";
+import { isEditorRole } from "@/lib/roles";
 import { getMyDramaProgress, saveMyDramaProgress } from "@/lib/drama-progress.functions";
 import { getDrama, updateDramaLineTime, type DramaScene } from "@/lib/dramas.functions";
 import { useZhTts } from "@/lib/use-zh-tts";
@@ -545,7 +546,7 @@ function ScenePanel({
   onQuizComplete?: (score: number, total: number) => void;
 }) {
   const { data: profile } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   return (
     <div className="space-y-4">
       <div className="glass-read rounded-3xl p-5 space-y-2">

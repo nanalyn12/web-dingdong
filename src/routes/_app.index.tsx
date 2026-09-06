@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -18,6 +18,9 @@ import { COURSE_CATEGORIES } from "@/lib/course-categories";
 import heroDingdong from "@/assets/hero-dingdong.png";
 import { listCoursesWithCounts } from "@/lib/courses.functions";
 import { WidgetPanel } from "@/components/widget-panel";
+import { TeacherConsole } from "@/components/teacher-console";
+import { useMyProfile, useSession } from "@/lib/auth-client";
+import { homeViewFor } from "@/lib/home-view";
 import { LEVEL_HSK, LEVEL_LABEL } from "@/lib/levels";
 
 export const Route = createFileRoute("/_app/")({
@@ -36,8 +39,70 @@ export const Route = createFileRoute("/_app/")({
       },
     ],
   }),
-  component: Landing,
+  component: Home,
 });
+
+/**
+ * `/` 한 경로가 역할에 따라 두 화면을 낸다.
+ *
+ * `Landing()`은 손대지 않고 형제로 콘솔을 붙였다 — 학습자 경로에 회귀가 생기면
+ * 이 앱의 첫 화면 전체가 걸리기 때문이다. 어느 쪽을 그릴지는 순수 함수
+ * `homeViewFor`가 정하고, 그 판정의 이유는 home-view.ts에 적혀 있다.
+ */
+function Home() {
+  const { session, loading } = useSession();
+  const { data: profile, isFetched } = useMyProfile();
+  const hydrated = useHydrated();
+
+  const view = homeViewFor({
+    // 세션은 브라우저에서만 조회된다(better-auth의 세션 atom은 `isPending: true`로
+    // 시작한다). 즉 SSR과 하이드레이션 첫 렌더는 로그인 여부를 알 수 없는데, 그
+    // 구간을 "로딩"으로 흘리면 비로그인 요청의 응답 HTML이 통째로 스켈레톤이 되고
+    // head의 OG 태그가 광고하는 내용과 마크업이 어긋난다. 그래서 그때는 공개
+    // 기본값 — 랜딩 — 으로 확정한다. 로그인한 교수자에게는 서버가 그린 랜딩이 한
+    // 프레임 남는데, 이걸 없애려면 세션을 서버에서 읽어야 하고 그건 이 앱의 모든
+    // 화면이 쓰는 클라이언트 인증 구조를 바꾸는 일이라 이 배치 밖이다.
+    sessionLoading: hydrated ? loading : false,
+    hasSession: !!session,
+    // 성공이든 실패든 한 번 다녀왔으면 "모르는 상태"는 끝났다. 실패를 로딩으로
+    // 남겨 두면 프로필 조회가 죽는 날 홈이 영원히 스켈레톤이 된다.
+    profileLoaded: isFetched,
+    role: profile?.role,
+  });
+
+  if (view === "console") {
+    return <TeacherConsole role={profile?.role} name={profile?.nickname ?? undefined} />;
+  }
+  if (view === "loading") return <HomeSkeleton />;
+  return <Landing />;
+}
+
+/**
+ * 서버가 그린 트리와 클라이언트의 첫 렌더가 같아야 하이드레이션이 조용히
+ * 지나간다. 그래서 "이제 브라우저다"는 렌더 중이 아니라 effect에서 켠다.
+ */
+function useHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  return hydrated;
+}
+
+/**
+ * 역할을 아직 모르는 동안. 비로그인 방문자는 여기 오지 않는다 — SSR HTML이
+ * 스켈레톤이 되면 `head`의 OG 태그가 광고하는 내용과 마크업이 어긋난다.
+ */
+function HomeSkeleton() {
+  return (
+    <div className="flex flex-col gap-5" aria-busy="true">
+      <div className="glass rounded-4xl h-40 animate-pulse" />
+      <div className="grid gap-4 md:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="glass rounded-3xl h-28 animate-pulse" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const LEVEL_META: Record<string, { label: string; emoji: string; chip: string }> = {
   beginner: {

@@ -35,6 +35,7 @@ import {
   type VocabPractice,
 } from "@/lib/vocab-practice.functions";
 import { useMyProfile } from "@/lib/auth-client";
+import { isEditorRole } from "@/lib/roles";
 import { LEVEL_LABEL, LEVEL_TONE } from "@/lib/levels";
 import type {
   SpeechRecognitionErrorEventLike,
@@ -77,7 +78,7 @@ export function VocabPracticeDialog({
   const { speak, speakingId } = useZhTts();
   const [tab, setTab] = useState("examples");
   const { data: profile } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
 
   const gen = useMutation({
     mutationFn: (w: Word) =>

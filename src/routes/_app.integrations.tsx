@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, Plug, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useMyProfile, useSession } from "@/lib/auth-client";
+import { isEditorRole } from "@/lib/roles";
 import {
   getIntegrationStatus,
   testIntegration,
@@ -23,7 +24,7 @@ function IntegrationsPage() {
   const navigate = useNavigate();
   const { session, loading } = useSession();
   const { data: profile, isLoading: pLoading } = useMyProfile();
-  const isEditor = profile?.role === "teacher" || profile?.role === "admin";
+  const isEditor = isEditorRole(profile?.role);
   const callStatus = useServerFn(getIntegrationStatus);
 
   useEffect(() => {

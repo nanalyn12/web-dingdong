@@ -3,6 +3,7 @@ import { eq, gte, inArray, sql } from "drizzle-orm";
 
 import { requireAuth } from "@/lib/auth-middleware";
 import { assertEditor } from "@/lib/courses.functions";
+import { kstDateKeyNDaysAgo as kstDateNDaysAgo } from "@/lib/kst-month";
 import { kstToday } from "@/lib/learning-activity.server";
 
 // 교사/관리자용 학습자 현황 로스터. 반/수강 등록 개념이 없어 전체 학습자
@@ -31,10 +32,6 @@ export type StudentRoster = {
     neverActive: number;
   };
 };
-
-function kstDateNDaysAgo(n: number): string {
-  return new Date(Date.now() + 9 * 3600_000 - n * 86400_000).toISOString().slice(0, 10);
-}
 
 export const getStudentRoster = createServerFn({ method: "GET" })
   .middleware([requireAuth])
