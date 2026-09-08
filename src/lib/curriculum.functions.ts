@@ -6,6 +6,13 @@ import { z } from "zod";
 import type { Json } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-middleware";
 import { createTextProviderFor } from "./ai-gateway.server";
+import {
+  buildAssureBackfillPrompt,
+  buildAssurePromptSection,
+  isAssureEmpty,
+  normalizeAssure,
+  type AssurePlan,
+} from "@/lib/assure";
 import { assertEditor, getRole } from "./courses.functions";
 import { levelLabel } from "@/lib/levels";
 
@@ -18,6 +25,10 @@ const GenerateInput = z.object({
   preferredActivities: z.array(z.string()).default([]),
   specialNotes: z.string().optional().default(""),
   lessonObjectiveHint: z.string().optional().default(""),
+  // ASSURE 학습자 분석(A)의 입력. 둘 다 없는 payload 로도 생성이 성공해야 한다 —
+  // 이 화면은 ASSURE 이전부터 쓰이고 있었다.
+  priorKnowledge: z.string().optional().default(""),
+  learningStyle: z.string().optional().default(""),
 });
 
 const JsonObject = z.looseObject({});
@@ -30,9 +41,27 @@ const OutputSchema = z.object({
   activities: z.array(JsonObject).default([]),
   assessment: JsonObject.default({}),
   handout_markdown: z.string().default(""),
+  // ASSURE 가 통째로 빠져도 지도안 본문은 살아야 한다. 스키마로 강제하면
+  // 한 단계 누락이 생성 전체 실패가 된다 — 모양 검사는 normalizeAssure 의 몫.
+  assure: z.unknown().optional(),
 });
 
 const toJson = (v: unknown): Json => v as Json;
+
+/** 6단계가 전부 빈 ASSURE 는 저장하지 않는다 (= 레거시 행과 같은 취급). */
+const assureOrNull = (plan: AssurePlan | null) => (isAssureEmpty(plan) ? null : plan);
+
+/** AI 게이트웨이 에러를 교사가 읽을 수 있는 한 문장으로. 생성·보강 두 경로가 공유한다. */
+function friendlyAiError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/429|rate.?limit|quota/i.test(msg)) {
+    return "Gemini 요청 한도를 초과했어요. 1~2분 후 다시 시도해주세요.";
+  }
+  if (/402|credit|insufficient/i.test(msg))
+    return "AI 크레딧이 부족해요. 충전 후 다시 시도해주세요.";
+  if (/401|unauthor|api.?key/i.test(msg)) return "Gemini API 키 인증 실패.";
+  return msg;
+}
 
 function extractJsonObject(text: string) {
   const trimmed = text
@@ -60,6 +89,8 @@ function buildPrompt(args: {
   preferredActivities: string[];
   specialNotes: string;
   lessonObjectiveHint: string;
+  priorKnowledge: string;
+  learningStyle: string;
 }) {
   return `당신은 한국 학생을 위한 중국어 수업 커리큘럼 설계 전문가입니다.
 아래 입력을 바탕으로 실제 교실에서 바로 사용할 수 있는 수업 지도안을 JSON으로 생성하세요.
@@ -73,6 +104,8 @@ function buildPrompt(args: {
 - 선호 활동: ${args.preferredActivities.join(", ") || "특별 사항 없음"}
 - 특이사항: ${args.specialNotes || "없음"}
 - 수업 목표 힌트: ${args.lessonObjectiveHint || "없음"}
+- 선수학습 수준: ${args.priorKnowledge || "없음"}
+- 학습 양식: ${args.learningStyle || "없음"}
 
 [출력 JSON 스키마 — 최상위 키만 사용]
 {
@@ -107,8 +140,15 @@ function buildPrompt(args: {
     "summative": "수업 끝 확인 방법",
     "rubric": ["평가 기준 3~4개"]
   },
-  "handout_markdown": "학생 배포용 한 페이지 유인물의 마크다운. ## 오늘의 학습 → ## 핵심 표현 (표 형태로 zh/pinyin/의미) → ## 연습 문제 3개 → ## 오늘의 도전 과제. 중국어 문장에는 병음과 한국어 뜻을 함께."
+  "handout_markdown": "학생 배포용 한 페이지 유인물의 마크다운. ## 오늘의 학습 → ## 핵심 표현 (표 형태로 zh/pinyin/의미) → ## 연습 문제 3개 → ## 오늘의 도전 과제. 중국어 문장에는 병음과 한국어 뜻을 함께.",
+  "assure": { "analyze": {…}, "state": {…}, "select": {…}, "utilize": {…}, "require": {…}, "evaluate": {…} }
 }
+
+${buildAssurePromptSection({
+  priorKnowledge: args.priorKnowledge,
+  learningStyle: args.learningStyle,
+  studentGrade: args.studentGrade,
+})}
 
 [필수 규칙]
 - time_blocks 는 반드시 start_min=0 부터 시작하고 마지막 end_min = ${args.durationMinutes} 이 되도록. 겹치거나 비지 않게 연속.
@@ -163,21 +203,18 @@ export const generateCurriculum = createServerFn({ method: "POST" })
           preferredActivities: data.preferredActivities,
           specialNotes: data.specialNotes,
           lessonObjectiveHint: data.lessonObjectiveHint,
+          priorKnowledge: data.priorKnowledge,
+          learningStyle: data.learningStyle,
         }),
-        maxOutputTokens: 16000,
+        // ASSURE 6단계는 ABCD 목표 · 5P · 평가/수정 계획까지 한 응답에 더한다.
+        // 실측 지도안 본문이 9~12k 토큰이라 16000 에서는 잘릴 여지가 크고,
+        // 잘리면 extractJsonObject 가 던져 생성 «전체» 가 실패한다.
+        maxOutputTokens: 24000,
         temperature: 0.5,
       });
       parsed = OutputSchema.parse(extractJsonObject(result.text));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const friendly = /429|rate.?limit|quota/i.test(msg)
-        ? "Gemini 요청 한도를 초과했어요. 1~2분 후 다시 시도해주세요."
-        : /402|credit|insufficient/i.test(msg)
-          ? "AI 크레딧이 부족해요. 충전 후 다시 시도해주세요."
-          : /401|unauthor|api.?key/i.test(msg)
-            ? "Gemini API 키 인증 실패."
-            : msg;
-      throw new Error(`커리큘럼 생성 실패 — ${friendly}`);
+      throw new Error(`커리큘럼 생성 실패 — ${friendlyAiError(err)}`);
     }
 
     const finalTitle = (
@@ -196,6 +233,8 @@ export const generateCurriculum = createServerFn({ method: "POST" })
         preferred_activities: data.preferredActivities,
         special_notes: data.specialNotes || null,
         lesson_objective_hint: data.lessonObjectiveHint || null,
+        prior_knowledge: data.priorKnowledge || null,
+        learning_style: data.learningStyle || null,
         title: finalTitle,
         objectives: toJson(parsed.objectives),
         materials: toJson(parsed.materials),
@@ -203,6 +242,10 @@ export const generateCurriculum = createServerFn({ method: "POST" })
         activities: toJson(parsed.activities),
         assessment: toJson(parsed.assessment),
         handout_markdown: parsed.handout_markdown,
+        // 응답에 assure 가 없거나 6단계가 전부 비면 null 로 남긴다 — 그래야
+        // 상세 화면이 레거시 행과 똑같이 «ASSURE 분석 추가» 버튼을 띄우고,
+        // 화면과 PDF 가 «빈 ASSURE» 를 서로 다르게 다루지 않는다.
+        assure: toJson(assureOrNull(normalizeAssure(parsed.assure ?? null))),
       })
       .returning({ id: tables.curriculum_plans.id });
     return { id: inserted.id };
@@ -449,6 +492,8 @@ export type CurriculumRow = {
   preferred_activities: string[];
   special_notes: string | null;
   lesson_objective_hint: string | null;
+  prior_knowledge: string | null;
+  learning_style: string | null;
   course_id: string | null;
   lesson_id: string | null;
   objectives: Json;
@@ -458,6 +503,8 @@ export type CurriculumRow = {
   assessment: Json;
   handout_markdown: string;
   linked_content: Json | null;
+  // ASSURE 이전에 만들어진 행은 null. 화면은 normalizeAssure 를 거쳐 읽는다.
+  assure: Json | null;
   created_at: string;
   created_by: string;
   // Joined for display — the course/lesson the teacher picked as 현재 진도.
@@ -517,6 +564,76 @@ export const getCurriculum = createServerFn({ method: "POST" })
       course_title: row.course_title,
       lesson_title: row.lesson_title,
     } as unknown as CurriculumRow;
+  });
+
+/**
+ * ASSURE 컬럼이 비어 있는 기존 계획서에 6단계만 나중에 채운다 (리더 결정 4).
+ *
+ * 지도안 본문은 이미 확정된 사실로 두고 건드리지 않는다 — 다시 생성하면 교사가
+ * 이미 수업에 쓴 계획서가 발밑에서 바뀐다.
+ */
+export const generateAssureForPlan = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((i: unknown) => IdInput.parse(i))
+  .handler(async ({ data, context }): Promise<AssurePlan | null> => {
+    await assertEditor(context.userId);
+    const { db, tables } = await import("@/db");
+    const rows = await db
+      .select()
+      .from(tables.curriculum_plans)
+      .where(eq(tables.curriculum_plans.id, data.id))
+      .limit(1);
+    const plan = rows[0];
+    if (!plan) throw new Error("커리큘럼을 찾을 수 없습니다.");
+    const isAdmin = (await getRole(context.userId)) === "admin";
+    if (!isAdmin && plan.created_by !== context.userId) {
+      throw new Error("접근 권한이 없습니다.");
+    }
+
+    const asStrings = (v: Json) => (Array.isArray(v) ? v.map((x) => String(x ?? "")) : []);
+    const asList = (v: Json): unknown[] => (Array.isArray(v) ? v : []);
+
+    // 개인 Gemini 키가 있으면 그 키로 돈다 — 공용 키로 새면 관리자 카드로 결제된다.
+    const gateway = await createTextProviderFor(context.userId);
+
+    let assure: AssurePlan | null;
+    try {
+      const result = await generateText({
+        model: gateway("google/gemini-2.5-flash"),
+        system:
+          "You are an expert instructional designer. Output only valid JSON following the ASSURE model.",
+        prompt: buildAssureBackfillPrompt({
+          title: plan.title,
+          studentGrade: plan.student_grade,
+          durationMinutes: plan.duration_minutes,
+          objectives: asStrings(plan.objectives),
+          materials: asStrings(plan.materials),
+          timeBlocks: asList(plan.time_blocks),
+          activities: asList(plan.activities),
+          assessment: plan.assessment,
+          priorKnowledge: plan.prior_knowledge ?? "",
+          learningStyle: plan.learning_style ?? "",
+        }),
+        maxOutputTokens: 8000,
+        temperature: 0.4,
+      });
+      // 지시대로면 { "assure": {…} } 지만 6단계를 최상위에 펴서 내놓는 응답도 있다.
+      const raw = extractJsonObject(result.text) as Record<string, unknown>;
+      assure = normalizeAssure(raw.assure ?? raw);
+    } catch (err) {
+      throw new Error(`ASSURE 분석 생성 실패 — ${friendlyAiError(err)}`);
+    }
+    // 6단계가 통째로 빈 응답을 저장하면 «ASSURE 분석 추가» 버튼이 사라져
+    // 교사가 다시 시도할 길이 없어진다. 저장하지 않고 실패로 돌린다.
+    if (isAssureEmpty(assure)) {
+      throw new Error("ASSURE 분석 생성 실패 — AI 응답에서 6단계를 읽지 못했어요.");
+    }
+
+    await db
+      .update(tables.curriculum_plans)
+      .set({ assure: toJson(assure) })
+      .where(eq(tables.curriculum_plans.id, data.id));
+    return assure;
   });
 
 /** 커리큘럼의 연계 학습 콘텐츠 — 캐시가 없으면 최초 1회 AI로 생성. */

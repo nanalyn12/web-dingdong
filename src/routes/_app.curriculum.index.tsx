@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LEARNING_STYLE_PRESETS } from "@/lib/assure";
 import { useIsEditor, useMyProfile } from "@/lib/auth-client";
 import { listCoursesWithLessons } from "@/lib/courses.functions";
 import {
@@ -110,6 +111,9 @@ function CurriculumForm() {
   const [activities, setActivities] = useState<string[]>(["게임", "짝활동"]);
   const [specialNotes, setSpecialNotes] = useState("");
   const [objectiveHint, setObjectiveHint] = useState("");
+  const [priorKnowledge, setPriorKnowledge] = useState("");
+  const [learningStyles, setLearningStyles] = useState<string[]>([]);
+  const [styleInput, setStyleInput] = useState("");
 
   const lessonsForCourse = useMemo(
     () => coursesData?.find((c) => c.id === courseId)?.lessons ?? [],
@@ -128,6 +132,9 @@ function CurriculumForm() {
           preferredActivities: activities,
           specialNotes,
           lessonObjectiveHint: objectiveHint,
+          priorKnowledge,
+          // 서버·DB·프롬프트는 한 문장으로 다룬다. 칩은 입력 조작감일 뿐이다.
+          learningStyle: learningStyles.join(", "),
         },
       }),
     onSuccess: (r) => {
@@ -147,6 +154,13 @@ function CurriculumForm() {
     if (!v) return;
     if (!interests.includes(v)) setInterests([...interests, v]);
     setInterestInput("");
+  };
+
+  const addStyle = () => {
+    const v = styleInput.trim();
+    if (!v) return;
+    if (!learningStyles.includes(v)) setLearningStyles([...learningStyles, v]);
+    setStyleInput("");
   };
 
   return (
@@ -311,6 +325,89 @@ function CurriculumForm() {
               {p}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/*
+        ASSURE 의 학습자 분석(A) 입력. 두 칸이 폼 어딘가에 흩어져 있으면 교사는
+        이게 무엇을 위한 질문인지 알 수 없어서, 단계 이름을 붙여 한 묶음으로 둔다.
+      */}
+      <div className="rounded-2xl border border-lavender/40 bg-surface/40 p-3 sm:p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-6 items-center justify-center rounded-full bg-lavender/40 text-xs font-bold">
+            A
+          </span>
+          <div>
+            <div className="text-sm font-semibold">학습자 분석 (선택)</div>
+            <p className="text-xs text-muted-foreground">
+              ASSURE 모형의 첫 단계예요. 적어두면 목표·활동·매체를 이 학생들에 맞춰 골라줍니다.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>선수학습 수준 (선택)</Label>
+          <Input
+            placeholder="예: HSK 1급 어휘 150개 학습 완료 / 성조는 배웠지만 발음은 미숙"
+            value={priorKnowledge}
+            onChange={(e) => setPriorKnowledge(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>학습 양식 (선택, 여러 개 가능)</Label>
+          <div className="flex gap-2 flex-wrap">
+            {LEARNING_STYLE_PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => toggle(learningStyles, p, setLearningStyles)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  learningStyles.includes(p)
+                    ? "gradient-primary text-primary-foreground"
+                    : "bg-surface/50 hover:bg-surface/70"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="직접 추가 (예: 또래와 말하며 익히는 편)"
+              value={styleInput}
+              onChange={(e) => setStyleInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addStyle();
+                }
+              }}
+            />
+            <Button type="button" variant="outline" onClick={addStyle}>
+              추가
+            </Button>
+          </div>
+          {learningStyles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {learningStyles.map((s) => (
+                <span
+                  key={s}
+                  className="text-xs bg-lavender/30 text-foreground px-2 py-1 rounded-full flex items-center gap-1"
+                >
+                  {s}
+                  <button
+                    type="button"
+                    aria-label={`${s} 제거`}
+                    onClick={() => setLearningStyles(learningStyles.filter((x) => x !== s))}
+                    className="hover:text-foreground"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

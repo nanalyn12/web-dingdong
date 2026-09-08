@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ASSURE_STEPS, normalizeAssure, type AssurePlan } from "@/lib/assure";
 import { deliverFile } from "@/lib/file-delivery";
 import { renderElementToPdfBlob } from "@/lib/pdf-report";
 
@@ -43,6 +44,11 @@ type Props = {
   activities: Activity[];
   assessment: Assessment;
   handoutMarkdown: string;
+  /**
+   * ASSURE 6단계. 없는 계획서(레거시 행)에서는 섹션만 빠지고 나머지는 그대로
+   * 나와야 한다 — buildHtml 이 여기서 던지면 PDF·인쇄 두 버튼이 함께 죽는다.
+   */
+  assure?: AssurePlan | null;
 };
 
 /** Trims a value down to something a filesystem will accept. */
@@ -60,6 +66,95 @@ function esc(s: unknown) {
     .replace(/>/g, "&gt;");
 }
 
+/**
+ * ASSURE 6단계 — 없으면 빈 문자열을 돌려 섹션만 빠진다.
+ *
+ * 흑백 인쇄에서도 단계가 구분돼야 하므로 색이 아니라 테두리와 단계 문자
+ * 사각형으로 나눈다. 값은 전부 esc() 를 지나며, 규칙은 화면과 같은
+ * normalizeAssure 하나만 쓴다.
+ */
+function assureHtml(raw: unknown): string {
+  const plan = normalizeAssure(raw);
+  if (!plan) return "";
+
+  const list = (label: string, items: string[]) =>
+    items.length > 0
+      ? `<div style="margin-bottom:6px;"><div style="font-weight:700;">${esc(label)}</div>
+          <ul style="margin:2px 0;padding-left:16px;">${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul></div>`
+      : "";
+  const text = (label: string, value: string) =>
+    value
+      ? `<div style="margin-bottom:6px;"><div style="font-weight:700;">${esc(label)}</div><div>${esc(value)}</div></div>`
+      : "";
+
+  const abcd = plan.state.objectives
+    .map(
+      (
+        o,
+      ) => `<div style="border:1px solid #cbd5e1;border-radius:6px;padding:6px;margin-bottom:6px;">
+        ${o.audience ? `<div><b>A 학습자</b> ${esc(o.audience)}</div>` : ""}
+        ${o.condition ? `<div><b>C 조건</b> ${esc(o.condition)}</div>` : ""}
+        ${o.behavior ? `<div><b>B 행동</b> ${esc(o.behavior)}</div>` : ""}
+        ${o.degree ? `<div><b>D 준거</b> ${esc(o.degree)}</div>` : ""}
+      </div>`,
+    )
+    .join("");
+
+  const bodies: Record<string, string> = {
+    analyze: [
+      list("일반적 특성", plan.analyze.general_traits),
+      list("출발점 능력 (선수학습)", plan.analyze.entry_competencies),
+      list("학습 양식", plan.analyze.learning_styles),
+    ].join(""),
+    state: abcd,
+    select: [
+      list("교수방법", plan.select.methods),
+      list("매체", plan.select.media),
+      list("자료", plan.select.materials),
+      text("선정 근거", plan.select.rationale),
+    ].join(""),
+    utilize: [
+      text("사전검토", plan.utilize.preview),
+      text("자료 준비", plan.utilize.prepare_materials),
+      text("환경 준비", plan.utilize.prepare_environment),
+      text("학습자 준비", plan.utilize.prepare_learners),
+      text("학습경험 제공", plan.utilize.provide_experience),
+    ].join(""),
+    require: [
+      list("참여 유도 활동", plan.require.participation_activities),
+      text("연습", plan.require.practice),
+      text("피드백", plan.require.feedback),
+    ].join(""),
+    evaluate: [
+      text("학습자 성취 평가", plan.evaluate.learner_assessment),
+      text("매체·방법 평가", plan.evaluate.media_method_evaluation),
+      text("수정 계획", plan.evaluate.revision_plan),
+    ].join(""),
+  };
+
+  const cards = ASSURE_STEPS.filter((s) => bodies[s.key])
+    .map(
+      (
+        s,
+      ) => `<div style="border:1px solid #94a3b8;border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px;page-break-inside:avoid;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="display:inline-block;min-width:20px;text-align:center;border:1px solid #0f172a;background:#0f172a;color:#f8fafc;font-weight:700;border-radius:4px;padding:1px 4px;">${esc(s.letter)}</span>
+          <b style="font-size:13px;">${esc(s.label)}</b>
+          <span style="color:#475569;font-size:11px;">${esc(s.summary)}</span>
+        </div>
+        ${bodies[s.key]}
+      </div>`,
+    )
+    .join("");
+  if (!cards) return "";
+
+  return `
+      <section style="margin-bottom:18px;">
+        <h2 style="font-size:15px;font-weight:700;margin:0 0 6px;">🧭 ASSURE 교수설계 분석</h2>
+        ${cards}
+      </section>`;
+}
+
 function buildHtml(p: Props) {
   const phaseColor: Record<string, string> = {
     도입: "#fce7f3",
@@ -74,6 +169,7 @@ function buildHtml(p: Props) {
         <h1 style="font-size:24px;font-weight:700;margin:6px 0 0;">${esc(p.title)}</h1>
         <div style="font-size:12px;color:#64748b;margin-top:4px;">대상: ${esc(p.studentGrade)} · 총 ${p.durationMinutes}분</div>
       </div>
+${assureHtml(p.assure)}
 
       <section style="margin-bottom:18px;">
         <h2 style="font-size:15px;font-weight:700;margin:0 0 6px;">🎯 수업 목표</h2>

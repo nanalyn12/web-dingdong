@@ -175,6 +175,11 @@ export const curriculum_plans = pgTable("curriculum_plans", {
   preferred_activities: text("preferred_activities").array().notNull().default([]),
   special_notes: text("special_notes"),
   lesson_objective_hint: text("lesson_objective_hint"),
+  // ASSURE 학습자 분석(A)의 교사 입력 원문 — interests·lesson_objective_hint 와
+  // 같은 취급이다. 이걸 남기지 않으면 "무슨 입력으로 만든 계획서인지" 를
+  // 나중에 되짚을 수 없다.
+  prior_knowledge: text("prior_knowledge"),
+  learning_style: text("learning_style"),
   course_id: uuid("course_id").references(() => courses.id, { onDelete: "set null" }),
   lesson_id: uuid("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
   objectives: jsonb("objectives").$type<Json>().notNull().default([]),
@@ -187,6 +192,9 @@ export const curriculum_plans = pgTable("curriculum_plans", {
   // computed once on first view of the plan, cached here.
   // See curriculum.functions.ts.
   linked_content: jsonb("linked_content").$type<Json>(),
+  // ASSURE 6단계 (assure.ts 의 AssurePlan). nullable — 이 컬럼 이전에 만들어진
+  // 계획서는 영영 NULL 로 남을 수 있고, 그 행에서도 상세·PDF·백업이 살아야 한다.
+  assure: jsonb("assure").$type<Json>(),
   created_by: text("created_by").notNull(),
   created_at: ts("created_at").notNull().defaultNow(),
   updated_at: ts("updated_at").notNull().defaultNow(),
