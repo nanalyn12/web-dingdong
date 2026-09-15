@@ -412,7 +412,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
           {count >= 6 && (
             <p className="text-xs text-muted-foreground">
               YouTube 업로드는 하루 약 6개 한도가 있어요. 초과분은 업로드 단계에서 실패할 수 있으니
-              [승인 후 업로드]를 권장해요.
+              [미리보기 후 승인 업로드]를 권장해요.
             </p>
           )}
         </div>
