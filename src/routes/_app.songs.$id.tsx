@@ -2052,7 +2052,8 @@ function ResyncLyricsButton({ song }: { song: SongRow }) {
   );
 }
 
-// Editor-only: retry MP4 when auto-kickoff failed.
+// Editor-only: retry an MP4 task that failed. Audio completion no longer starts
+// one (see advanceSongAudio), so this only appears on failed_video songs.
 function RetryMp4Button({ song }: { song: SongRow }) {
   const { data: profile } = useMyProfile();
   const qc = useQueryClient();
@@ -2218,7 +2219,7 @@ function SunoStatusPanel({
         <p className="text-[11px] text-muted-foreground">
           {isVideo
             ? "MP4가 완료되면 자동으로 재생 화면에 나타나요."
-            : "음원이 완료되면 자동으로 MP4 영상 생성이 이어져요."}
+            : "음원이 완료되면 가사 싱크와 학습 자료가 자동으로 준비돼요."}
         </p>
       )}
     </div>

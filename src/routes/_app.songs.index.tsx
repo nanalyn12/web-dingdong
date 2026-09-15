@@ -866,7 +866,7 @@ function GenerateSongForm({ onDone }: { onDone: () => void }) {
         toast.error(res.error);
         return;
       }
-      toast.success("🎙️ 음원을 만들고 있어요. 완료되면 자동으로 MP4 영상까지 만들어드릴게요!");
+      toast.success("🎙️ 음원을 만들고 있어요. 완료되면 가사 싱크와 학습 자료까지 준비해드릴게요!");
       qc.invalidateQueries({ queryKey: ["songs"] });
       onDone();
     },
