@@ -14,7 +14,14 @@ const VISITOR_URLS = [
   "/settings",
 ];
 
-const EDITOR_ONLY_URLS = ["/students", "/curriculum", "/studio", "/integrations", "/admin"];
+const EDITOR_ONLY_URLS = [
+  "/students",
+  "/curriculum",
+  "/studio",
+  "/integrations",
+  "/guide",
+  "/admin",
+];
 
 describe("what a visitor sees", () => {
   // L1-1 — order matters: this is the rendered menu, not a set.
@@ -53,6 +60,15 @@ describe("what an editor sees", () => {
   // L1-4
   it("gives an admin the same destinations as a teacher", () => {
     expect(urls("admin")).toEqual(urls("teacher"));
+  });
+
+  // Teacher guide — the guide sits with the teacher screens, right before AI 설정.
+  it.each(["teacher", "admin"])("puts 가이드 just before AI 설정 for %s", (role) => {
+    const items = navItemsFor(role);
+    const guide = items.findIndex((i) => i.url === "/guide");
+    expect(guide).toBeGreaterThanOrEqual(0);
+    expect(items[guide].title).toBe("가이드");
+    expect(items[guide + 1].url).toBe("/settings");
   });
 
   // L1-5 — the one place the two editor roles differ.

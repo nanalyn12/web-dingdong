@@ -1,4 +1,5 @@
 import {
+  BookMarked,
   BookOpen,
   CalendarClock,
   Clapperboard,
@@ -54,6 +55,8 @@ const EDITOR_ITEMS: NavItem[] = [
   { title: "커리큘럼 생성기", url: "/curriculum", icon: CalendarClock },
   { title: "영상 스튜디오", url: "/studio", icon: Clapperboard },
   { title: "연동 상태", url: "/integrations", icon: Plug },
+  // Editor-only until a learner guide exists — a student would get an empty tab.
+  { title: "가이드", url: "/guide", icon: BookMarked },
 ];
 
 const SETTINGS_ITEM: NavItem = { title: "AI 설정", url: "/settings", icon: KeyRound };
