@@ -40,7 +40,9 @@ import {
   type CourseWithLessons,
 } from "@/lib/courses.functions";
 
-import { useIsEditor } from "@/lib/auth-client";
+import { useIsEditor, useSession } from "@/lib/auth-client";
+import { courseRingState } from "@/lib/course-progress";
+import { listMyLessonProgress } from "@/lib/lesson-progress.functions";
 import { generateLesson } from "@/lib/generate-lesson.functions";
 import { courseMatchesCategory, findCategory } from "@/lib/course-categories";
 import {
@@ -498,7 +500,23 @@ function CourseCard({ course }: { course: CourseWithCount }) {
     queryKey: ["sidebar-courses-with-lessons"],
     queryFn: () => listCoursesWithLessons(),
   });
-  const firstLessonId = coursesWithLessons?.find((c) => c.id === course.id)?.lessons?.[0]?.id;
+  const courseLessons = coursesWithLessons?.find((c) => c.id === course.id)?.lessons ?? [];
+  const firstLessonId = courseLessons[0]?.id;
+
+  // 진도 링에 쓸 "내가 끝낸 세부 강의" 수. 강의 상세 화면과 같은 질의·같은
+  // queryKey라 카드가 몇 장이든 요청은 한 번이다.
+  const { session } = useSession();
+  const { data: myProgress } = useQuery({
+    queryKey: ["my-lesson-progress"],
+    queryFn: () => listMyLessonProgress(),
+    enabled: !!session,
+  });
+  const doneIds = new Set((myProgress ?? []).filter((p) => p.completed).map((p) => p.lesson_id));
+  const ring = courseRingState({
+    lessonCount: course.lesson_count,
+    completedLessons: courseLessons.filter((l) => doneIds.has(l.id)).length,
+    signedIn: !!session,
+  });
 
   const accent = {
     // Amber/orange was the one accent outside the pink–sky–mint–lavender
@@ -523,9 +541,6 @@ function CourseCard({ course }: { course: CourseWithCount }) {
       glow: "hover:shadow-[0_10px_30px_-12px_rgba(139,92,246,0.45)]",
     },
   }[courseLevel];
-
-  const progress = Math.min(course.lesson_count, course.weeks);
-  const pct = course.weeks > 0 ? progress / course.weeks : 0;
 
   return (
     <div
@@ -568,42 +583,44 @@ function CourseCard({ course }: { course: CourseWithCount }) {
             </Link>
           </div>
 
-          {/* Progress ring */}
-          <div className="shrink-0 relative w-14 h-14">
-            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-              <circle
-                cx="18"
-                cy="18"
-                r="15.9"
-                fill="none"
-                className="stroke-white/60"
-                strokeWidth="3"
-              />
-              <circle
-                cx="18"
-                cy="18"
-                r="15.9"
-                fill="none"
-                className={accent.ring}
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeDasharray={`${pct * 100} 100`}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-              <span className="text-sm font-bold">{progress}</span>
-              <span className="text-[9px] text-muted-foreground">/{course.weeks}</span>
+          {/* Progress ring — 내가 끝낸 세부 강의 수. 셀 진도가 없으면 접는다. */}
+          {ring.show && (
+            <div
+              className="shrink-0 relative w-14 h-14"
+              role="img"
+              aria-label={`세부 강의 ${ring.total}개 중 ${ring.done}개 완료`}
+            >
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90" aria-hidden="true">
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="15.9"
+                  fill="none"
+                  className="stroke-white/60"
+                  strokeWidth="3"
+                />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="15.9"
+                  fill="none"
+                  className={accent.ring}
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray={`${ring.ratio * 100} 100`}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+                <span className="text-sm font-bold">{ring.done}</span>
+                <span className="text-[9px] text-muted-foreground">/{ring.total}</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Progress caption */}
-        <p className="text-xs text-muted-foreground">
-          {course.lesson_count > 0
-            ? `${course.weeks}주 중 ${progress}주차 준비됨 · 세부 강의 ${course.lesson_count}개`
-            : "아직 세부 강의가 준비되지 않았어요"}
-        </p>
+        <p className="text-xs text-muted-foreground">{ring.caption}</p>
 
         {/* CTA */}
         <div className="flex items-center gap-2">

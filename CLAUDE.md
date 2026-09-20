@@ -49,3 +49,4 @@ npm run verify
 | 2026-09-15 | 학습송 MP4 자동 생성 안내 문구 정정             | src/lib/song-copy.test.ts, \_app.songs.index.tsx, \_app.songs.$id.tsx | MP4가 opt-in으로 바뀐 뒤에도 화면 3곳이 "음원 완료 후 자동으로 MP4"를 약속하고 있었음. 전제(advanceSongAudio가 MP4를 시작하지 않음)와 문구를 소스 가드로 묶음 |
 | 2026-09-15 | 교수자 가이드 탭 (7개 가이드)                   | src/lib/teacher-guide.ts(+test), nav-items.ts, \_app.guide.tsx | 코치마크는 한 화면의 버튼만 짚어 여러 화면·대기에 걸친 교수자 작업 순서를 담지 못했음. 가이드의 경로는 라우트 트리, 「」 인용 문구는 원본 화면 파일과 대조해 화면이 바뀌면 게이트에서 깨지게 함 |
 | 2026-09-15 | 영상 스튜디오 안내의 없는 옵션 이름 정정        | src/lib/studio-copy.test.ts, \_app.studio.tsx | "[승인 후 업로드]"를 권장했으나 그런 옵션은 없고 실제 이름은 "미리보기 후 승인 업로드". 화면 속 [라벨] 참조를 실제 텍스트·메뉴 제목과 대조하는 가드 추가 |
+| 2026-09-20 | 강의 카드 진도 링을 학습 진도로 재정의          | src/lib/course-progress.ts(+test), \_app.courses.index.tsx | 분모로 쓰던 weeks가 `GREATEST(weeks, lesson count)` 래칫이라 운영 DB 14개 강의 전부 weeks == lesson_count. 링이 구조적으로 100% 외의 값을 가질 수 없었음. 상세 화면이 이미 쓰던 "완료한 세부 강의 수" 정의로 통일하고, weeks를 인자로 받지 않는 순수 함수로 빼 회귀를 가드 |
