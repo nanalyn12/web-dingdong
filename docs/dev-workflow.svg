@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 880" width="1240" height="880" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="8" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arRed" markerWidth="9" markerHeight="8" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#e11d48"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1240" height="880" rx="18" fill="#f7f9fc" stroke="#e2e8f0"/>
+
+  <text x="44" y="54" font-size="29" font-weight="700" fill="#0f172a">딩동(DingDong) 개발 워크플로우</text>
+  <text x="44" y="84" font-size="15" fill="#64748b">합격 기준 → 실패 테스트 → 최소 구현 → 4중 게이트 → 배포. 기준을 코드보다 먼저 고정한다.</text>
+  <rect x="972" y="34" width="224" height="30" rx="15" fill="#ede9fe" stroke="#ddd6fe"/>
+  <text x="1084" y="54" font-size="13" font-weight="700" fill="#5b21b6" text-anchor="middle">학위논문 연구 산출물</text>
+
+  <!-- 1. 프로젝트 여정 -->
+  <rect x="44" y="110" width="236" height="28" rx="14" fill="#e0e7ff"/>
+  <text x="60" y="129" font-size="13" font-weight="700" fill="#3730a3">① 프로젝트 여정 (한 번)</text>
+
+  <g>
+    <rect x="44" y="152" width="168" height="86" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="128" y="190" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Lovable export</text>
+    <text x="128" y="212" font-size="11.5" fill="#64748b" text-anchor="middle">코드만 추출 · 동기화 없음</text>
+
+    <rect x="244" y="152" width="168" height="86" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="328" y="190" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">자체 호스팅 전환</text>
+    <text x="328" y="212" font-size="11.5" fill="#64748b" text-anchor="middle">Railway · Postgres · 볼륨</text>
+
+    <rect x="444" y="152" width="168" height="86" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="528" y="190" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">에이전트 하네스 도입</text>
+    <text x="528" y="212" font-size="11.5" fill="#64748b" text-anchor="middle">CLAUDE.md · 스킬 4 · 역할 4</text>
+
+    <rect x="644" y="152" width="168" height="86" rx="12" fill="#eef2ff" stroke="#a5b4fc"/>
+    <text x="728" y="190" font-size="14" font-weight="700" fill="#312e81" text-anchor="middle">기능 단위 반복</text>
+    <text x="728" y="212" font-size="11.5" fill="#4f46e5" text-anchor="middle">↓ 아래 사이클을 매번</text>
+
+    <rect x="844" y="152" width="168" height="86" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="928" y="190" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">배포 · 운영</text>
+    <text x="928" y="212" font-size="11.5" fill="#64748b" text-anchor="middle">main push → 자동 배포</text>
+
+    <rect x="1044" y="152" width="168" height="86" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="1128" y="190" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">연구 자료화</text>
+    <text x="1128" y="212" font-size="11.5" fill="#64748b" text-anchor="middle">논문용 기술서로 정리</text>
+
+    <line x1="216" y1="195" x2="238" y2="195" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="416" y1="195" x2="438" y2="195" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="616" y1="195" x2="638" y2="195" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="816" y1="195" x2="838" y2="195" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="1016" y1="195" x2="1038" y2="195" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- 2. 기능 하나당 반복 -->
+  <rect x="44" y="270" width="620" height="28" rx="14" fill="#e0e7ff"/>
+  <text x="60" y="289" font-size="13" font-weight="700" fill="#3730a3">② 기능 하나당 반복 — 메인 세션(리더)이 역할 4개를 순서대로 돌린다</text>
+
+  <g>
+    <rect x="40" y="312" width="272" height="200" rx="14" fill="#ffffff" stroke="#a7f3d0" stroke-width="2"/>
+    <rect x="56" y="328" width="76" height="22" rx="11" fill="#d1fae5"/>
+    <text x="94" y="343" font-size="11.5" font-weight="700" fill="#065f46" text-anchor="middle">Phase 1</text>
+    <text x="56" y="376" font-size="16.5" font-weight="700" fill="#0f172a">기준 확정</text>
+    <text x="56" y="397" font-size="11.5" fill="#059669">spec-analyst · 읽기 전용</text>
+    <line x1="56" y1="412" x2="296" y2="412" stroke="#e2e8f0"/>
+    <text x="56" y="436" font-size="12.5" fill="#334155">• 영향 파일과 회귀 위험 식별</text>
+    <text x="56" y="460" font-size="12.5" fill="#334155">• L1/L2/L3 합격 기준 문서화</text>
+    <text x="56" y="484" font-size="12.5" fill="#334155">• L1 기준이 없으면 착수 반려</text>
+
+    <rect x="336" y="312" width="272" height="200" rx="14" fill="#ffffff" stroke="#fed7aa" stroke-width="2"/>
+    <rect x="352" y="328" width="76" height="22" rx="11" fill="#ffedd5"/>
+    <text x="390" y="343" font-size="11.5" font-weight="700" fill="#9a3412" text-anchor="middle">Phase 2</text>
+    <text x="352" y="376" font-size="16.5" font-weight="700" fill="#0f172a">Red — 실패를 먼저</text>
+    <text x="352" y="397" font-size="11.5" fill="#c2410c">test-author</text>
+    <line x1="352" y1="412" x2="592" y2="412" stroke="#e2e8f0"/>
+    <text x="352" y="436" font-size="12.5" fill="#334155">• 합격 기준을 Vitest 테스트로</text>
+    <text x="352" y="460" font-size="12.5" fill="#334155">• 실행해서 실패 출력을 확인</text>
+    <text x="352" y="484" font-size="12.5" fill="#334155">• 프로덕션 코드는 건드리지 않음</text>
+
+    <rect x="632" y="312" width="272" height="200" rx="14" fill="#ffffff" stroke="#fed7aa" stroke-width="2"/>
+    <rect x="648" y="328" width="76" height="22" rx="11" fill="#ffedd5"/>
+    <text x="686" y="343" font-size="11.5" font-weight="700" fill="#9a3412" text-anchor="middle">Phase 3</text>
+    <text x="648" y="376" font-size="16.5" font-weight="700" fill="#0f172a">Green — 최소 구현</text>
+    <text x="648" y="397" font-size="11.5" fill="#c2410c">feature-builder</text>
+    <line x1="648" y1="412" x2="888" y2="412" stroke="#e2e8f0"/>
+    <text x="648" y="436" font-size="12.5" fill="#334155">• 테스트를 통과시키는 최소 변경</text>
+    <text x="648" y="460" font-size="12.5" fill="#334155">• 테스트 파일 수정 금지</text>
+    <text x="648" y="484" font-size="12.5" fill="#334155">• 통과를 유지한 채 정리(Refactor)</text>
+
+    <rect x="928" y="312" width="272" height="200" rx="14" fill="#ffffff" stroke="#bfdbfe" stroke-width="2"/>
+    <rect x="944" y="328" width="76" height="22" rx="11" fill="#dbeafe"/>
+    <text x="982" y="343" font-size="11.5" font-weight="700" fill="#1e40af" text-anchor="middle">Phase 4</text>
+    <text x="944" y="376" font-size="16.5" font-weight="700" fill="#0f172a">게이트 채점</text>
+    <text x="944" y="397" font-size="11.5" fill="#2563eb">qa-verifier</text>
+    <line x1="944" y1="412" x2="1184" y2="412" stroke="#e2e8f0"/>
+    <text x="944" y="436" font-size="12.5" fill="#334155">• L1·L2 게이트 4종 실행 (아래)</text>
+    <text x="944" y="460" font-size="12.5" fill="#334155">• 경계면 교차 검증</text>
+    <text x="944" y="484" font-size="12.5" fill="#334155">  서버함수 ↔ 라우트 ↔ 스키마</text>
+
+    <line x1="314" y1="412" x2="332" y2="412" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="610" y1="412" x2="628" y2="412" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="906" y1="412" x2="924" y2="412" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+  </g>
+
+  <path d="M1064,512 L1064,552 L768,552 L768,518" fill="none" stroke="#e11d48" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arRed)"/>
+  <text x="916" y="576" font-size="12.5" font-weight="600" fill="#be123c" text-anchor="middle">게이트 미달 → Phase 3부터 다시 (상한 3회, 넘으면 사람이 개입)</text>
+
+  <!-- 3. 완료 조건 -->
+  <rect x="44" y="600" width="536" height="28" rx="14" fill="#e0e7ff"/>
+  <text x="60" y="619" font-size="13" font-weight="700" fill="#3730a3">③ 완료 조건 — npm run verify, 넷이 모두 통과해야 완료</text>
+
+  <g>
+    <rect x="40" y="642" width="272" height="66" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="176" y="670" font-size="13.5" font-weight="700" fill="#0f172a" text-anchor="middle">vitest run</text>
+    <text x="176" y="691" font-size="11.5" fill="#64748b" text-anchor="middle">순수 로직 유닛 테스트 · 소스 가드</text>
+
+    <rect x="336" y="642" width="272" height="66" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="472" y="670" font-size="13.5" font-weight="700" fill="#0f172a" text-anchor="middle">tsc --noEmit</text>
+    <text x="472" y="691" font-size="11.5" fill="#64748b" text-anchor="middle">타입 체크 (경계면 불일치 탐지)</text>
+
+    <rect x="632" y="642" width="272" height="66" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="768" y="670" font-size="13.5" font-weight="700" fill="#0f172a" text-anchor="middle">eslint .</text>
+    <text x="768" y="691" font-size="11.5" fill="#64748b" text-anchor="middle">저장소 전체 errors 0 기준선</text>
+
+    <rect x="928" y="642" width="272" height="66" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="1064" y="670" font-size="13.5" font-weight="700" fill="#0f172a" text-anchor="middle">vite build</text>
+    <text x="1064" y="691" font-size="11.5" fill="#64748b" text-anchor="middle">프로덕션 빌드 (Nitro node-server)</text>
+  </g>
+
+  <!-- 4. 합격 이후 -->
+  <g>
+    <rect x="40" y="740" width="372" height="72" rx="12" fill="#ecfdf5" stroke="#a7f3d0"/>
+    <text x="226" y="770" font-size="14" font-weight="700" fill="#065f46" text-anchor="middle">합격 → 커밋 1개</text>
+    <text x="226" y="791" font-size="11.5" fill="#047857" text-anchor="middle">CLAUDE.md 변경 이력에 날짜 · 대상 · 사유 기록</text>
+
+    <rect x="434" y="740" width="372" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="620" y="770" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">GitHub main push</text>
+    <text x="620" y="791" font-size="11.5" fill="#64748b" text-anchor="middle">nanalyn12/web-dingdong</text>
+
+    <rect x="828" y="740" width="372" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="1014" y="770" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Railway 자동 배포</text>
+    <text x="1014" y="791" font-size="11.5" fill="#64748b" text-anchor="middle">빌드 → Node 서버 → 볼륨 /data 마운트</text>
+
+    <line x1="414" y1="776" x2="430" y2="776" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+    <line x1="808" y1="776" x2="824" y2="776" stroke="#94a3b8" stroke-width="2" marker-end="url(#ar)"/>
+  </g>
+
+  <text x="620" y="848" font-size="12.5" fill="#64748b" text-anchor="middle">합격 기준은 구현 전에 확정되고 구현 도중에 낮추지 않는다 — 기준이 조용히 느슨해지는 것을 막는 것이 이 워크플로우의 목적이다.</text>
+</svg>
