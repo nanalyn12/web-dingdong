@@ -5,6 +5,50 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
+ * Han characters in one Simplified Chinese face.
+ *
+ * The app sets no font of its own, and on Korean Windows Han text is looked up
+ * in Malgun Gothic first. It carries the Korean (traditional-form) hanja, so a
+ * line like "比赛就要开始了" took 比·就·要 from it and only the simplified-only
+ * 赛·开 from a Chinese face — two fonts, visibly different weights, one line.
+ *
+ * "DD Han" answers only for Han and CJK punctuation (unicode-range), so it can
+ * sit first in the sans stack without touching Hangul or Latin — pinyin tone
+ * marks stay in the text font. Sources are faces already on the device; where
+ * none is installed the alias simply fails to load and the next font in the
+ * stack takes over, as before. A separate bold face keeps bold Chinese real
+ * rather than synthesised. Guarded by han-font.test.ts.
+ */
+@font-face {
+  font-family: "DD Han";
+  src:
+    local("PingFang SC Regular"), local("PingFangSC-Regular"), local("Microsoft YaHei"),
+    local("Microsoft YaHei UI"), local("Noto Sans CJK SC"), local("NotoSansCJKsc-Regular"),
+    local("Noto Sans SC"), local("Source Han Sans SC");
+  font-weight: 100 500;
+  font-display: swap;
+  unicode-range: U+3000-303F, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF01-FF60;
+}
+
+@font-face {
+  font-family: "DD Han";
+  src:
+    local("PingFang SC Semibold"), local("PingFangSC-Semibold"), local("Microsoft YaHei Bold"),
+    local("Microsoft YaHei UI Bold"), local("Noto Sans CJK SC Bold"), local("NotoSansCJKsc-Bold"),
+    local("Noto Sans SC Bold"), local("Source Han Sans SC Bold");
+  font-weight: 600 900;
+  font-display: swap;
+  unicode-range: U+3000-303F, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF01-FF60;
+}
+
+@theme {
+  /* Tailwind's default sans stack, with the Han alias in front. */
+  --font-sans:
+    "DD Han", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/*
  * DingDong — Glassmorphism design system
  * Pastel palette: pink / sky / mint / lavender.
  * All colors use oklch. Tokens are mapped through @theme inline so
