@@ -115,9 +115,15 @@ function SongPlayerPage() {
   const qc = useQueryClient();
   const { data: profile } = useMyProfile();
   const isEditor = isEditorRole(profile?.role);
+  // The loader fills the *server's* query cache, and that cache is not sent to
+  // the browser — only the loader's return value is. Without this the browser's
+  // first render had no song, returned null, and threw away the server HTML
+  // (React #418 on every direct visit).
+  const loaderSong = Route.useLoaderData();
   const { data: song } = useQuery({
     queryKey: ["song", id],
     queryFn: () => getSong({ data: { id } }),
+    initialData: loaderSong,
     refetchInterval: (q) => {
       const s = q.state.data as SongRow | undefined;
       return s && (s.status === "generating_audio" || s.status === "generating_video")

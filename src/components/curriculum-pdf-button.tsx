@@ -297,7 +297,7 @@ export function CurriculumPdfButton(props: Props) {
     const w = window.open("", "_blank", "width=900,height=1200");
     if (!w) return;
     w.document.write(
-      `<!doctype html><html><head><meta charset="utf-8"><title>${esc(props.title)}</title></head><body>${sheetHtml(props)}<script>window.onload=()=>{window.print();}</script></body></html>`,
+      `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(props.title)}</title></head><body>${sheetHtml(props)}<script>window.onload=()=>{window.print();}</script></body></html>`,
     );
     w.document.close();
   };

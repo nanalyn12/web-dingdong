@@ -177,7 +177,7 @@ function RootShell({ children }: { children: ReactNode }) {
     // hydrates, which is a mismatch by definition — the server cannot know the
     // visitor's theme. Suppressing it here is what keeps that from being
     // reported as a hydration error.
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning>
       <head>
         {/* Must run before the stylesheet paints, or a dark user gets a pastel
             flash on every full document load. */}
