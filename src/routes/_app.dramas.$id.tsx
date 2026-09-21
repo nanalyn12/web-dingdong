@@ -15,6 +15,7 @@ import { saveVocabulary } from "@/lib/vocab.functions";
 import { addGuestVocab, guessEmoji } from "@/lib/vocab";
 
 export const Route = createFileRoute("/_app/dramas/$id")({
+  head: () => ({ meta: [{ title: "영상 학습 — DingDong" }] }),
   component: DramaDetail,
   errorComponent: ({ error }) => (
     <div className="glass rounded-3xl p-4 sm:p-6 text-sm text-destructive">{error.message}</div>

@@ -242,6 +242,10 @@ export const getLesson = createServerFn({ method: "GET" })
         comic_panels: tables.lessons.comic_panels,
         cultural_note: tables.lessons.cultural_note,
         cultural_snippet: tables.lessons.cultural_snippet,
+        // Raw as stored — shapes vary per generation; the page normalizes
+        // them through @/lib/lesson-extras.
+        storybook_pages: tables.lessons.storybook_pages,
+        vocab_comparison: tables.lessons.vocab_comparison,
         video: tables.lessons.video,
       })
       .from(tables.lessons)

@@ -83,3 +83,49 @@ export async function renderElementToPdfBlob(
 
   return pdf.output("blob");
 }
+
+/*
+ * Chinese in a report has to say it is Chinese.
+ *
+ * On screen every Chinese element carries lang="zh-CN", which is how the
+ * browser knows to reach for a Simplified Chinese face. The report HTML had no
+ * such mark, so the Korean face was tried first and only the glyphs it lacks
+ * fell through to a Chinese one: "请问，这趟车到上海虹桥站吗？" came out in two
+ * fonts, some characters visibly heavier than their neighbours.
+ */
+
+/** A Simplified Chinese face on each platform, then whatever lang="zh-CN" picks. */
+const ZH_FONT_STACK =
+  "'PingFang SC','Microsoft YaHei','Noto Sans SC','Noto Sans CJK SC','Source Han Sans SC',sans-serif";
+
+const HAN = "\u3400-\u9fff\uf900-\ufaff";
+/** CJK punctuation and fullwidth forms: ，。？！、：；（）「」 and friends. */
+const CJK_PUNCT = "\u3000-\u303f\uff00-\uffef\u201c\u201d\u2018\u2019\u00b7\u2026";
+/** A run starts on a Han character and ends on Han or CJK punctuation. */
+const ZH_RUN = new RegExp(`[${HAN}](?:[${HAN}${CJK_PUNCT}]*[${HAN}${CJK_PUNCT}])?`, "g");
+
+const ZH_OPEN = `<span lang="zh-CN" style="font-family:${ZH_FONT_STACK}">`;
+
+/**
+ * Wraps every run of Chinese in `html` in a zh-CN span. Markup is left alone —
+ * attribute values included — and so is text already inside such a span, so
+ * applying it twice changes nothing.
+ */
+export function tagChineseRuns(html: string): string {
+  let inZh = false;
+  let skip = 0; // inside <title>, <script> or <style>
+  return html
+    .split(/(<[^>]*>)/)
+    .map((part) => {
+      if (part.startsWith("<")) {
+        if (/^<span lang="zh-CN"/i.test(part)) inZh = true;
+        else if (inZh && /^<\/span>/i.test(part)) inZh = false;
+        else if (/^<(title|script|style)\b/i.test(part)) skip++;
+        else if (/^<\/(title|script|style)>/i.test(part)) skip = Math.max(0, skip - 1);
+        return part;
+      }
+      if (inZh || skip > 0) return part;
+      return part.replace(ZH_RUN, (run) => `${ZH_OPEN}${run}</span>`);
+    })
+    .join("");
+}

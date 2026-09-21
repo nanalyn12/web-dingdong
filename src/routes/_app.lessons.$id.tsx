@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -35,7 +35,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { RichLessonContent } from "@/components/lesson-rich-content";
 import { LessonPdfButton } from "@/components/lesson-pdf-button";
-import { loadProgress, saveProgress } from "@/lib/lesson-progress";
+import { loadProgress, saveProgress, tabsAfterQuiz, tabsAfterVisit } from "@/lib/lesson-progress";
+import {
+  normalizeStorybook,
+  normalizeVocabComparison,
+  type StoryPage,
+  type VocabComparison,
+} from "@/lib/lesson-extras";
 import { getMyLessonProgress, saveMyLessonProgress } from "@/lib/lesson-progress.functions";
 import { useMyProfile, useSession } from "@/lib/auth-client";
 import { isEditorRole } from "@/lib/roles";
@@ -115,6 +121,10 @@ type LessonRow = {
   comic_panels: ComicPanel[];
   cultural_note: CulturalCard | null;
   cultural_snippet: CulturalCard | null;
+  // Raw as stored — 21 and 10 key shapes in production. Read through
+  // @/lib/lesson-extras, never mapped directly.
+  storybook_pages?: unknown;
+  vocab_comparison?: unknown;
   video?: { youtube_video_id?: string; media_url?: string; drama_id?: string } | null;
 };
 
@@ -182,16 +192,17 @@ function LessonPage() {
     }
   }, [serverProgress]);
 
+  // Opening a tab marks it studied — except the quiz, which counts only once
+  // QuizRunner reports a score (see onScore below).
   useEffect(() => {
-    if (!completedTabs.includes(tab)) {
-      const next = [...completedTabs, tab];
-      setCompletedTabs(next);
-      saveProgress(id, { completedTabs: next });
-      if (session) {
-        void callSaveLessonProgress({
-          data: { lessonId: id, completedTabs: [tab] },
-        }).catch(() => {});
-      }
+    const next = tabsAfterVisit(completedTabs, tab);
+    if (!next) return;
+    setCompletedTabs(next);
+    saveProgress(id, { completedTabs: next });
+    if (session) {
+      void callSaveLessonProgress({
+        data: { lessonId: id, completedTabs: [tab] },
+      }).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, completedTabs, id, session]);
@@ -211,6 +222,14 @@ function LessonPage() {
   // Lessons generated before the quiz schema was pinned down store each item
   // under whatever keys that run invented, so repair them into one shape here.
   const quiz = useMemo(() => normalizeQuiz(lesson?.quiz), [lesson?.quiz]);
+  const storybook = useMemo(
+    () => normalizeStorybook(lesson?.storybook_pages),
+    [lesson?.storybook_pages],
+  );
+  const vocabCompare = useMemo(
+    () => normalizeVocabComparison(lesson?.vocab_comparison),
+    [lesson?.vocab_comparison],
+  );
 
   if (isLoading) {
     return (
@@ -375,6 +394,10 @@ function LessonPage() {
               );
             })}
           </div>
+
+          {vocabCompare.length > 0 && (
+            <VocabCompareSection items={vocabCompare} speak={speak} speakingId={speakingId} />
+          )}
         </TabsContent>
 
         <TabsContent value="content" className="space-y-6">
@@ -392,9 +415,18 @@ function LessonPage() {
               speak={speak}
               speakingId={speakingId}
               showPinyin={showPinyin}
-              onGenerate={() => genImagesMut.mutate()}
+              onGenerate={isEditor ? () => genImagesMut.mutate() : undefined}
               generating={genImagesMut.isPending}
               error={genImagesMut.error?.message}
+            />
+          )}
+
+          {storybook.length > 0 && (
+            <StorybookSection
+              pages={storybook}
+              speak={speak}
+              speakingId={speakingId}
+              showPinyin={showPinyin}
             />
           )}
 
@@ -469,6 +501,7 @@ function LessonPage() {
             quiz={quiz}
             onScore={(correct, total) => {
               setQuizScore({ correct, total });
+              setCompletedTabs((prev) => tabsAfterQuiz(prev));
               saveProgress(id, {
                 quizScore: { correct, total },
                 completedTabs: ["quiz"],
@@ -653,7 +686,8 @@ function ComicStrip({
   speak: (t: string, id?: string) => void;
   speakingId: string | null;
   showPinyin: boolean;
-  onGenerate: () => void;
+  /** Editors only — the server refuses anyone else, so learners never see the button. */
+  onGenerate?: () => void;
   generating: boolean;
   error?: string;
 }) {
@@ -665,7 +699,7 @@ function ComicStrip({
           <ImageIcon className="size-5 text-primary" />
           만화로 보는 본문
         </h3>
-        {!hasAnyImage && (
+        {!hasAnyImage && onGenerate && (
           <Button
             size="sm"
             onClick={onGenerate}
@@ -718,6 +752,168 @@ function ComicStrip({
         ))}
       </div>
     </div>
+  );
+}
+
+/* ---------------- Storybook ---------------- */
+
+/** One page at a time, like turning a picture book. There are no images yet
+ * (0 of 132 stored pages have one), so the page is its narration and lines. */
+function StorybookSection({
+  pages,
+  speak,
+  speakingId,
+  showPinyin,
+}: {
+  pages: StoryPage[];
+  speak: (t: string, id?: string) => void;
+  speakingId: string | null;
+  showPinyin: boolean;
+}) {
+  const [i, setI] = useState(0);
+  const page = pages[Math.min(i, pages.length - 1)];
+  return (
+    <section className="rounded-3xl border bg-surface/60 p-5 space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          <BookMarked className="size-5 text-primary" />
+          스토리북
+        </h3>
+        <span className="text-xs text-muted-foreground">
+          {i + 1} / {pages.length}
+        </span>
+      </div>
+
+      <div className="rounded-2xl border bg-background/50 p-4 space-y-3 min-h-40">
+        {page.title && <div className="font-semibold">{page.title}</div>}
+        {page.ko && <p className="text-sm leading-relaxed">{page.ko}</p>}
+        {page.zh && (
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium" lang="zh-CN">
+                {page.zh}
+              </span>
+              <SpeakButton text={page.zh} speak={speak} active={speakingId === page.zh} size="sm" />
+            </div>
+            {showPinyin && page.pinyin && (
+              <div className="text-[11px] text-muted-foreground">{page.pinyin}</div>
+            )}
+          </div>
+        )}
+        {page.lines.map((l, j) => (
+          <div key={j} className="rounded-lg bg-surface/70 p-2 text-sm">
+            {l.speaker && <div className="text-[10px] text-muted-foreground">{l.speaker}</div>}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold" lang="zh-CN">
+                {l.zh}
+              </span>
+              <SpeakButton text={l.zh} speak={speak} active={speakingId === l.zh} size="sm" />
+            </div>
+            {showPinyin && l.pinyin && (
+              <div className="text-[11px] text-muted-foreground">{l.pinyin}</div>
+            )}
+            {l.ko && <div className="text-xs text-foreground/75">{l.ko}</div>}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setI((v) => Math.max(0, v - 1))}
+          disabled={i === 0}
+        >
+          <ChevronLeft className="size-4" /> 이전
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setI((v) => Math.min(pages.length - 1, v + 1))}
+          disabled={i >= pages.length - 1}
+        >
+          다음 <ChevronRight className="size-4" />
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Vocabulary comparison ---------------- */
+
+/** 헷갈리는 단어 비교 — sits under the key expressions it sharpens. Pinyin is
+ * always shown here, as it is on the key expression cards. */
+function VocabCompareSection({
+  items,
+  speak,
+  speakingId,
+}: {
+  items: VocabComparison[];
+  speak: (t: string, id?: string) => void;
+  speakingId: string | null;
+}) {
+  return (
+    <section className="mt-6 space-y-3">
+      <h3 className="text-lg font-bold flex items-center gap-2">
+        <Target className="size-5 text-primary" />
+        헷갈리는 단어 비교
+      </h3>
+      <div className="grid gap-3 md:grid-cols-2">
+        {items.map((c, i) => (
+          <div key={i} className="rounded-2xl border bg-surface/60 p-4 space-y-3">
+            {c.title && <div className="text-xs text-muted-foreground">‘{c.title}’를 중국어로</div>}
+            <div className="flex flex-wrap items-stretch gap-2">
+              {c.words.map((w, j) => (
+                <Fragment key={j}>
+                  {j > 0 && <span className="self-center text-xs text-muted-foreground">vs</span>}
+                  <div className="rounded-xl border border-lavender/40 bg-lavender/20 px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-lg font-bold" lang="zh-CN">
+                        {w.zh}
+                      </span>
+                      <SpeakButton
+                        text={w.zh}
+                        speak={speak}
+                        active={speakingId === w.zh}
+                        size="sm"
+                        iconOnly
+                      />
+                    </div>
+                    {w.pinyin && (
+                      <div className="text-[11px] text-muted-foreground">{w.pinyin}</div>
+                    )}
+                    {w.ko && <div className="text-xs">{w.ko}</div>}
+                  </div>
+                </Fragment>
+              ))}
+            </div>
+            {c.note && (
+              <p className="text-sm leading-relaxed whitespace-pre-line text-foreground/85">
+                {c.note}
+              </p>
+            )}
+            {c.example && (
+              <div className="rounded-lg bg-background/60 p-2 text-sm">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span lang="zh-CN">{c.example.zh}</span>
+                  <SpeakButton
+                    text={c.example.zh}
+                    speak={speak}
+                    active={speakingId === c.example.zh}
+                    size="sm"
+                    iconOnly
+                  />
+                </div>
+                {c.example.pinyin && (
+                  <div className="text-[11px] text-muted-foreground">{c.example.pinyin}</div>
+                )}
+                {c.example.ko && <div className="text-xs text-foreground/75">{c.example.ko}</div>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

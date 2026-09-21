@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { deliverFile } from "@/lib/file-delivery";
-import { renderElementToPdfBlob } from "@/lib/pdf-report";
+import { renderElementToPdfBlob, tagChineseRuns } from "@/lib/pdf-report";
 
 type KeyExpression = { zh: string; pinyin?: string; ko: string; hsk?: number };
 
@@ -44,7 +44,9 @@ export function LessonPdfButton({
       // PDF was being rendered.
       container.style.cssText =
         "position:fixed;left:-10000px;top:0;z-index:-1;padding:32px;font-family:'Noto Sans KR','Pretendard',system-ui,sans-serif;color:#0f172a;background:#fff;width:720px;";
-      container.innerHTML = `
+      // tagChineseRuns: without lang="zh-CN" the Korean face renders the
+      // Chinese and only its missing glyphs fall back — two fonts in one line.
+      container.innerHTML = tagChineseRuns(`
         <div style="border-bottom:2px solid #f9a8d4;padding-bottom:12px;margin-bottom:20px;">
           <div style="font-size:12px;color:#64748b;">DingDong 학습 리포트 · ${dateStr}</div>
           <h1 style="font-size:24px;font-weight:700;margin:6px 0 0;">${escapeHtml(lessonTitle)}</h1>
@@ -100,7 +102,7 @@ export function LessonPdfButton({
         <div style="margin-top:24px;text-align:center;color:#94a3b8;font-size:11px;">
           🐼 叮叮(DingDong) · 오늘도 중국어 한 입!
         </div>
-      `;
+      `);
       document.body.appendChild(container);
 
       const filename = `DingDong_${safeFile(lessonTitle)}_${safeFile(dateStr)}.pdf`;

@@ -547,7 +547,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>⑥ 해상도</Label>
+          <Label>⑤ 해상도</Label>
           <Select
             value={resolution}
             onValueChange={(v) => setResolution(v as VideoJobConfig["resolution"])}
@@ -580,7 +580,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>⑦ 음성</Label>
+          <Label>⑥ 음성</Label>
           <Select value={voice} onValueChange={setVoice}>
             <SelectTrigger>
               <SelectValue />
@@ -621,7 +621,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
         <div className="flex items-center gap-3 rounded-2xl bg-surface/50 border border-border px-4 py-3">
           <Switch checked={burnSubtitles} onCheckedChange={setBurnSubtitles} id="burn" />
           <Label htmlFor="burn" className="cursor-pointer">
-            ⑧ 자막 영상에 새기기
+            ⑦ 자막 영상에 새기기
           </Label>
         </div>
         <div className="flex items-center gap-3 rounded-2xl bg-surface/50 border border-border px-4 py-3">
@@ -631,7 +631,7 @@ function CreateWizard({ initialCourseId }: { initialCourseId: string | null }) {
           </Label>
         </div>
         <div className="space-y-2">
-          <Label>⑩ 업로드 방식</Label>
+          <Label>⑧ 업로드 방식</Label>
           <Select
             value={uploadMode}
             onValueChange={(v) => setUploadMode(v as VideoJobConfig["uploadMode"])}

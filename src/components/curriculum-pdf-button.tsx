@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ASSURE_STEPS, normalizeAssure, type AssurePlan } from "@/lib/assure";
 import { deliverFile } from "@/lib/file-delivery";
-import { renderElementToPdfBlob } from "@/lib/pdf-report";
+import { renderElementToPdfBlob, tagChineseRuns } from "@/lib/pdf-report";
 
 type TimeBlock = {
   start_min?: number;
@@ -257,6 +257,12 @@ ${assureHtml(p.assure)}
   `;
 }
 
+/** The sheet both buttons render, with its Chinese marked as Chinese so it is
+ * set in one face rather than the Korean face plus fallbacks. */
+function sheetHtml(props: Props): string {
+  return tagChineseRuns(buildHtml(props));
+}
+
 export function CurriculumPdfButton(props: Props) {
   const [busy, setBusy] = useState(false);
 
@@ -264,7 +270,7 @@ export function CurriculumPdfButton(props: Props) {
     setBusy(true);
     const container = document.createElement("div");
     try {
-      container.innerHTML = buildHtml(props);
+      container.innerHTML = sheetHtml(props);
       document.body.appendChild(container);
       const target = container.firstElementChild as HTMLElement;
       const dateStr = new Date().toLocaleDateString("ko-KR");
@@ -291,7 +297,7 @@ export function CurriculumPdfButton(props: Props) {
     const w = window.open("", "_blank", "width=900,height=1200");
     if (!w) return;
     w.document.write(
-      `<!doctype html><html><head><meta charset="utf-8"><title>${esc(props.title)}</title></head><body>${buildHtml(props)}<script>window.onload=()=>{window.print();}</script></body></html>`,
+      `<!doctype html><html><head><meta charset="utf-8"><title>${esc(props.title)}</title></head><body>${sheetHtml(props)}<script>window.onload=()=>{window.print();}</script></body></html>`,
     );
     w.document.close();
   };

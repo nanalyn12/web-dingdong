@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Json } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-middleware";
 import { normalizeQuizForStorage, QUIZ_PROMPT_SPEC } from "@/lib/quiz-normalize";
+import { STORYBOOK_PAGE_SHAPE, VOCAB_COMPARISON_SHAPE } from "@/lib/lesson-extras";
 import { createTextProviderFor } from "./ai-gateway.server";
 import { assertEditor } from "./courses.functions";
 import { LEVEL_LABEL_HSK } from "@/lib/levels";
@@ -188,8 +189,10 @@ ${titleBlock}
 [video_keywords] 정확히 2개. 1번 한국어, 2번 중국어. 영어 금지.
 [slides] 정확히 5장. 각 슬라이드는 반드시 다음 필드를 모두 포함하세요: title(한국어 제목, 12자 이내), subtitle(한 줄 한국어 부제), key_point(핵심 한 문장), content(마크다운 본문 — ###, **, - 사용, 중국어는 반드시 한자로, 예문엔 한국어 번역 병기, 최소 120자), tip(학습 팁 한 문장), image_prompt(영어 + "No text, no characters"). 가능하면 vocab(zh/pinyin/ko 3~5개) 또는 examples(zh/pinyin/ko 2~3개) 중 주제에 맞는 쪽을 추가하세요. 주제 순서: ① 도입/개요 ② 핵심 표현 ③ 문법 포인트 ④ 실전 활용 ⑤ 정리/복습.
 ${QUIZ_PROMPT_SPEC}
-[storybook_pages] 정확히 6페이지. 캐릭터 지수 중심. image_prompt는 영어 + "No text, no characters" + watercolor storybook 스타일.
-[vocab_comparison] 2-3개.
+[storybook_pages] 정확히 6페이지. 캐릭터 지수 중심. 각 페이지는 아래 JSON 형태를 그대로 지키세요. 키 이름을 바꾸거나 추가하지 마세요. narration은 한국어 서술, lines는 그 페이지의 대사 0~2개 배열(없으면 []), 각 원소는 speaker/zh/pinyin/ko. image_prompt는 영어 + "No text, no characters" + watercolor storybook 스타일.
+${STORYBOOK_PAGE_SHAPE}
+[vocab_comparison] 2-3개. 한국인 학습자가 헷갈리기 쉬운 중국어 단어 두 개를 비교. 각 항목은 아래 JSON 형태를 그대로 지키세요. 키 이름을 바꾸거나 추가하지 마세요. words는 정확히 2개(zh/pinyin/ko), note는 두 단어의 차이를 설명하는 한국어 문장, example은 둘 중 하나를 쓴 예문 1개.
+${VOCAB_COMPARISON_SHAPE}
 [cultural_snippet] 반드시 {"title":"한국어 소제목","description":"한국어 본문 150자 이상"} 형태의 객체 1개. cultural_note와 겹치지 않는 실용적인 팁으로. description 키 이름을 바꾸지 말 것. 빈 객체 금지.`;
 }
 

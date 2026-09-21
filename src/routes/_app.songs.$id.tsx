@@ -67,10 +67,6 @@ function fmtSecKor(sec: number) {
   const s = Math.floor(sec % 60);
   return m > 0 ? `${m}분 ${s}초` : `${s}초`;
 }
-function isSectionHeader(text: string | null | undefined): boolean {
-  if (!text) return false;
-  return /^\s*\[[^\]]+\]\s*$/.test(text);
-}
 
 import {
   GENRE_LABEL,
@@ -96,6 +92,7 @@ import {
   type VocabItem,
 } from "@/lib/songs.functions";
 import { levelLabel } from "@/lib/levels";
+import { isSectionHeader, orderPuzzleLines } from "@/lib/song-lyrics";
 
 export const Route = createFileRoute("/_app/songs/$id")({
   loader: ({ params, context }) =>
@@ -103,6 +100,9 @@ export const Route = createFileRoute("/_app/songs/$id")({
       queryKey: ["song", params.id],
       queryFn: () => getSong({ data: { id: params.id } }),
     }),
+  head: ({ loaderData }) => ({
+    meta: [{ title: loaderData?.title ? `${loaderData.title} — DingDong` : "학습송 — DingDong" }],
+  }),
   component: SongPlayerPage,
   errorComponent: ({ error }) => (
     <div className="glass rounded-3xl p-4 sm:p-6 text-sm text-destructive">{error.message}</div>
@@ -1173,6 +1173,7 @@ function SongLessonTabs({ song, onSeek }: { song: SongRow; onSeek?: (t: number) 
   const { data: profile } = useMyProfile();
   const isEditor = isEditorRole(profile?.role);
   const hasTimes = lyricLines.some((l) => typeof l.time === "number");
+  const hasOrderPuzzle = orderPuzzleLines(lyricLines).length > 0;
 
   // Words the learner already has, so a card opens showing "담김" instead of
   // inviting a duplicate save. Signed-in users read their saved rows; guests
@@ -1220,7 +1221,7 @@ function SongLessonTabs({ song, onSeek }: { song: SongRow; onSeek?: (t: number) 
     });
   if (vocab.length > 0 && lyricLines.length > 0)
     activities.push({ done: progress.cloze, total: 1, count: progress.cloze ? 1 : 0 });
-  if (lyricLines.length >= 3)
+  if (hasOrderPuzzle)
     activities.push({ done: progress.order, total: 1, count: progress.order ? 1 : 0 });
   if (hasTimes && onSeek)
     activities.push({
@@ -1284,7 +1285,7 @@ function SongLessonTabs({ song, onSeek }: { song: SongRow; onSeek?: (t: number) 
               {progress.cloze && <span className="ml-0.5">✅</span>}
             </TabsTrigger>
           )}
-          {lyricLines.length >= 3 && (
+          {hasOrderPuzzle && (
             <TabsTrigger value="order" className={triggerCls(progress.order)}>
               <span className="text-base leading-none">🎼</span> 순서
               {progress.order && <span className="ml-0.5">✅</span>}
@@ -1350,7 +1351,7 @@ function SongLessonTabs({ song, onSeek }: { song: SongRow; onSeek?: (t: number) 
           </TabsContent>
         )}
 
-        {lyricLines.length >= 3 && (
+        {hasOrderPuzzle && (
           <TabsContent value="order" className="pt-4">
             <LineOrderActivity
               lyrics={lyricLines}
@@ -1506,7 +1507,9 @@ function LineOrderActivity({
   completed: boolean;
   onComplete: () => void;
 }) {
-  const base = useMemo(() => lyrics.slice(0, Math.min(6, lyrics.length)), [lyrics]);
+  // Sung lines only: every stored song opens with a "[Verse 1]" marker, and
+  // the learner was being asked to put it in order.
+  const base = useMemo(() => orderPuzzleLines(lyrics), [lyrics]);
   const [order, setOrder] = useState<number[]>(() => [...base.keys()]);
   const [revealed, setRevealed] = useState(false);
   const [mounted, setMounted] = useState(false);

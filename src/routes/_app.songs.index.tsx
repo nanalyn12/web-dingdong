@@ -67,6 +67,7 @@ import {
   type SongRow,
 } from "@/lib/songs.functions";
 import { LEVEL_LABEL, LEVEL_LABEL_HSK, LEVEL_OPTIONS, LEVEL_ORDER, levelLabel } from "@/lib/levels";
+import { sungLines } from "@/lib/song-lyrics";
 
 const songsSearchSchema = z.object({
   level: fallback(z.enum(["all", "beginner", "intermediate", "advanced"]), "all").default("all"),
@@ -665,7 +666,7 @@ function SongsPage() {
                   )}
                   <div className="text-[11px] text-muted-foreground mt-1">
                     {STATUS_LABEL[s.status] ??
-                      `가사 ${Array.isArray(s.lyrics) ? s.lyrics.length : 0}줄`}
+                      `가사 ${Array.isArray(s.lyrics) ? sungLines(s.lyrics).length : 0}줄`}
                     {s.theme && THEME_LABEL[s.theme] && ` · ${THEME_LABEL[s.theme]}`}
                   </div>
                 </div>

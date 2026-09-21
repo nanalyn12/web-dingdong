@@ -135,17 +135,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: VIEWPORT_CONTENT },
-      { title: "dingdong lms" },
+      // Fallback for a page that names nothing itself; every _app route does
+      // (page-polish.test.ts). og/twitter titles are what a shared link shows.
+      { title: "DingDong" },
       { name: "description", content: "AI-powered Chinese learning platform for Korean adults." },
       { name: "author", content: "DingDong" },
-      { property: "og:title", content: "dingdong lms" },
+      { property: "og:title", content: "DingDong — AI로 배우는 중국어" },
       {
         property: "og:description",
         content: "AI-powered Chinese learning platform for Korean adults.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "dingdong lms" },
+      { name: "twitter:title", content: "DingDong — AI로 배우는 중국어" },
       {
         name: "twitter:description",
         content: "AI-powered Chinese learning platform for Korean adults.",
