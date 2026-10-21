@@ -36,6 +36,14 @@
 - 외부 유료 API(Gemini·Suno·Google TTS·Pexels)를 사용하므로, 직접 구동하려면 **본인 키와 비용**이 필요합니다.
 - 인용·재사용·협업 문의는 이 저장소의 Issues로 남겨 주세요.
 
+## 논문 부록 A — 프롬프트 자료
+
+박사학위논문 부록 A에 수록한 프롬프트를 [`prompts/`](prompts/README.md) 폴더에 항목별로 옮겨 두었습니다.
+
+- [개발 프롬프트 (표준화) A-1-18 ~ A-1-37](prompts/README.md#개발-프롬프트-표준화)
+- [시스템 내장 프롬프트 A-3](prompts/README.md#시스템-내장-프롬프트)
+- 워드프레스 플러그인 Dingdong의 프롬프트: [wp-dingdong/prompts](https://github.com/nanalyn12/wp-dingdong/tree/main/prompts)
+
 ## 개발 워크플로우
 
 이 앱은 **"합격 기준 먼저 → 실패 확인 → 최소 구현 → 4중 게이트 통과"** 순서로 개발되었습니다.
