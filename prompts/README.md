@@ -8,7 +8,7 @@
 | 바로가기 | 수록 범위 | 건수 |
 |---|---|---|
 | [개발 프롬프트 (표준화)](#개발-프롬프트-표준화) | 부록 A-1-18 ~ A-1-37 | 20건 |
-| [시스템 내장 프롬프트](#시스템-내장-프롬프트) | 부록 A-3-01 ~ A-3-16 | 16건 |
+| [시스템 내장 프롬프트](#시스템-내장-프롬프트) | 부록 A-3-01 ~ A-3-17 | 17건 |
 | [워드프레스 플러그인 Dingdong 프롬프트 ↗](https://github.com/nanalyn12/wp-dingdong/tree/main/prompts) | 부록 A-1-01 ~ A-1-17, A-2 | |
 
 ## 읽는 법
@@ -69,7 +69,7 @@
 
 ## 시스템 내장 프롬프트
 
-> 4장에서 다룬 학습 웹앱의 지시문 16건이다. 여러 생성 기능에 결합되는 퀴즈 규격을 앞에 두고, 학습 영상, 레슨과 부속 콘텐츠, 학습송, 교수자 지원, 학습도우미의 차례로 수록한다.
+> 4장에서 다룬 학습 웹앱의 지시문 17건이다. 여러 생성 기능에 결합되는 퀴즈 규격을 앞에 두고, 학습 영상, 레슨과 부속 콘텐츠, 학습송, 교수자 지원, 학습도우미의 차례로 수록한다.
 
 | 번호 | 지시문 | 출처 (기준 커밋의 파일·행) |
 |---|---|---|
@@ -89,6 +89,7 @@
 | [A-3-14](system/A-3-14.md) | 학습송–세부 강의 연계 추천 | `content-links.functions.ts` [109~110행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/content-links.functions.ts#L109-L110) · [111~127행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/content-links.functions.ts#L111-L127) |
 | [A-3-15](system/A-3-15.md) | 학습도우미 응답 | `assistant.functions.ts` [28~52행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/assistant.functions.ts#L28-L52) |
 | [A-3-16](system/A-3-16.md) | 오늘의 명언 풀 생성 | `widgets.functions.ts` [83~84행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/widgets.functions.ts#L83-L84) · [85~92행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/widgets.functions.ts#L85-L92) |
+| [A-3-17](system/A-3-17.md) | ASSURE 교수설계 단락 | `assure.ts` [337~365행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/assure.ts#L337-L365) · [294~298행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/assure.ts#L294-L298) · [30~67행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/assure.ts#L30-L67) · [300~307행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/assure.ts#L300-L307) · [309~315행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/assure.ts#L309-L315) · [317~324행](https://github.com/nanalyn12/web-dingdong/blob/db7a88802cdc57a0d3266a3028d7d9eba85854ab/src/lib/assure.ts#L317-L324) |
 
 <details>
 <summary>수록 원칙 (논문 부록 A-2·A-3)</summary>

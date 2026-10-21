@@ -55,3 +55,4 @@ npm run verify
 | 2026-09-22 | 화면 한자를 한 간체 글꼴로                      | src/styles.css, src/lib/han-font.test.ts | 앱이 글꼴을 따로 안 정해 한국어 Windows에서 한자가 맑은 고딕(한국 한자)부터 잡히고 간체 전용 글자만 다른 글꼴로 빠져 한 줄에 두 글꼴이 섞였음. 한자 범위만 맡는 local() 별칭을 sans 스택 맨 앞에 둠 — 한글·라틴은 범위 밖 |
 | 2026-10-21 | 학습송 작사 급수 표기를 levels.ts에서 가져옴 | src/lib/songs.functions.ts | 작사 프롬프트의 HSK 범위를 손으로 적어 화면 표기(LEVEL_HSK)와 어긋나 있었음. 커밋 db7a888 |
 | 2026-10-21 | 논문 부록 A 프롬프트 공개 | prompts/ (README.md, development/, system/), README.md | 부록 A-1-18~37·A-3을 항목별 문서로 옮기고 기준 커밋 db7a888의 소스 행으로 연결. 코드 변경 없음 |
+| 2026-10-21 | 부록 A-3-17 ASSURE 단락 추가 | prompts/system/A-3-17.md, prompts/README.md, A-3-12·16 | A-3-12에 결합되는 ASSURE 단락(src/lib/assure.ts)을 별도 항목으로 수록. 코드 변경 없음 |
