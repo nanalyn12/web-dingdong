@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/auth-middleware";
 import type { SunoAlignedWord } from "@/lib/suno.server";
 import { createTextProviderFor } from "@/lib/ai-gateway.server";
 import { assertEditor } from "@/lib/courses.functions";
+import { LEVEL_HSK } from "@/lib/levels";
 import { SONG_GENRES, SONG_THEMES, genreFromStyle, themeFromKeywords } from "@/lib/song-taxonomy";
 import type { Json } from "@/db/schema";
 
@@ -961,12 +962,14 @@ export async function draftSongInternal(data: {
   userId?: string | null;
 }): Promise<DraftedSong> {
   const gateway = await createTextProviderFor(data.userId);
+  // 급수 문자열은 levels.ts 한 곳에서 가져온다 — 여기에 직접 적으면 화면 표기와
+  // 어긋난다. levels.ts 머리 주석 참조.
   const levelHint =
     data.level === "beginner"
-      ? "HSK 1~2 수준의 아주 쉬운 단어와 짧은 문장 (4~7자)"
+      ? `${LEVEL_HSK.beginner} 수준의 아주 쉬운 단어와 짧은 문장 (4~7자)`
       : data.level === "intermediate"
-        ? "HSK 3~4 수준의 일상 어휘"
-        : "HSK 5 이상, 표현이 풍부하게";
+        ? `${LEVEL_HSK.intermediate} 수준의 일상 어휘`
+        : `${LEVEL_HSK.advanced} 수준, 표현이 풍부하게`;
 
   const prompt = `너는 한국인 중국어 학습자를 위한 학습송 작사가야.
 주제 키워드: "${data.keyword}"
