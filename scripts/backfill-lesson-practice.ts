@@ -6,7 +6,7 @@
 // pipeline now uses — so a backfilled lesson is identical to a freshly
 // generated one.
 //
-//   npx tsx --env-file=.env backfill-lesson-practice.ts [--dry] [limit]
+//   npx tsx --env-file=.env scripts/backfill-lesson-practice.ts [--dry] [limit]
 //
 //   --dry   list what would be filled and exit (no AI calls, no writes)
 //
@@ -17,8 +17,8 @@
 
 import { Client } from "pg";
 
-import { buildLessonEnrichment } from "./src/lib/video/lesson-enrich.server";
-import type { VideoJobConfig, VideoScript } from "./src/lib/video/config";
+import { buildLessonEnrichment } from "../src/lib/video/lesson-enrich.server";
+import type { VideoJobConfig, VideoScript } from "../src/lib/video/config";
 
 const dry = process.argv.includes("--dry");
 const limit = Number(process.argv.find((a) => /^\d+$/.test(a)) ?? 999);
@@ -96,5 +96,5 @@ if (failed.length) {
 }
 if (rows.length - filled > 0) {
   console.log(`\n남은 강의는 다시 실행하면 이어서 처리됩니다:`);
-  console.log(`  npx tsx --env-file=.env backfill-lesson-practice.ts`);
+  console.log(`  npx tsx --env-file=.env scripts/backfill-lesson-practice.ts`);
 }

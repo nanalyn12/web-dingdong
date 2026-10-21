@@ -5,7 +5,7 @@
 // read. This reports what that repair recovers against the live database, so a
 // change to the normalizer can be measured instead of guessed at.
 //
-//   npx tsx --env-file=.env check-quiz-normalize.ts [flags]
+//   npx tsx --env-file=.env scripts/check-quiz-normalize.ts [flags]
 //
 //   --audit          re-check every resolved answer against what the model
 //                    wrote (a wrong `correct` is worse than a dropped item)
@@ -15,7 +15,7 @@
 // Read-only: it never writes to the database.
 import { Client } from "pg";
 
-import { normalizeQuizItem } from "./src/lib/quiz-normalize";
+import { normalizeQuizItem } from "../src/lib/quiz-normalize";
 
 const showDropped = process.argv.includes("--show-dropped");
 

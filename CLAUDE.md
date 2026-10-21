@@ -56,3 +56,4 @@ npm run verify
 | 2026-10-21 | 학습송 작사 급수 표기를 levels.ts에서 가져옴 | src/lib/songs.functions.ts | 작사 프롬프트의 HSK 범위를 손으로 적어 화면 표기(LEVEL_HSK)와 어긋나 있었음. 커밋 db7a888 |
 | 2026-10-21 | 논문 부록 A 프롬프트 공개 | prompts/ (README.md, development/, system/), README.md | 부록 A-1-18~37·A-3을 항목별 문서로 옮기고 기준 커밋 db7a888의 소스 행으로 연결. 코드 변경 없음 |
 | 2026-10-21 | 부록 A-3-17 ASSURE 단락 추가 | prompts/system/A-3-17.md, prompts/README.md, A-3-12·16 | A-3-12에 결합되는 ASSURE 단락(src/lib/assure.ts)을 별도 항목으로 수록. 코드 변경 없음 |
+| 2026-10-21 | 저장소 루트 정리 + README 둘러보기 | backfill-*.ts·check-quiz-normalize.ts → scripts/, 소개.md → docs/, data/ 추적 해제, README.md | 처음 보는 사람이 루트에서 길을 잃음. data/는 이미 .gitignore 대상인데 표본 영상·글꼴 3개(약 29MB)가 추적되고 있었음. 운영 볼륨은 /data라 영향 없음 |

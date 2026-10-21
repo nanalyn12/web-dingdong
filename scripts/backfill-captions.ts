@@ -6,7 +6,7 @@
 // on the next invocation — videos that already carry a track are skipped, so
 // re-running is safe.
 //
-//   npx tsx --env-file=.env backfill-captions.ts [--probe] [maxUploads]
+//   npx tsx --env-file=.env scripts/backfill-captions.ts [--probe] [maxUploads]
 //
 //   --probe   check one video's caption list and exit (verifies the token has
 //             the force-ssl scope without spending an insert)
@@ -15,8 +15,8 @@
 
 import { Client } from "pg";
 
-import { listCaptionTracks, uploadCaptionTrack } from "./src/lib/video/youtube.server";
-import type { VideoJobConfig } from "./src/lib/video/config";
+import { listCaptionTracks, uploadCaptionTrack } from "../src/lib/video/youtube.server";
+import type { VideoJobConfig } from "../src/lib/video/config";
 
 const LIST_UNITS = 50;
 const INSERT_UNITS = 400;
@@ -118,7 +118,7 @@ console.log(`사용 할당량: ~${spent} units`);
 const remaining = rows.length - uploaded - already - failed.length;
 if (stopped && remaining > 0) {
   console.log(`\n남은 ${remaining}개는 내일 다시 실행하세요 (할당량은 태평양시 자정에 초기화):`);
-  console.log(`  npx tsx --env-file=.env backfill-captions.ts`);
+  console.log(`  npx tsx --env-file=.env scripts/backfill-captions.ts`);
 }
 if (failed.length) {
   console.log(`\nfailures:`);
